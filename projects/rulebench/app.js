@@ -231,7 +231,7 @@
   function gainText(e) {
     if (state.id === 'commission') {
       const pct = Math.round(e.gain / state.red.honestTotal * 1000) / 10;
-      return `<b>+${money(e.gain)}</b> extra commission, ${pct}% of the plan's cost`;
+      return `<b><span class="pl">+</span>${money(e.gain)}</b> extra commission, ${pct}% of the plan's cost`;
     }
     return `<b>${money(e.impact)}</b> of spending could reach a lower approver than it should`;
   }

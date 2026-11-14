@@ -22,7 +22,23 @@
   <main class="wrap">
     <section class="intro">
       <h1>Rulebench</h1>
-      <p class="lead">Companies change their rules all the time: commission plans, approval limits, bonus schemes. They almost never test them, so the first test happens in real life, when someone finds the loophole. Rulebench tests a business rule the way developers test code.</p>
+      <p class="lead">It finds the loopholes in a company's rules before employees do.</p>
+      <ol class="story" aria-label="Why it matters, in three steps">
+        <li>
+          <span class="st-n">1 · The new rule</span>
+          <p>A sales manager writes: <q>Every sale under 10,000 earns an extra 400 bonus, to reward small new customers.</q></p>
+        </li>
+        <li>
+          <span class="st-n">2 · The trick</span>
+          <p>A salesperson with one 30,000 sale writes it up as <b>three sales of 9,900</b> to the same customer, and collects the bonus three times. Nobody notices for months.</p>
+          <div class="split" aria-hidden="true"><span class="one">30,000</span><span class="arrow">→</span><span class="three"><i>9,900</i><i>9,900</i><i>9,900</i></span><span class="plus">+1,200 bonus</span></div>
+        </li>
+        <li>
+          <span class="st-n">3 · Rulebench</span>
+          <p>Before the rule is used, it plays the clever employee and tries thousands of tricks. It shows which ones work, what they would cost, and the fix. It also flags the cases the rule forgot and replays last year's real sales to show the cost.</p>
+        </li>
+      </ol>
+      <p class="hint try-it">Try it below with a fictional company. Pick a rule set, then press <b>1. Attack the rule</b>.</p>
       <div class="scn-switch" role="radiogroup" aria-label="Rule set">
         <button type="button" role="radio" data-scn="commission" aria-checked="true"><b>Sales commission plan</b><span>Next year's draft for a team of 6 reps</span></button>
         <button type="button" role="radio" data-scn="expenses" aria-checked="false"><b>Expense approvals</b><span>New routing rules for 12 people</span></button>
