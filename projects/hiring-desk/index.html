@@ -22,7 +22,13 @@
   <main class="wrap">
     <section class="intro">
       <h1>Hiring Desk</h1>
-      <p>Open positions, candidates, follow-ups and past talent, all on one screen. It's loaded with demo data so you can try it right away. Your own data stays in your browser.</p>
+      <p class="lead">Recruiting often lives in a spreadsheet, an inbox and someone's memory. Hiring Desk puts open positions, candidates, follow-ups and past talent on one screen, so nobody falls through the cracks.</p>
+      <div class="tour">
+        <span>Try it with the demo data:</span>
+        <button type="button" class="chip-btn" data-tour="follow">Who needs a follow-up today?</button>
+        <button type="button" class="chip-btn" data-tour="match">Find past candidates for a QA role</button>
+        <button type="button" class="chip-btn" data-tour="pipe">Drag a candidate to the next stage</button>
+      </div>
     </section>
 
     <nav class="tabs" role="tablist" aria-label="Sections">
@@ -37,6 +43,8 @@
       <button type="button" class="btn" id="addCandidate">+ Candidate</button>
       <button type="button" class="btn btn-line" id="addPosition">+ Position</button>
       <span class="spacer"></span>
+      <button type="button" class="link-btn" id="importCsv">Import CSV</button>
+      <input type="file" id="csvFile" accept=".csv,text/csv" hidden>
       <button type="button" class="link-btn" id="exportCsv">Export CSV</button>
       <button type="button" class="link-btn" id="resetDemo">Reset demo</button>
       <button type="button" class="link-btn" id="clearAll">Start empty</button>
@@ -58,6 +66,17 @@
       <div class="panel">
         <h2>Hiring needs</h2>
         <div id="needs" class="needs"></div>
+      </div>
+      <div class="grid2">
+        <div class="panel">
+          <h2>Stuck for more than 2 weeks</h2>
+          <ul id="stuckList" class="mini-list"></ul>
+        </div>
+        <div class="panel">
+          <h2>Where candidates come from</h2>
+          <div id="sources" class="funnel"></div>
+          <p class="hint"><i class="key"></i>Total &nbsp; <i class="key adv"></i>Reached interview or beyond</p>
+        </div>
       </div>
     </section>
 
@@ -102,7 +121,7 @@
       <div id="talentList" class="talent"></div>
     </section>
 
-    <p class="note">Demo data is fictional. Everything is saved only in this browser (local storage). Nothing is sent to a server.</p>
+    <p class="note">Demo data is fictional. Everything is saved only in this browser (local storage), and nothing is sent to a server. Import CSV accepts this app's export or any spreadsheet with a "Name" column (optional: Email, Position, Stage, Skills, Source, Notes).</p>
   </main>
 
   <footer class="wrap foot">
@@ -124,6 +143,10 @@
         <label>Next follow-up<input name="followUp" type="date"></label>
         <label>Last contact<input name="lastContact" type="date"></label>
         <label class="full">Notes<textarea name="notes" rows="3" maxlength="1000"></textarea></label>
+      </div>
+      <div class="history" id="candHistory" hidden>
+        <h3>History</h3>
+        <ol id="candHistoryList"></ol>
       </div>
       <div class="dialog-actions">
         <button type="button" class="link-btn danger" id="candDelete">Delete</button>

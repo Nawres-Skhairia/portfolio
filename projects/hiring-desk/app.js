@@ -40,21 +40,27 @@
       P('HR Assistant', 'People', 'Lyon', 1, 'Low', ['Recruiting', 'Onboarding', 'Excel'], 60, 'On hold')
     ];
     const [qa, bc, da, hr] = positions.map((p) => p.id);
-    const C = (name, positionId, stage, skills, rating, source, follow, last, notes) =>
-      ({ id: uid(), name, email: name.toLowerCase().replace(/[^a-z]+/g, '.') + '@example.com', positionId, stage, skills, rating, source, followUp: follow === null ? '' : plus(follow), lastContact: plus(last), notes: notes || '', added: plus(last - 3) });
+    const C = (name, positionId, stage, skills, rating, source, follow, last, notes, since, addedAgo) => {
+      const added = plus(addedAgo || last - 3), stageSince = plus(since || last);
+      const history = [{ d: added, t: 'Applied via ' + source }];
+      if (stage !== 'Applied') history.push({ d: stageSince, t: 'Moved to ' + stage });
+      return { id: uid(), name, email: name.toLowerCase().replace(/[^a-z]+/g, '.') + '@example.com', positionId, stage, skills, rating, source,
+        followUp: follow === null ? '' : plus(follow), lastContact: plus(last), notes: notes || '', added, stageSince, history,
+        hiredOn: stage === 'Hired' ? stageSince : '' };
+    };
     const candidates = [
       C('Lina Haddad', qa, 'Interview', ['Selenium', 'Test automation', 'Java', 'Jira'], 4, 'LinkedIn', 0, -6, 'Strong on automation. Second interview with the tech lead.'),
-      C('Omar Ferchichi', qa, 'Screening', ['Manual testing', 'Jira', 'SQL'], 3, 'Job board', -2, -9, 'Waiting for availability dates.'),
-      C('Julie Martin', qa, 'Offer', ['Selenium', 'API testing', 'SQL', 'Postman', 'Test automation'], 5, 'Referral', 1, -2, 'Offer sent, expecting answer this week.'),
+      C('Omar Ferchichi', qa, 'Screening', ['Manual testing', 'Jira', 'SQL'], 3, 'Job board', -2, -9, 'Waiting for availability dates.', -19, -24),
+      C('Julie Martin', qa, 'Offer', ['Selenium', 'API testing', 'SQL', 'Postman', 'Test automation'], 5, 'Referral', 1, -2, 'Offer sent, expecting answer this week.', -2, -27),
       C('Karim Ben Ali', qa, 'Applied', ['Cypress', 'JavaScript', 'API testing'], 0, 'Website', 3, -1),
       C('Sofia Rossi', bc, 'Interview', ['Process mapping', 'Excel', 'Change management'], 4, 'LinkedIn', -1, -8, 'Case study to review.'),
       C('Thomas Leroy', bc, 'Screening', ['Stakeholder management', 'Power BI', 'Excel'], 3, 'Agency', 2, -4),
       C('Amira Trabelsi', da, 'Interview', ['SQL', 'Python', 'Power BI', 'Excel'], 5, 'LinkedIn', 0, -5, 'Excellent technical test.'),
       C('Hugo Bernard', da, 'Applied', ['Excel', 'Tableau'], 2, 'Job board', 4, -1),
       C('Nadia Saidi', da, 'Rejected', ['SQL', 'Python', 'Statistics'], 3, 'Website', null, -40, 'Great profile, chose another offer. Keep for future roles.'),
-      C('Paul Garnier', qa, 'Hired', ['Selenium', 'Test automation', 'SQL', 'Jira'], 5, 'Referral', null, -20, 'Started last month.'),
+      C('Paul Garnier', qa, 'Hired', ['Selenium', 'Test automation', 'SQL', 'Jira'], 5, 'Referral', null, -20, 'Started last month.', -20, -52),
       C('Ines Mansour', bc, 'Rejected', ['Process mapping', 'Power BI', 'Agile'], 4, 'LinkedIn', null, -60, 'Too junior then, worth re-contacting.'),
-      C('Leo Dubois', hr, 'Applied', ['Recruiting', 'Onboarding'], 0, 'Website', null, -12),
+      C('Leo Dubois', hr, 'Applied', ['Recruiting', 'Onboarding'], 0, 'Website', null, -12, '', -16, -16),
       C('Yasmine Gharbi', da, 'Screening', ['SQL', 'Excel', 'Power BI'], 3, 'Referral', -4, -11, 'Chase for references.')
     ];
     return { positions, candidates };
@@ -63,8 +69,14 @@
   /* ---------- storage ---------- */
   let db;
   function load() {
-    try { const raw = localStorage.getItem(KEY); if (raw) { db = JSON.parse(raw); if (db && db.positions && db.candidates) return; } } catch (e) { /* ignore */ }
-    db = demo(); save();
+    try { const raw = localStorage.getItem(KEY); if (raw) { const d = JSON.parse(raw); if (d && d.positions && d.candidates) db = d; } } catch (e) { /* ignore */ }
+    if (!db) db = demo();
+    db.candidates.forEach((c) => {
+      if (!c.stageSince) c.stageSince = c.lastContact || c.added || iso(today());
+      if (!Array.isArray(c.history)) c.history = [];
+      if (!Array.isArray(c.skills)) c.skills = splitSkills(c.skills);
+    });
+    save();
   }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) { /* storage unavailable: keep in memory */ } }
   const posById = (id) => db.positions.find((p) => p.id === id);
@@ -89,9 +101,21 @@
     const hired = db.candidates.filter((c) => c.stage === 'Hired').length;
     $('kpis').innerHTML = `
       <div class="kpi dark"><span class="k-label">Open positions</span><span class="k-val">${open.length}</span><span class="k-sub">${needed} people still to hire</span></div>
-      <div class="kpi"><span class="k-label">Active candidates</span><span class="k-val">${active.length}</span><span class="k-sub">${db.candidates.filter((c) => c.stage === 'Interview').length} in interview</span></div>
+      <div class="kpi"><span class="k-label">Active candidates</span><span class="k-val">${active.length}</span><span class="k-sub">${db.candidates.filter((c) => c.stage === 'Interview').length} in interview · ${active.filter(isStuck).length} stuck</span></div>
       <div class="kpi ${overdue ? 'alert' : ''}"><span class="k-label">Follow-ups</span><span class="k-val">${overdue + dueToday}</span><span class="k-sub">${overdue} late · ${dueToday} today</span></div>
-      <div class="kpi"><span class="k-label">Hired</span><span class="k-val">${hired}</span><span class="k-sub">${db.candidates.length} people in your talent pool</span></div>`;
+      <div class="kpi"><span class="k-label">Hired</span><span class="k-val">${hired}</span><span class="k-sub">${avgDaysToHire() === null ? db.candidates.length + ' people in your talent pool' : 'in ' + avgDaysToHire() + ' days on average'}</span></div>`;
+
+    const srcs = {};
+    db.candidates.forEach((c) => { const s = srcs[c.source] || (srcs[c.source] = { n: 0, adv: 0, hired: 0 }); s.n++; if (['Interview', 'Offer', 'Hired'].includes(c.stage)) s.adv++; if (c.stage === 'Hired') s.hired++; });
+    const smax = Math.max(1, ...Object.values(srcs).map((x) => x.n));
+    $('sources').innerHTML = Object.entries(srcs).sort((a, b) => b[1].n - a[1].n).map(([k, v]) =>
+      `<div class="f-row src"><span>${esc(k)}</span><div class="f-bar"><span style="width:${(v.n / smax) * 100}%"></span><span class="adv" style="width:${(v.adv / smax) * 100}%"></span></div><b>${v.n}</b></div>`
+    ).join('') || '<p class="empty">No candidates yet.</p>';
+
+    const stuck = db.candidates.filter(isStuck).sort((a, b) => inStage(b) - inStage(a));
+    $('stuckList').innerHTML = stuck.length ? stuck.map((c) =>
+      `<li><span><button type="button" class="link-btn" data-open="${c.id}" style="padding:0;min-height:0">${esc(c.name)}</button><br><small style="color:var(--soft)">${esc(posTitle(c.positionId))} · ${esc(c.stage)}</small></span><span class="when over">${inStage(c)} days in ${esc(c.stage)}</span></li>`
+    ).join('') : '<li class="empty">Nobody stuck. Everything is moving.</li>';
 
     const max = Math.max(1, ...STAGES.map((s) => db.candidates.filter((c) => c.stage === s).length));
     $('funnel').innerHTML = STAGES.map((s) => {
@@ -116,16 +140,24 @@
         <div class="need-count">${h} / ${p.needed} hired</div></div>`;
     }).join('') : '<p class="empty">No open positions. Add one with "+ Position".</p>';
   }
+  const inStage = (c) => Math.max(0, -daysFrom(c.stageSince || iso(today())));
+  const STUCK = 14;
+  const isStuck = (c) => ACTIVE.includes(c.stage) && inStage(c) > STUCK;
+  function avgDaysToHire() {
+    const h = db.candidates.filter((c) => c.stage === 'Hired' && c.hiredOn && c.added);
+    if (!h.length) return null;
+    return Math.round(h.reduce((s, c) => s + (daysFrom(c.hiredOn) - daysFrom(c.added)), 0) / h.length);
+  }
   const hiredFor = (pid) => db.candidates.filter((c) => c.positionId === pid && c.stage === 'Hired').length;
 
   function cardHTML(c) {
     const i = STAGES.indexOf(c.stage);
-    return `<article class="ccard" draggable="true" data-id="${c.id}">
+    return `<article class="ccard${isStuck(c) ? ' is-stuck' : ''}" draggable="true" data-id="${c.id}">
       <button type="button" class="name" data-open="${c.id}">${esc(c.name)}</button>
       <span class="role">${esc(posTitle(c.positionId))}</span>
       <div class="chips">${c.skills.slice(0, 4).map((s) => `<span class="chip">${esc(s)}</span>`).join('')}</div>
       <div class="row"><span class="stars" aria-label="${c.rating || 0} out of 5">${stars(c.rating)}</span>${c.followUp && ACTIVE.includes(c.stage) ? whenLabel(c.followUp) : ''}</div>
-      <div class="row"><small style="color:var(--soft)">${esc(c.source)}</small>
+      <div class="row"><small class="${isStuck(c) ? 'stuck' : ''}" style="color:${isStuck(c) ? 'var(--rust)' : 'var(--soft)'}">${ACTIVE.includes(c.stage) ? inStage(c) + 'd in stage' + (isStuck(c) ? ' · stuck' : '') : esc(c.source)}</small>
         <span class="arrows"><button type="button" data-move="${c.id}" data-dir="-1" aria-label="Move ${esc(c.name)} back" ${i === 0 ? 'disabled' : ''}>←</button><button type="button" data-move="${c.id}" data-dir="1" aria-label="Move ${esc(c.name)} forward" ${i === STAGES.length - 1 ? 'disabled' : ''}>→</button></span></div>
     </article>`;
   }
@@ -229,7 +261,9 @@
   }
   function setStage(c, stage) {
     if (c.stage === stage) return;
-    c.stage = stage; c.lastContact = iso(today());
+    c.stage = stage; c.lastContact = iso(today()); c.stageSince = iso(today());
+    c.history.push({ d: iso(today()), t: 'Moved to ' + stage });
+    if (stage === 'Hired') c.hiredOn = iso(today());
     if (stage === 'Hired' || stage === 'Rejected') c.followUp = '';
     save(); render();
     toast(`${c.name} → ${stage}`);
@@ -251,6 +285,9 @@
     f.followUp.value = c ? c.followUp : plus(3); f.lastContact.value = c ? c.lastContact : iso(today());
     f.notes.value = c ? c.notes : '';
     $('candDelete').hidden = !c;
+    const h = c ? c.history.slice().reverse() : [];
+    $('candHistory').hidden = !h.length;
+    $('candHistoryList').innerHTML = h.map((x) => `<li><time>${esc(x.d)}</time>${esc(x.t)}</li>`).join('');
     $('candDialog').showModal();
   }
   $('candForm').addEventListener('submit', (e) => {
@@ -258,8 +295,10 @@
     const data = { name: f.name.value.trim(), email: f.email.value.trim(), positionId: f.positionId.value, stage: f.stage.value, source: f.source.value,
       rating: parseInt(f.rating.value, 10) || 0, skills: splitSkills(f.skills.value), followUp: f.followUp.value, lastContact: f.lastContact.value, notes: f.notes.value.trim() };
     if (!data.name) return;
-    if (editingCand) Object.assign(editingCand, data);
-    else db.candidates.push(Object.assign({ id: uid(), added: iso(today()) }, data));
+    if (editingCand) {
+      if (editingCand.stage !== data.stage) { data.stageSince = iso(today()); editingCand.history.push({ d: iso(today()), t: 'Moved to ' + data.stage }); if (data.stage === 'Hired') data.hiredOn = iso(today()); }
+      Object.assign(editingCand, data);
+    } else db.candidates.push(Object.assign({ id: uid(), added: iso(today()), stageSince: iso(today()), history: [{ d: iso(today()), t: 'Added (' + data.source + ')' }] }, data));
     save(); render(); toast(editingCand ? 'Saved' : 'Candidate added');
   });
   $('candCancel').addEventListener('click', () => $('candDialog').close());
@@ -316,10 +355,67 @@
       $('skillSearch').value = skillFilter.join(', '); $('matchPos').value = ''; renderTalent();
     } else if (d.snooze || d.done) {
       const c = db.candidates.find((x) => x.id === (d.snooze || d.done)); if (!c) return;
-      if (d.done) { c.lastContact = iso(today()); c.followUp = plus(7); toast(`Logged. Next follow-up with ${c.name} in 7 days`); }
-      else { const base = c.followUp && daysFrom(c.followUp) > 0 ? new Date(c.followUp + 'T00:00:00') : today(); c.followUp = iso(new Date(base.getTime() + 3 * DAY)); toast('Snoozed 3 days'); }
+      if (d.done) { c.lastContact = iso(today()); c.followUp = plus(7); c.history.push({ d: iso(today()), t: 'Followed up' }); toast(`Logged. Next follow-up with ${c.name} in 7 days`); }
+      else { const base = c.followUp && daysFrom(c.followUp) > 0 ? new Date(c.followUp + 'T00:00:00') : today(); c.followUp = iso(new Date(base.getTime() + 3 * DAY)); c.history.push({ d: iso(today()), t: 'Follow-up moved to ' + c.followUp }); toast('Snoozed 3 days'); }
       save(); render();
     }
+  });
+  document.querySelectorAll('[data-tour]').forEach((b) => b.addEventListener('click', () => {
+    const t = b.dataset.tour;
+    if (t === 'follow') setTab('followups');
+    if (t === 'pipe') setTab('pipeline');
+    if (t === 'match') { const p = db.positions[0]; setTab('talent'); if (p) { $('matchPos').value = p.id; $('skillSearch').value = ''; skillFilter = []; renderTalent(); } }
+    document.querySelector('.tabs').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }));
+
+  /* CSV import (accepts this app's export, or any sheet with a Name column) */
+  function parseCSV(text) {
+    const rows = []; let row = [], cell = '', q = false;
+    text = text.replace(/^\ufeff/, '');
+    const sep = (text.split('\n')[0].match(/;/g) || []).length > (text.split('\n')[0].match(/,/g) || []).length ? ';' : ',';
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (q) { if (ch === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; } else cell += ch; }
+      else if (ch === '"') q = true;
+      else if (ch === sep) { row.push(cell); cell = ''; }
+      else if (ch === '\n' || ch === '\r') { if (ch === '\r' && text[i + 1] === '\n') i++; row.push(cell); rows.push(row); row = []; cell = ''; }
+      else cell += ch;
+    }
+    if (cell || row.length) { row.push(cell); rows.push(row); }
+    return rows.filter((r) => r.some((c) => c.trim()));
+  }
+  $('importCsv').addEventListener('click', () => $('csvFile').click());
+  $('csvFile').addEventListener('change', (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const rows = parseCSV(String(reader.result));
+      if (rows.length < 2) { toast('No rows found in that file'); return; }
+      const head = rows[0].map((h) => h.trim().toLowerCase());
+      const col = (...names) => head.findIndex((h) => names.some((n) => h === n || h.includes(n)));
+      const ix = { name: col('name', 'nom'), email: col('email', 'mail'), pos: col('position', 'poste', 'job'), stage: col('stage', 'status', 'statut'),
+        skills: col('skill', 'compétence', 'competence'), rating: col('rating', 'note'), source: col('source'), follow: col('follow', 'relance'), last: col('last contact', 'dernier'), notes: col('notes', 'comment') };
+      if (ix.name < 0) { toast('The file needs a "Name" column'); return; }
+      const get = (r, k) => (ix[k] >= 0 ? (r[ix[k]] || '').trim() : '');
+      const okDate = (v) => /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : '';
+      let added = 0, newPos = 0;
+      rows.slice(1).forEach((r) => {
+        const name = get(r, 'name'); if (!name) return;
+        const title = get(r, 'pos') || 'Imported candidates';
+        let pos = db.positions.find((p) => norm(p.title) === norm(title));
+        if (!pos) { pos = { id: uid(), title, team: '', location: '', needed: 1, priority: 'Medium', status: 'Open', skills: [], target: '', opened: iso(today()) }; db.positions.push(pos); newPos++; }
+        const st = STAGES.find((s) => norm(s) === norm(get(r, 'stage'))) || 'Applied';
+        const source = get(r, 'source') || 'Other';
+        db.candidates.push({ id: uid(), name: name.slice(0, 80), email: get(r, 'email').slice(0, 120), positionId: pos.id, stage: st,
+          skills: get(r, 'skills').split(/[;,|]/).map((x) => x.trim()).filter(Boolean), rating: Math.min(5, parseInt(get(r, 'rating'), 10) || 0),
+          source, followUp: okDate(get(r, 'follow')), lastContact: okDate(get(r, 'last')) || iso(today()), notes: get(r, 'notes').slice(0, 1000),
+          added: iso(today()), stageSince: iso(today()), history: [{ d: iso(today()), t: 'Imported from ' + file.name }] });
+        added++;
+      });
+      save(); render(); toast(`Imported ${added} candidate${added === 1 ? '' : 's'}${newPos ? ` and ${newPos} position${newPos === 1 ? '' : 's'}` : ''}`);
+      e.target.value = '';
+    };
+    reader.readAsText(file);
   });
   $('addCandidate').addEventListener('click', () => openCand(null));
   $('addPosition').addEventListener('click', () => openPos(null));
