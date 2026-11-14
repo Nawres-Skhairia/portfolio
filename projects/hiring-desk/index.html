@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hiring Desk · Track positions, candidates and follow-ups · Nawres Skhairia</title>
+  <meta name="description" content="A simple recruitment tracker: open positions and needs, candidate pipeline, follow-up reminders and a searchable talent pool. Runs in your browser.">
+  <meta property="og:title" content="Hiring Desk · A recruitment tracker that fits on one screen">
+  <meta property="og:description" content="Positions, pipeline, follow-ups and a searchable talent pool. Private: data stays in your browser.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Gloock&family=Karla:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top wrap">
+    <a class="back" href="/#work">← Nawres Skhairia</a>
+    <span class="tag">Project N°02 · Work in progress</span>
+  </header>
+
+  <main class="wrap">
+    <section class="intro">
+      <h1>Hiring Desk</h1>
+      <p>Open positions, candidates, follow-ups and past talent, all on one screen. It's loaded with demo data so you can try it right away. Your own data stays in your browser.</p>
+    </section>
+
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button role="tab" type="button" data-tab="dashboard" aria-selected="true">Dashboard</button>
+      <button role="tab" type="button" data-tab="pipeline" aria-selected="false">Pipeline</button>
+      <button role="tab" type="button" data-tab="positions" aria-selected="false">Positions</button>
+      <button role="tab" type="button" data-tab="followups" aria-selected="false">Follow-ups <span class="badge" id="fuBadge" hidden></span></button>
+      <button role="tab" type="button" data-tab="talent" aria-selected="false">Talent pool</button>
+    </nav>
+
+    <div class="toolbar">
+      <button type="button" class="btn" id="addCandidate">+ Candidate</button>
+      <button type="button" class="btn btn-line" id="addPosition">+ Position</button>
+      <span class="spacer"></span>
+      <button type="button" class="link-btn" id="exportCsv">Export CSV</button>
+      <button type="button" class="link-btn" id="resetDemo">Reset demo</button>
+      <button type="button" class="link-btn" id="clearAll">Start empty</button>
+    </div>
+
+    <!-- Dashboard -->
+    <section class="view" id="view-dashboard" role="tabpanel">
+      <div class="kpis" id="kpis"></div>
+      <div class="grid2">
+        <div class="panel">
+          <h2>Pipeline</h2>
+          <div id="funnel" class="funnel"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h2>Follow-ups due</h2><button type="button" class="link-btn" data-goto="followups">See all</button></div>
+          <ul id="dueSoon" class="mini-list"></ul>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Hiring needs</h2>
+        <div id="needs" class="needs"></div>
+      </div>
+    </section>
+
+    <!-- Pipeline -->
+    <section class="view" id="view-pipeline" role="tabpanel" hidden>
+      <div class="filters">
+        <label for="pipeFilter">Position</label>
+        <select id="pipeFilter"></select>
+        <label for="pipeSearch" class="sr">Search candidates</label>
+        <input id="pipeSearch" type="search" placeholder="Search name or skill…">
+      </div>
+      <div class="board" id="board"></div>
+      <p class="hint">Drag a card to another column, or use the arrows. Click a name to open the details.</p>
+    </section>
+
+    <!-- Positions -->
+    <section class="view" id="view-positions" role="tabpanel" hidden>
+      <div class="positions" id="positionsList"></div>
+    </section>
+
+    <!-- Follow-ups -->
+    <section class="view" id="view-followups" role="tabpanel" hidden>
+      <div id="followList" class="follow"></div>
+    </section>
+
+    <!-- Talent pool -->
+    <section class="view" id="view-talent" role="tabpanel" hidden>
+      <div class="grid2 talent-top">
+        <div class="panel">
+          <h2>Find people by skill</h2>
+          <label for="skillSearch" class="sr">Skills</label>
+          <input id="skillSearch" type="search" placeholder="e.g. SQL, Selenium, Excel">
+          <div class="chips" id="skillCloud"></div>
+        </div>
+        <div class="panel">
+          <h2>Best matches for a role</h2>
+          <label for="matchPos" class="sr">Position</label>
+          <select id="matchPos"></select>
+          <p class="hint">Ranks every candidate ever added, including past ones, by how many of the role's skills they have.</p>
+        </div>
+      </div>
+      <div id="talentList" class="talent"></div>
+    </section>
+
+    <p class="note">Demo data is fictional. Everything is saved only in this browser (local storage). Nothing is sent to a server.</p>
+  </main>
+
+  <footer class="wrap foot">
+    <p>Built by <a href="/">Nawres Skhairia</a>. A work in progress: ideas and feedback are welcome, <a href="/#contact">get in touch</a>.</p>
+  </footer>
+
+  <!-- Candidate dialog -->
+  <dialog id="candDialog" aria-labelledby="candTitle">
+    <form method="dialog" id="candForm">
+      <h2 id="candTitle">Candidate</h2>
+      <div class="form-grid">
+        <label>Full name<input name="name" required maxlength="80"></label>
+        <label>Email<input name="email" type="email" maxlength="120"></label>
+        <label>Position<select name="positionId" id="candPos"></select></label>
+        <label>Stage<select name="stage" id="candStage"></select></label>
+        <label>Source<select name="source"><option>LinkedIn</option><option>Referral</option><option>Job board</option><option>Website</option><option>Agency</option><option>Other</option></select></label>
+        <label>Rating<select name="rating"><option value="0">–</option><option value="1">★</option><option value="2">★★</option><option value="3">★★★</option><option value="4">★★★★</option><option value="5">★★★★★</option></select></label>
+        <label class="full">Skills <span>(comma separated)</span><input name="skills" maxlength="300" placeholder="SQL, Excel, Jira"></label>
+        <label>Next follow-up<input name="followUp" type="date"></label>
+        <label>Last contact<input name="lastContact" type="date"></label>
+        <label class="full">Notes<textarea name="notes" rows="3" maxlength="1000"></textarea></label>
+      </div>
+      <div class="dialog-actions">
+        <button type="button" class="link-btn danger" id="candDelete">Delete</button>
+        <span class="spacer"></span>
+        <button type="button" class="btn btn-line" value="cancel" id="candCancel">Cancel</button>
+        <button type="submit" class="btn" value="save">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Position dialog -->
+  <dialog id="posDialog" aria-labelledby="posTitle">
+    <form method="dialog" id="posForm">
+      <h2 id="posTitle">Position</h2>
+      <div class="form-grid">
+        <label class="full">Job title<input name="title" required maxlength="80"></label>
+        <label>Team<input name="team" maxlength="60"></label>
+        <label>Location<input name="location" maxlength="60"></label>
+        <label>People needed<input name="needed" type="number" min="1" max="99" value="1"></label>
+        <label>Priority<select name="priority"><option>High</option><option selected>Medium</option><option>Low</option></select></label>
+        <label>Status<select name="status"><option>Open</option><option>On hold</option><option>Filled</option></select></label>
+        <label>Target date<input name="target" type="date"></label>
+        <label class="full">Required skills <span>(comma separated)</span><input name="skills" maxlength="300"></label>
+      </div>
+      <div class="dialog-actions">
+        <button type="button" class="link-btn danger" id="posDelete">Delete</button>
+        <span class="spacer"></span>
+        <button type="button" class="btn btn-line" id="posCancel">Cancel</button>
+        <button type="submit" class="btn">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>
