@@ -97,3 +97,10 @@ h2 { font-size: clamp(36px, 5vw, 48px); line-height: 1.1; }
   .btn { width: 100%; justify-content: center; }
   .contact-box .btn-dark { font-size: 15px; padding: 0 12px; }
 }
+
+.card-link { text-decoration: none; transition: transform .25s ease, box-shadow .25s ease; }
+.card-link:hover { color: var(--ink); transform: rotate(0deg) translateY(-4px) !important; box-shadow: 0 12px 30px rgba(0,0,0,.25); }
+.shot-loan { background: var(--green); color: var(--paper); flex-direction: column; gap: 4px; }
+.shot-big { font-family: var(--serif); font-size: 44px; line-height: 1; }
+.shot-small { font-size: 14px; opacity: .8; }
+.card-cta { font-weight: 700; color: var(--rust); font-size: 15px; margin-top: 4px; }

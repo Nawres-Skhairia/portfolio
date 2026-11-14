@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Loan Simulator · Nawres Skhairia</title>
+  <meta name="description" content="Instantly see monthly payments, total interest and how much you save by repaying early. A free loan simulator by Nawres Skhairia.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Gloock&family=Karla:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top wrap">
+    <a class="back" href="/#work">← Nawres Skhairia</a>
+    <span class="tag">Project N°01</span>
+  </header>
+
+  <main class="wrap">
+    <section class="intro">
+      <h1>Loan simulator</h1>
+      <p>See what a loan really costs, month by month, and how much you save by paying a little extra.</p>
+    </section>
+
+    <div class="layout">
+      <form class="panel inputs" id="form" onsubmit="return false">
+        <div class="field">
+          <label for="currency">Currency</label>
+          <select id="currency">
+            <option value="EUR">Euro (€)</option>
+            <option value="USD">US dollar ($)</option>
+            <option value="GBP">Pound (£)</option>
+            <option value="TND">Tunisian dinar (TND)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="amount">Loan amount</label>
+          <input id="amount" type="number" inputmode="decimal" min="100" step="100" value="150000">
+          <input id="amountRange" type="range" min="1000" max="1000000" step="1000" value="150000" aria-label="Loan amount slider">
+        </div>
+        <div class="field">
+          <label for="rate">Annual interest rate (%)</label>
+          <input id="rate" type="number" inputmode="decimal" min="0" max="30" step="0.05" value="3.5">
+          <input id="rateRange" type="range" min="0" max="15" step="0.05" value="3.5" aria-label="Interest rate slider">
+        </div>
+        <div class="field">
+          <label for="years">Duration (years)</label>
+          <input id="years" type="number" inputmode="numeric" min="1" max="40" step="1" value="20">
+          <input id="yearsRange" type="range" min="1" max="40" step="1" value="20" aria-label="Duration slider">
+        </div>
+        <div class="field extra">
+          <label for="extra">Extra payment each month <span>(optional)</span></label>
+          <input id="extra" type="number" inputmode="decimal" min="0" step="10" value="0">
+          <p class="hint">Try adding a small amount to see how many months and how much interest you save.</p>
+        </div>
+      </form>
+
+      <section class="results" aria-live="polite">
+        <div class="cards">
+          <div class="card main">
+            <p class="label">Monthly payment</p>
+            <p class="big" id="monthly">–</p>
+            <p class="sub" id="monthlyExtra"></p>
+          </div>
+          <div class="card">
+            <p class="label">Total interest</p>
+            <p class="mid" id="interest">–</p>
+          </div>
+          <div class="card">
+            <p class="label">Total repaid</p>
+            <p class="mid" id="total">–</p>
+          </div>
+          <div class="card">
+            <p class="label">Paid off in</p>
+            <p class="mid" id="duration">–</p>
+          </div>
+        </div>
+
+        <div class="savings" id="savings" hidden>
+          <p><strong id="saveMoney"></strong> less interest and <strong id="saveTime"></strong> sooner, thanks to your extra payment.</p>
+        </div>
+
+        <div class="panel chart-panel">
+          <div class="chart-head">
+            <h2>Balance over time</h2>
+            <div class="legend">
+              <span><i class="sw sw-base"></i>Standard plan</span>
+              <span id="legendExtra" hidden><i class="sw sw-extra"></i>With extra payment</span>
+            </div>
+          </div>
+          <svg id="chart" viewBox="0 0 640 260" role="img" aria-label="Chart of remaining balance over time"></svg>
+        </div>
+
+        <div class="panel split-panel">
+          <h2>Where your money goes</h2>
+          <div class="bar" aria-hidden="true"><span id="barPrincipal"></span><span id="barInterest"></span></div>
+          <div class="split-legend">
+            <span><i class="sw sw-principal"></i>Principal <b id="pctPrincipal"></b></span>
+            <span><i class="sw sw-interest"></i>Interest <b id="pctInterest"></b></span>
+          </div>
+        </div>
+
+        <details class="panel table-panel">
+          <summary>Year-by-year schedule</summary>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Year</th><th>Paid</th><th>Of which interest</th><th>Balance left</th></tr></thead>
+              <tbody id="schedule"></tbody>
+            </table>
+          </div>
+        </details>
+      </section>
+    </div>
+
+    <p class="note">Estimates for a fixed-rate loan with monthly repayments. Real offers may include fees and insurance.</p>
+  </main>
+
+  <footer class="wrap foot">
+    <p>Built by <a href="/">Nawres Skhairia</a> · Need a tool like this for your business? <a href="/#contact">Let's talk</a></p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
