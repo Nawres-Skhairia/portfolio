@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rulebench · Test business rules before people find the loophole · Nawres Skhairia</title>
+  <meta name="description" content="Rulebench tests business rules the way developers test code: it replays last year's cases, attacks the rule to find loopholes, and finds the cases no rule covers.">
+  <meta property="og:title" content="Rulebench · Test business rules like code">
+  <meta property="og:description" content="Replay, red team and coverage tests for commission plans, approval limits and other business rules. Runs in your browser.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Gloock&family=Karla:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top wrap">
+    <a class="back" href="/#work">← Nawres Skhairia</a>
+    <span class="tag">Project N°04 · Work in progress</span>
+  </header>
+
+  <main class="wrap">
+    <section class="intro">
+      <h1>Rulebench</h1>
+      <p class="lead">Companies change their rules all the time: commission plans, approval limits, bonus schemes. They almost never test them, so the first test happens in real life, when someone finds the loophole. Rulebench tests a business rule the way developers test code.</p>
+      <div class="scn-switch" role="radiogroup" aria-label="Rule set">
+        <button type="button" role="radio" data-scn="commission" aria-checked="true"><b>Sales commission plan</b><span>Next year's draft for a team of 6 reps</span></button>
+        <button type="button" role="radio" data-scn="expenses" aria-checked="false"><b>Expense approvals</b><span>New routing rules for 12 people</span></button>
+      </div>
+      <div class="tour">
+        <span>Try it:</span>
+        <button type="button" class="chip-btn" data-tour="attack">1. Attack the rule</button>
+        <button type="button" class="chip-btn" data-tour="fix">2. Apply the fixes</button>
+        <button type="button" class="chip-btn" data-tour="replay">3. Replay last year</button>
+      </div>
+    </section>
+
+    <div class="layout">
+      <!-- Rules editor -->
+      <section class="panel rules" aria-labelledby="rulesTitle">
+        <div class="panel-head">
+          <h2 id="rulesTitle">The draft rules</h2>
+          <button type="button" class="link-btn" id="resetDraft">Reset draft</button>
+        </div>
+        <p class="hint" id="scnStory"></p>
+        <div class="dt-wrap"><table class="dt" id="dt"></table></div>
+        <button type="button" class="link-btn add-row" id="addRow">+ Add a row</button>
+        <ol class="sentences" id="sentences"></ol>
+        <div class="settings" id="settings"></div>
+        <details class="today">
+          <summary>Rules in use today</summary>
+          <ol class="sentences" id="todayRules"></ol>
+          <p class="hint" id="todaySettings"></p>
+        </details>
+      </section>
+
+      <!-- Test report -->
+      <section class="report" aria-labelledby="reportTitle">
+        <div class="panel-head">
+          <h2 id="reportTitle" class="report-title">Test report</h2>
+          <button type="button" class="link-btn" id="printBtn">Print report</button>
+        </div>
+        <div class="scores" id="scores"></div>
+
+        <div class="panel" id="redPanel">
+          <div class="panel-head">
+            <h3>Red team <span class="sub">Can someone game this rule?</span></h3>
+            <button type="button" class="btn" id="attackBtn">Attack this rule</button>
+          </div>
+          <div id="redOut" aria-live="polite"></div>
+        </div>
+
+        <div class="panel" id="covPanel">
+          <h3>Coverage <span class="sub">Cases no rule covers, or rules that disagree</span></h3>
+          <div id="covOut"></div>
+        </div>
+
+        <div class="panel" id="replayPanel">
+          <h3>Replay <span class="sub" id="replaySub"></span></h3>
+          <div id="replayOut"></div>
+        </div>
+      </section>
+    </div>
+
+    <section class="how" aria-labelledby="howTitle">
+      <h2 id="howTitle">How it works</h2>
+      <div class="how-grid">
+        <div>
+          <h3>Rules as a decision table</h3>
+          <p>Each rule set is a decision table, the format business analysts use in DMN. Every row has conditions and a result, and exactly one row should apply to each case. You can edit any cell and every test re-runs instantly.</p>
+        </div>
+        <div>
+          <h3>Coverage</h3>
+          <p>The engine cuts the space of possible cases at every boundary used in the table, then checks each piece. A piece no row covers is a gap. A piece where two rows give different answers is a conflict.</p>
+        </div>
+        <div>
+          <h3>Red team</h3>
+          <p>An adversary plays the person the rule applies to. It may only make moves that person really controls, like splitting a deal or moving a signing date, and it searches for the combination that pays the most. Nothing it finds is random: every exploit comes with a concrete example.</p>
+        </div>
+        <div>
+          <h3>Replay</h3>
+          <p>Last year's real cases go through today's rules and the draft side by side, so you see the cost and the workload of the change before you announce it.</p>
+        </div>
+      </div>
+    </section>
+
+    <p class="note">Demo data is fictional: names, companies and amounts are generated. Everything runs in this browser and nothing is sent to a server. Your edits are kept in this browser only.</p>
+  </main>
+
+  <footer class="wrap foot">
+    <p>Built by <a href="/">Nawres Skhairia</a>. A work in progress: ideas and feedback are welcome, <a href="/#contact">get in touch</a>.</p>
+  </footer>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="engine.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
