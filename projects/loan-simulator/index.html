@@ -3,8 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Loan Simulator · Nawres Skhairia</title>
-  <meta name="description" content="Instantly see monthly payments, total interest and how much you save by repaying early. A free loan simulator by Nawres Skhairia.">
+  <title>Loan Simulator · See what a loan really costs · Nawres Skhairia</title>
+  <meta name="description" content="See what a loan really costs, compare two bank offers side by side, check if it fits your budget, and share the result. A free tool by Nawres Skhairia.">
+  <meta property="og:title" content="Loan Simulator · What does your loan really cost?">
+  <meta property="og:description" content="Compare two bank offers, see the true cost and how much you save by repaying early. Free, instant, private.">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,89 +21,152 @@
 
   <main class="wrap">
     <section class="intro">
-      <h1>Loan simulator</h1>
-      <p>See what a loan really costs, month by month, and how much you save by paying a little extra.</p>
+      <h1>What does your loan <em>really</em> cost?</h1>
+      <p>Simulate a loan, compare two bank offers side by side, and see if it fits your budget. Everything runs in your browser: nothing you type is sent anywhere.</p>
     </section>
+
+    <div class="modes" role="group" aria-label="Mode">
+      <button type="button" id="modeSingle" class="mode on" aria-pressed="true">Simulate a loan</button>
+      <button type="button" id="modeCompare" class="mode" aria-pressed="false">Compare two offers</button>
+    </div>
 
     <div class="layout">
       <form class="panel inputs" id="form" onsubmit="return false">
-        <div class="field">
-          <label for="currency">Currency</label>
-          <select id="currency">
-            <option value="EUR">Euro (€)</option>
-            <option value="USD">US dollar ($)</option>
-            <option value="GBP">Pound (£)</option>
-            <option value="TND">Tunisian dinar (TND)</option>
-          </select>
+        <div class="row2">
+          <div class="field">
+            <label for="currency">Currency</label>
+            <select id="currency">
+              <option value="EUR">Euro (€)</option>
+              <option value="USD">US dollar ($)</option>
+              <option value="GBP">Pound (£)</option>
+              <option value="TND">Tunisian dinar</option>
+            </select>
+          </div>
         </div>
         <div class="field">
-          <label for="amount">Loan amount</label>
+          <label for="amount">Amount borrowed</label>
           <input id="amount" type="number" inputmode="decimal" min="100" step="100" value="150000">
-          <input id="amountRange" type="range" min="1000" max="1000000" step="1000" value="150000" aria-label="Loan amount slider">
+          <input id="amountRange" type="range" min="1000" max="1000000" step="1000" value="150000" aria-label="Amount slider">
         </div>
-        <div class="field">
-          <label for="rate">Annual interest rate (%)</label>
-          <input id="rate" type="number" inputmode="decimal" min="0" max="30" step="0.05" value="3.5">
-          <input id="rateRange" type="range" min="0" max="15" step="0.05" value="3.5" aria-label="Interest rate slider">
-        </div>
-        <div class="field">
-          <label for="years">Duration (years)</label>
-          <input id="years" type="number" inputmode="numeric" min="1" max="40" step="1" value="20">
-          <input id="yearsRange" type="range" min="1" max="40" step="1" value="20" aria-label="Duration slider">
-        </div>
-        <div class="field extra">
+
+        <fieldset class="offer" id="offerA">
+          <legend><span class="dot a"></span><span class="only-compare">Offer A</span><span class="only-single">Your loan</span></legend>
+          <div class="field">
+            <label for="rateA">Interest rate (% per year)</label>
+            <input id="rateA" type="number" inputmode="decimal" min="0" max="30" step="0.05" value="3.5">
+            <input id="rateARange" class="only-single" type="range" min="0" max="15" step="0.05" value="3.5" aria-label="Interest rate slider">
+          </div>
+          <div class="field">
+            <label for="yearsA">Duration (years)</label>
+            <input id="yearsA" type="number" inputmode="numeric" min="1" max="40" step="1" value="20">
+            <input id="yearsARange" class="only-single" type="range" min="1" max="40" step="1" value="20" aria-label="Duration slider">
+          </div>
+          <div class="field only-compare">
+            <label for="feesA">One-off fees</label>
+            <input id="feesA" type="number" inputmode="decimal" min="0" step="50" value="600">
+          </div>
+        </fieldset>
+
+        <fieldset class="offer only-compare" id="offerB">
+          <legend><span class="dot b"></span>Offer B</legend>
+          <div class="field">
+            <label for="rateB">Interest rate (% per year)</label>
+            <input id="rateB" type="number" inputmode="decimal" min="0" max="30" step="0.05" value="3.3">
+          </div>
+          <div class="field">
+            <label for="yearsB">Duration (years)</label>
+            <input id="yearsB" type="number" inputmode="numeric" min="1" max="40" step="1" value="20">
+          </div>
+          <div class="field">
+            <label for="feesB">One-off fees</label>
+            <input id="feesB" type="number" inputmode="decimal" min="0" step="50" value="5000">
+          </div>
+        </fieldset>
+
+        <div class="field only-single sep">
           <label for="extra">Extra payment each month <span>(optional)</span></label>
           <input id="extra" type="number" inputmode="decimal" min="0" step="10" value="0">
-          <p class="hint">Try adding a small amount to see how many months and how much interest you save.</p>
+          <p class="hint">Add even a small amount and watch the interest drop.</p>
+        </div>
+
+        <div class="field sep">
+          <label for="income">Your monthly net income <span>(optional)</span></label>
+          <input id="income" type="number" inputmode="decimal" min="0" step="50" value="">
+          <p class="hint">To check whether the payment fits your budget.</p>
         </div>
       </form>
 
       <section class="results" aria-live="polite">
-        <div class="cards">
-          <div class="card main">
-            <p class="label">Monthly payment</p>
-            <p class="big" id="monthly">–</p>
-            <p class="sub" id="monthlyExtra"></p>
+        <div class="insight" id="insight"></div>
+
+        <!-- Single mode -->
+        <div class="only-single stack">
+          <div class="cards">
+            <div class="card main">
+              <p class="label">Monthly payment</p>
+              <p class="big" id="monthly">–</p>
+              <p class="sub" id="monthlyExtra"></p>
+            </div>
+            <div class="card"><p class="label">Total interest</p><p class="mid" id="interest">–</p></div>
+            <div class="card"><p class="label">Total repaid</p><p class="mid" id="total">–</p></div>
+            <div class="card"><p class="label">Paid off in</p><p class="mid" id="duration">–</p></div>
           </div>
-          <div class="card">
-            <p class="label">Total interest</p>
-            <p class="mid" id="interest">–</p>
-          </div>
-          <div class="card">
-            <p class="label">Total repaid</p>
-            <p class="mid" id="total">–</p>
-          </div>
-          <div class="card">
-            <p class="label">Paid off in</p>
-            <p class="mid" id="duration">–</p>
+          <div class="savings" id="savings" hidden>
+            <p><strong id="saveMoney"></strong> less interest and debt-free <strong id="saveTime"></strong> sooner, thanks to your extra payment.</p>
           </div>
         </div>
 
-        <div class="savings" id="savings" hidden>
-          <p><strong id="saveMoney"></strong> less interest and <strong id="saveTime"></strong> sooner, thanks to your extra payment.</p>
+        <!-- Compare mode -->
+        <div class="only-compare stack">
+          <div class="winner" id="winner"></div>
+          <div class="compare-grid">
+            <div class="ccard"><p class="label"><span class="dot a"></span>Offer A</p>
+              <dl>
+                <div><dt>Monthly</dt><dd id="cMonthlyA">–</dd></div>
+                <div><dt>Interest</dt><dd id="cInterestA">–</dd></div>
+                <div><dt>Fees</dt><dd id="cFeesA">–</dd></div>
+                <div class="tot"><dt>Total cost</dt><dd id="cCostA">–</dd></div>
+              </dl>
+            </div>
+            <div class="ccard"><p class="label"><span class="dot b"></span>Offer B</p>
+              <dl>
+                <div><dt>Monthly</dt><dd id="cMonthlyB">–</dd></div>
+                <div><dt>Interest</dt><dd id="cInterestB">–</dd></div>
+                <div><dt>Fees</dt><dd id="cFeesB">–</dd></div>
+                <div class="tot"><dt>Total cost</dt><dd id="cCostB">–</dd></div>
+              </dl>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel afford" id="afford" hidden>
+          <div class="afford-head"><h2>Does it fit your budget?</h2><p class="pct" id="affordPct"></p></div>
+          <div class="gauge" aria-hidden="true"><span id="gaugeFill"></span><i style="left:35%"></i></div>
+          <p class="afford-text" id="affordText"></p>
         </div>
 
         <div class="panel chart-panel">
           <div class="chart-head">
             <h2>Balance over time</h2>
-            <div class="legend">
-              <span><i class="sw sw-base"></i>Standard plan</span>
-              <span id="legendExtra" hidden><i class="sw sw-extra"></i>With extra payment</span>
-            </div>
+            <div class="legend" id="legend"></div>
           </div>
-          <svg id="chart" viewBox="0 0 640 260" role="img" aria-label="Chart of remaining balance over time"></svg>
+          <div class="chart-box">
+            <svg id="chart" viewBox="0 0 640 260" role="img" aria-label="Chart of remaining balance over time"></svg>
+            <div class="tip" id="tip" hidden></div>
+          </div>
+          <p class="chart-hint">Hover or touch the chart to see the balance at any point.</p>
         </div>
 
-        <div class="panel split-panel">
+        <div class="panel split-panel only-single">
           <h2>Where your money goes</h2>
           <div class="bar" aria-hidden="true"><span id="barPrincipal"></span><span id="barInterest"></span></div>
           <div class="split-legend">
-            <span><i class="sw sw-principal"></i>Principal <b id="pctPrincipal"></b></span>
-            <span><i class="sw sw-interest"></i>Interest <b id="pctInterest"></b></span>
+            <span><i class="sw sw-a"></i>Amount borrowed <b id="pctPrincipal"></b></span>
+            <span><i class="sw sw-b"></i>Interest to the bank <b id="pctInterest"></b></span>
           </div>
         </div>
 
-        <details class="panel table-panel">
+        <details class="panel table-panel only-single">
           <summary>Year-by-year schedule</summary>
           <div class="table-wrap">
             <table>
@@ -110,14 +175,20 @@
             </table>
           </div>
         </details>
+
+        <div class="share">
+          <button type="button" class="btn" id="shareBtn">Copy link to this simulation</button>
+          <button type="button" class="btn btn-line" id="printBtn">Save as PDF</button>
+          <span class="copied" id="copied" role="status"></span>
+        </div>
       </section>
     </div>
 
-    <p class="note">Estimates for a fixed-rate loan with monthly repayments. Real offers may include fees and insurance.</p>
+    <p class="note">Estimates for fixed-rate loans with monthly repayments. Real offers may include insurance and other costs. The 35% budget line is a common guideline used by many banks, not financial advice.</p>
   </main>
 
   <footer class="wrap foot">
-    <p>Built by <a href="/">Nawres Skhairia</a> · Need a tool like this for your business? <a href="/#contact">Let's talk</a></p>
+    <p>Built by <a href="/">Nawres Skhairia</a>. Need a custom tool like this for your bank, brokerage or business? <a href="/#contact">Let's talk</a>.</p>
   </footer>
 
   <script src="app.js"></script>
