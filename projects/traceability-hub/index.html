@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Traceability Hub · Requirements, tests and defects in one live matrix · Nawres Skhairia</title>
+  <meta name="description" content="Link every requirement to its tests, results and defects. When a requirement changes, see exactly which tests are now out of date, and whether the release is ready. Runs in your browser.">
+  <meta property="og:title" content="Traceability Hub · Know which tests went stale the moment a requirement changes">
+  <meta property="og:description" content="A live requirement → test → result → defect matrix with coverage heatmap, stale-test detection and a release readiness verdict.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Gloock&family=Karla:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top wrap">
+    <a class="back" href="/#work">← Nawres Skhairia</a>
+    <span class="tag">Project N°05 · Work in progress</span>
+  </header>
+
+  <main class="wrap">
+    <section class="intro">
+      <h1>Traceability Hub</h1>
+      <p class="lead">Consultants write the requirements, testers write the tests, and the link between them lives in a spreadsheet nobody updates. When a requirement changes, nobody knows which tests are now testing the wrong thing. This hub keeps requirement → test → result → defect in one live matrix, and flags stale tests the moment the wording changes.</p>
+      <div class="tour">
+        <span>Try it with the demo release:</span>
+        <button type="button" class="chip-btn" data-tour="change">Change a requirement, watch tests go stale</button>
+        <button type="button" class="chip-btn" data-tour="ready">What blocks the release?</button>
+        <button type="button" class="chip-btn" data-tour="gaps">Which requirements have no test?</button>
+      </div>
+    </section>
+
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button role="tab" type="button" data-tab="overview" aria-selected="true">Overview</button>
+      <button role="tab" type="button" data-tab="matrix" aria-selected="false">Matrix</button>
+      <button role="tab" type="button" data-tab="reqs" aria-selected="false">Requirements</button>
+      <button role="tab" type="button" data-tab="tests" aria-selected="false">Tests <span class="badge" id="staleBadge" hidden></span></button>
+      <button role="tab" type="button" data-tab="defects" aria-selected="false">Defects</button>
+    </nav>
+
+    <div class="toolbar">
+      <button type="button" class="btn" id="addReq">+ Requirement</button>
+      <button type="button" class="btn btn-line" id="addTest">+ Test</button>
+      <button type="button" class="btn btn-line" id="addDefect">+ Defect</button>
+      <span class="spacer"></span>
+      <button type="button" class="link-btn" id="exportCsv">Export matrix (CSV)</button>
+      <button type="button" class="link-btn" id="resetDemo">Reset demo</button>
+      <button type="button" class="link-btn" id="clearAll">Start empty</button>
+    </div>
+
+    <!-- Overview -->
+    <section class="view" id="view-overview" role="tabpanel">
+      <div class="kpis" id="kpis"></div>
+      <div class="grid2">
+        <div class="panel" id="readyPanel"></div>
+        <div class="panel">
+          <h2>Needs attention</h2>
+          <ul class="mini-list" id="attention"></ul>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Suggestions</h2>
+        <p class="hint">Found by comparing the words used in requirements and tests.</p>
+        <ul class="mini-list" id="suggestions"></ul>
+      </div>
+    </section>
+
+    <!-- Matrix -->
+    <section class="view" id="view-matrix" role="tabpanel" hidden>
+      <div class="panel">
+        <div class="panel-head"><h2>Coverage heatmap</h2>
+          <div class="legend"><span><i class="k pass"></i>Pass</span><span><i class="k fail"></i>Fail</span><span><i class="k blocked"></i>Blocked</span><span><i class="k notrun"></i>Not run</span><span><i class="k stale"></i>Stale</span></div>
+        </div>
+        <p class="hint">One row per requirement, one column per test. Click a coloured cell to open the test, or a requirement to open it.</p>
+        <div class="heat-scroll"><div id="heat"></div></div>
+      </div>
+    </section>
+
+    <!-- Requirements -->
+    <section class="view" id="view-reqs" role="tabpanel" hidden>
+      <div class="filters">
+        <label for="reqFilter">Show</label>
+        <select id="reqFilter">
+          <option value="all">All requirements</option>
+          <option value="uncovered">Not covered by any test</option>
+          <option value="failing">With failing tests</option>
+          <option value="stale">Changed since tests were written</option>
+        </select>
+      </div>
+      <div id="reqList" class="cards"></div>
+    </section>
+
+    <!-- Tests -->
+    <section class="view" id="view-tests" role="tabpanel" hidden>
+      <div class="filters">
+        <label for="testFilter">Show</label>
+        <select id="testFilter">
+          <option value="all">All tests</option>
+          <option value="stale">Stale (requirement changed)</option>
+          <option value="fail">Failing or blocked</option>
+          <option value="orphan">Not linked to a requirement</option>
+        </select>
+      </div>
+      <div id="testList" class="rows"></div>
+    </section>
+
+    <!-- Defects -->
+    <section class="view" id="view-defects" role="tabpanel" hidden>
+      <div id="defectList" class="rows"></div>
+    </section>
+
+    <p class="note">Demo data is fictional: release 2.4 of a mobile banking app, "Send money". Everything is saved only in this browser (local storage); nothing is sent to a server. Suggestions come from built-in word-matching rules.</p>
+  </main>
+
+  <footer class="wrap foot">
+    <p>Built by <a href="/">Nawres Skhairia</a>. A work in progress: ideas and feedback are welcome, <a href="/#contact">get in touch</a>.</p>
+  </footer>
+
+  <!-- Requirement dialog -->
+  <dialog id="reqDialog" aria-labelledby="reqTitle">
+    <form method="dialog" id="reqForm">
+      <h2 id="reqTitle">Requirement</h2>
+      <div class="form-grid">
+        <label class="full">Title<input name="title" required maxlength="100"></label>
+        <label class="full">Requirement and acceptance criteria<textarea name="text" rows="5" required maxlength="1500"></textarea></label>
+        <label>Feature<input name="feature" maxlength="40" placeholder="e.g. Transfers"></label>
+        <label>Priority<select name="priority"><option>High</option><option selected>Medium</option><option>Low</option></select></label>
+      </div>
+      <p class="hint" id="reqVersionHint"></p>
+      <div class="dialog-actions">
+        <button type="button" class="link-btn danger" id="reqDelete">Delete</button>
+        <span class="spacer"></span>
+        <button type="button" class="btn btn-line" id="reqCancel">Cancel</button>
+        <button type="submit" class="btn">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Test dialog -->
+  <dialog id="testDialog" aria-labelledby="testTitle">
+    <form method="dialog" id="testForm">
+      <h2 id="testTitle">Test</h2>
+      <div class="form-grid">
+        <label class="full">Title<input name="title" required maxlength="120"></label>
+        <label class="full">Steps and expected result<textarea name="steps" rows="4" maxlength="1500"></textarea></label>
+        <label>Result<select name="result"><option value="pass">Pass</option><option value="fail">Fail</option><option value="blocked">Blocked</option><option value="notrun">Not run</option></select></label>
+        <label>Tester<input name="owner" maxlength="40"></label>
+        <fieldset class="full reqs-pick"><legend>Covers requirements</legend><div id="testReqs"></div></fieldset>
+      </div>
+      <div class="dialog-actions">
+        <button type="button" class="link-btn danger" id="testDelete">Delete</button>
+        <span class="spacer"></span>
+        <button type="button" class="btn btn-line" id="testCancel">Cancel</button>
+        <button type="submit" class="btn">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Defect dialog -->
+  <dialog id="defDialog" aria-labelledby="defTitle">
+    <form method="dialog" id="defForm">
+      <h2 id="defTitle">Defect</h2>
+      <div class="form-grid">
+        <label class="full">Title<input name="title" required maxlength="120"></label>
+        <label>Found by test<select name="testId" id="defTest"></select></label>
+        <label>Severity<select name="severity"><option>Critical</option><option>High</option><option selected>Medium</option><option>Low</option></select></label>
+        <label>Status<select name="status"><option>Open</option><option>Fixed</option><option>Closed</option></select></label>
+      </div>
+      <div class="dialog-actions">
+        <button type="button" class="link-btn danger" id="defDelete">Delete</button>
+        <span class="spacer"></span>
+        <button type="button" class="btn btn-line" id="defCancel">Cancel</button>
+        <button type="submit" class="btn">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Impact dialog -->
+  <dialog id="impactDialog" aria-labelledby="impactTitle">
+    <div class="impact">
+      <h2 id="impactTitle">What this change affects</h2>
+      <div id="impactBody"></div>
+      <div class="dialog-actions"><span class="spacer"></span><button type="button" class="btn" id="impactClose">Got it</button></div>
+    </div>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>
