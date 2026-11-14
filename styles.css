@@ -80,7 +80,7 @@ h2 { font-size: clamp(36px, 5vw, 48px); line-height: 1.1; }
 
 /* About */
 .about { display: flex; flex-wrap: wrap; gap: 56px; align-items: center; padding-top: 96px; padding-bottom: 96px; }
-.avatar { flex: 0 0 auto; width: min(300px, 70vw); aspect-ratio: 1 / 1; border-radius: 50%; background: var(--sand); display: flex; align-items: center; justify-content: center; font-family: var(--serif); font-size: 120px; color: var(--green); }
+.avatar { flex: 0 0 auto; display: block; width: min(300px, 70vw); height: auto; aspect-ratio: 1 / 1; border-radius: 50%; object-fit: cover; object-position: center 20%; background: var(--green); box-shadow: 0 0 0 8px var(--paper), 0 0 0 10px var(--green); }
 .about-text { flex: 999 1 420px; min-width: 0; display: flex; flex-direction: column; gap: 18px; }
 .about-text p { color: #3a3129; }
 
