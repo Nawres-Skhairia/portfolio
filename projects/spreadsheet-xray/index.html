@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Spreadsheet X-ray · See what your Excel file really does · Nawres Skhairia</title>
+  <meta name="description" content="Drop in a spreadsheet: see how its formulas connect, the business rules hidden inside them, the cells that could break, a ready-to-use spec, and ask it questions in French or English. Runs in your browser.">
+  <meta property="og:title" content="Spreadsheet X-ray · For the Excel file only one person understands">
+  <meta property="og:description" content="Formula map, hidden rules, fragile cells, a generated spec, and plain-language questions. Your file never leaves your browser.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Gloock&family=Karla:wght@400;500;700&family=Caveat:wght@600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top wrap">
+    <a class="back" href="/#work">← Nawres Skhairia</a>
+    <span class="tag">Project N°03 · Work in progress</span>
+  </header>
+
+  <main class="wrap">
+    <section class="intro">
+      <h1>Spreadsheet X-ray</h1>
+      <p class="lead">Every company runs on an Excel file that only one person really understands. Drop it here: X-ray maps how the formulas connect, finds the business rules hidden inside them, flags the cells that could quietly break, and writes the spec you'd need to turn it into a proper app.</p>
+    </section>
+
+    <section id="start" class="start">
+      <label class="drop" id="drop" for="file">
+        <input type="file" id="file" accept=".xlsx,.xlsm,.csv" class="sr">
+        <span class="drop-title">Drop an Excel or CSV file here</span>
+        <span class="drop-sub">or click to choose one (.xlsx, .csv)</span>
+      </label>
+      <div class="or">
+        <span class="hand">no file handy?</span>
+        <button type="button" class="btn" id="demoBtn">Open the demo file</button>
+        <p class="hint">A deliberately messy sales commission workbook, the kind that ends up named <i>FINAL_v3 (2).xlsx</i>.</p>
+      </div>
+      <p class="privacy">Your file is read inside your browser. Nothing is uploaded, stored or sent anywhere.</p>
+    </section>
+
+    <section id="report" hidden>
+      <div class="file-bar">
+        <div><span class="file-name" id="fileName"></span> <span class="hint" id="fileMeta"></span></div>
+        <button type="button" class="link-btn" id="another">Open another file</button>
+      </div>
+
+      <nav class="tabs" role="tablist" aria-label="Report sections">
+        <button role="tab" type="button" data-tab="overview" aria-selected="true">Overview</button>
+        <button role="tab" type="button" data-tab="map" aria-selected="false">Formula map</button>
+        <button role="tab" type="button" data-tab="findings" aria-selected="false">Findings <span class="badge" id="riskBadge"></span></button>
+        <button role="tab" type="button" data-tab="spec" aria-selected="false">Spec</button>
+        <button role="tab" type="button" data-tab="ask" aria-selected="false">Ask</button>
+      </nav>
+
+      <section class="view" id="view-overview" role="tabpanel">
+        <div class="ov-top">
+          <div class="panel gauge-panel">
+            <h2>Fragility score</h2>
+            <div id="gauge"></div>
+            <p class="hint">0 is a clean, well-built file. Above 60, one wrong edit can silently change the numbers.</p>
+          </div>
+          <div class="panel bus">
+            <h2>If the person who built this leaves…</h2>
+            <p id="busText" class="bus-text"></p>
+            <div class="kpis" id="kpis"></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h2>Most urgent</h2><button type="button" class="link-btn" data-goto="findings">See all findings</button></div>
+          <ul class="risk-list" id="topRisks"></ul>
+        </div>
+      </section>
+
+      <section class="view" id="view-map" role="tabpanel" hidden>
+        <div class="panel map-panel">
+          <div class="panel-head"><h2>How the numbers flow</h2><div class="legend" id="legend"></div></div>
+          <p class="hint">Left: data people type in. Right: the final results. Click any box to see its formula in plain words.</p>
+          <div class="map-scroll"><div id="map"></div></div>
+        </div>
+        <div class="panel" id="nodeInfo">
+          <p class="empty">Click a box in the map.</p>
+        </div>
+      </section>
+
+      <section class="view" id="view-findings" role="tabpanel" hidden>
+        <div class="panel">
+          <h2>Hidden business rules</h2>
+          <p class="hint">Numbers typed inside formulas. They are real business decisions (rates, thresholds, fixed amounts), but nobody can see them without clicking the cell.</p>
+          <ul class="rule-list" id="rules"></ul>
+        </div>
+        <div class="panel">
+          <h2>Things that could break</h2>
+          <ul class="risk-list" id="risks"></ul>
+        </div>
+      </section>
+
+      <section class="view" id="view-spec" role="tabpanel" hidden>
+        <div class="panel">
+          <div class="panel-head"><h2>Functional spec</h2>
+            <div class="acts"><button type="button" class="btn btn-line" id="copySpec">Copy</button><button type="button" class="btn" id="dlSpec">Download .md</button></div>
+          </div>
+          <p class="hint">A starting point for rebuilding this file as a real application: data, parameters, rules, issues and screens. Paste it into a ticket, a doc or a tender.</p>
+          <article class="spec" id="spec"></article>
+        </div>
+      </section>
+
+      <section class="view" id="view-ask" role="tabpanel" hidden>
+        <div class="panel">
+          <h2>Ask your spreadsheet</h2>
+          <form class="ask-form" id="askForm">
+            <label for="askInput" class="sr">Your question</label>
+            <input id="askInput" type="search" autocomplete="off" placeholder="e.g. Which client paid late most?  /  Total des ventes par région">
+            <button type="submit" class="btn">Ask</button>
+          </form>
+          <div class="chips" id="suggest"></div>
+          <p class="hint">Works in English and French. Questions are answered with built-in rules that read your column names, so every answer shows exactly how it was calculated.</p>
+        </div>
+        <div id="answers" class="answers"></div>
+      </section>
+    </section>
+
+    <p class="note">Built-in rules, no AI service: your data never leaves this page. Formulas are read as written; X-ray doesn't recalculate them. Macros (VBA) and pivot tables aren't analysed yet.</p>
+  </main>
+
+  <footer class="wrap foot">
+    <p>Built by <a href="/">Nawres Skhairia</a>. A work in progress: ideas and feedback are welcome, <a href="/#contact">get in touch</a>.</p>
+  </footer>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="engine.js"></script>
+  <script src="ask.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
