@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Process to App · Describe a process, get a working approval app · Nawres Skhairia</title>
+  <meta name="description" content="Describe an internal process in plain English or French. Get the roles, data model, workflow diagram, states, a written spec, and a clickable approval app you can try as each role. Runs in your browser.">
+  <meta property="og:title" content="Process to App · From a sentence to a clickable approval app">
+  <meta property="og:description" content="Type “leave request: employee, manager, HR approves” and get the workflow diagram, data model, roles and a working prototype.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Gloock&family=Karla:wght@400;500;700&family=Caveat:wght@600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top wrap">
+    <a class="back" href="/#work">← Nawres Skhairia</a>
+    <span class="tag">Project N°05 · Work in progress</span>
+  </header>
+
+  <main class="wrap">
+    <section class="intro">
+      <h1>Process to App</h1>
+      <p class="lead">Most approval processes live in emails and "can you sign this?" messages. Describe yours in a few plain sentences, in English or French. You get the roles, the data to collect, the workflow diagram and a working app you can click through as each person involved.</p>
+    </section>
+
+    <section class="panel describe">
+      <label for="desc" class="describe-label">Describe the process</label>
+      <textarea id="desc" rows="5" maxlength="2000" placeholder="Leave request: the employee submits dates and a reason. The manager approves or rejects. Then HR validates it."></textarea>
+      <div class="describe-foot">
+        <div class="chips" id="templates"><span class="hint">Examples:</span></div>
+        <button type="button" class="btn" id="build">Design my app</button>
+      </div>
+      <p class="hint">Tip: one sentence per step, name who does it (employee, manager, HR, finance, director…) and add conditions like "if the amount is over 5,000".</p>
+    </section>
+
+    <section id="result" hidden>
+      <div class="result-head">
+        <h2 id="procTitle"></h2>
+        <p class="hint" id="procSummary"></p>
+      </div>
+      <nav class="tabs" role="tablist" aria-label="Result sections">
+        <button role="tab" type="button" data-tab="flow" aria-selected="true">Workflow</button>
+        <button role="tab" type="button" data-tab="model" aria-selected="false">Data &amp; roles</button>
+        <button role="tab" type="button" data-tab="app" aria-selected="false">Try the app</button>
+        <button role="tab" type="button" data-tab="spec" aria-selected="false">Spec</button>
+      </nav>
+
+      <section class="view" id="view-flow" role="tabpanel">
+        <div class="panel">
+          <div class="panel-head"><h2>Workflow diagram</h2><span class="hint">One lane per role, read left to right</span></div>
+          <div class="diagram-scroll"><div id="diagram"></div></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h2>Steps</h2><button type="button" class="link-btn" id="addStep">+ Add a step</button></div>
+          <p class="hint">This is how I understood your description. Fix anything here: the diagram, data model and app update instantly.</p>
+          <div class="steps-scroll"><table class="steps" id="steps"></table></div>
+        </div>
+      </section>
+
+      <section class="view" id="view-model" role="tabpanel" hidden>
+        <div class="grid2">
+          <div class="panel"><h2>Data model</h2><div id="model"></div></div>
+          <div class="panel"><h2>Roles and rights</h2><div id="roles"></div></div>
+        </div>
+        <div class="panel"><h2>Statuses a request goes through</h2><div id="states" class="states"></div></div>
+      </section>
+
+      <section class="view" id="view-app" role="tabpanel" hidden>
+        <div class="proto">
+          <div class="proto-bar">
+            <span class="hand">you are…</span>
+            <div class="role-switch" id="roleSwitch" role="radiogroup" aria-label="Play as"></div>
+            <span class="spacer"></span>
+            <button type="button" class="link-btn" id="protoReset">Reset sample requests</button>
+          </div>
+          <div class="proto-body">
+            <aside class="inbox" id="inbox" aria-label="Requests"></aside>
+            <div class="detail" id="detail"></div>
+          </div>
+        </div>
+        <p class="hint">A working prototype: switch role at the top to see each person's inbox. Conditions and rejections behave as described. Sample requests are saved in this browser only.</p>
+      </section>
+
+      <section class="view" id="view-spec" role="tabpanel" hidden>
+        <div class="panel">
+          <div class="panel-head"><h2>Functional spec</h2><div class="acts"><button type="button" class="btn btn-line" id="copySpec">Copy</button><button type="button" class="btn" id="dlSpec">Download .md</button></div></div>
+          <article class="spec" id="spec"></article>
+        </div>
+      </section>
+    </section>
+
+    <p class="note">Your description is read with built-in French and English rules, inside your browser: nothing is sent anywhere. Everything it guesses is editable.</p>
+  </main>
+
+  <footer class="wrap foot">
+    <p>Built by <a href="/">Nawres Skhairia</a>. A work in progress: ideas and feedback are welcome, <a href="/#contact">get in touch</a>.</p>
+  </footer>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="parser.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
