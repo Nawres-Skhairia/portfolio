@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>MT to MX Migration Lab · Nawres Skhairia</title>
+  <meta name="description" content="Turn a made-up MT103 into an ISO 20022 pacs.008, field by field, and see what is mapped, changed, defaulted, cut or lost. Runs in your browser.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/fonts/fonts.css">
+  <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="../mt.css">
+  <link rel="modulepreload" href="../js/mt-app.js">
+</head>
+<body>
+  <header class="bar">
+    <div class="bar-in">
+      <a class="home" href="/#work" aria-label="Back to Nawres Skhairia's portfolio">N.&nbsp;Skhairia</a>
+      <div class="brand">
+        <span class="brand-name">MT to MX Migration Lab</span>
+        <span class="brand-sub">MT103 → ISO 20022 pacs.008.001.08 · simplified mapping</span>
+      </div>
+      <nav class="suite" aria-label="Payments suite"><a href="../">Payment file check</a><a href="./" aria-current="page">MT to MX</a></nav>
+      <p class="device"><span class="dot" aria-hidden="true"></span>Runs on your device. Nothing is uploaded or stored.</p>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="intro">
+      <h1>See what an old payment message loses on its way to ISO 20022.</h1>
+      <p>Paste an MT103 and get the pacs.008 version, field by field. Every piece of data gets a status (mapped, transformed, defaulted, cut or lost, or needs review), and the result is checked against the ISO 20022 schema.</p>
+      <p class="honest-top"><b>Simplified, not SWIFT's official translation, not affiliated with SWIFT.</b> Please paste made-up messages only: real ones hold names and accounts.</p>
+    </section>
+
+    <div class="toolbar" role="toolbar" aria-label="Message actions">
+      <label class="fld-inline" for="sampleSel">Sample <select id="sampleSel"></select></label>
+      <button type="button" class="tb tb-main" id="pasteBtn">Paste MT103</button>
+      <label class="tb" for="fileIn">Open file<input type="file" id="fileIn" accept=".txt,.fin,.mt,.mt103,text/plain"></label>
+      <span class="tb-sep" aria-hidden="true"></span>
+      <button type="button" class="tb" id="dlXml" disabled>Download pacs.008</button>
+      <div class="export">
+        <button type="button" class="tb" id="exportBtn" aria-haspopup="true" aria-expanded="false" disabled>Export report</button>
+        <div class="menu" id="exportMenu" hidden>
+          <button type="button" data-export="html">Mapping report (HTML, to print or save as PDF)</button>
+          <button type="button" data-export="csv">Mapping table (CSV)</button>
+          <button type="button" data-export="json">Findings (JSON)</button>
+          <button type="button" data-export="junit">Test results (JUnit XML)</button>
+        </div>
+      </div>
+    </div>
+
+    <section class="status" id="status" aria-live="polite">
+      <div class="facts" id="facts"></div>
+      <div class="verdict" id="verdict"></div>
+    </section>
+    <p class="banner" id="banner"></p>
+
+    <div class="filters" role="group" aria-label="Filter the mapping table">
+      <button type="button" class="flt on" data-filter="all">All <b id="cAll">0</b></button>
+      <button type="button" class="flt s-mapped" data-filter="mapped">Mapped <b id="c-mapped">0</b></button>
+      <button type="button" class="flt s-transformed" data-filter="transformed">Transformed <b id="c-transformed">0</b></button>
+      <button type="button" class="flt s-defaulted" data-filter="defaulted">Defaulted <b id="c-defaulted">0</b></button>
+      <button type="button" class="flt s-lost" data-filter="lost">Cut or lost <b id="c-lost">0</b></button>
+      <button type="button" class="flt s-review" data-filter="review">Needs review <b id="c-review">0</b></button>
+      <p class="hint">Click a line on either side to see where it comes from or goes to.</p>
+    </div>
+
+    <div class="bench mt-bench">
+      <section class="pane" aria-label="MT103">
+        <div class="pane-head"><span id="mtName">MT103</span><span id="mtMeta" class="muted"></span></div>
+        <div class="code lc" id="mtCode" tabindex="0" aria-label="MT103 with line numbers"></div>
+      </section>
+      <section class="pane" aria-label="Generated pacs.008">
+        <div class="pane-head"><span>pacs.008.001.08</span><span id="xsdMeta" class="muted"></span></div>
+        <div class="code lc" id="mxCode" tabindex="0" aria-label="Generated pacs.008 with line numbers"></div>
+      </section>
+    </div>
+
+    <section class="block">
+      <h2>Findings <span class="muted" id="findMeta"></span></h2>
+      <ol class="findings mt-findings" id="findings"></ol>
+    </section>
+
+    <section class="block">
+      <h2>Mapping table <span class="muted" id="rowMeta"></span></h2>
+      <div class="table-wrap"><table class="cat map" id="mapTable">
+        <thead><tr><th>MT field</th><th>MT value</th><th>Rule</th><th>pacs.008 element</th><th>pacs.008 value</th><th>Status</th><th>Explanation</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </section>
+
+    <section class="block">
+      <h2>Reverse check <span class="muted">if this pacs.008 goes back to an MT party</span></h2>
+      <p class="muted rv-intro">Lines of 35 characters, a fixed number of lines per field, and the MT character set. <button type="button" class="tb tb-small" id="nativeBtn">Try it on a native pacs.008</button> <button type="button" class="tb tb-small" id="ownBtn" hidden>Back to the converted message</button></p>
+      <p class="rv-src" id="rvSrc"></p>
+      <div class="table-wrap"><table class="cat rv" id="rvTable">
+        <thead><tr><th>pacs.008 element</th><th>MT field</th><th>Before</th><th>After</th><th>What happens</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </section>
+
+    <section class="more">
+      <h2 id="catalogue">Mapping rules <span class="muted" id="catVersion"></span></h2>
+      <div class="table-wrap"><table class="cat" id="catTable">
+        <thead><tr><th>ID</th><th>MT</th><th>pacs.008</th><th>Can give</th><th>What it does</th><th>Source</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+
+      <p class="honest"><b>Simplified, not SWIFT's official translation, not affiliated with SWIFT.</b> The mapping follows the rules above, written in our own words; where no public source confirms a rule it says "Our documented choice". Check results against your bank's or SWIFT's own tools. No claim of certification or of full CBPR+ compliance. Nothing you paste here is sent anywhere: it is read in this browser tab and forgotten when you close it.</p>
+
+      <h2>Sources and licences</h2>
+      <ul class="sources">
+        <li>Schema: ISO 20022 pacs.008.001.08, served unchanged from this site. ISO 20022 message schemas are published free of charge by the ISO 20022 Registration Authority at <a href="https://www.iso20022.org/" rel="noopener">iso20022.org</a>. This is not the official ISO 20022 site. See <a href="../schemas/NOTICE.md">NOTICE</a>.</li>
+        <li>Public sources, linked and not copied: <a href="https://www.swift.com/standards/iso-20022/iso-20022-faqs/iso-20022-removal-unstructured-address" rel="noopener">Swift FAQ on the removal of unstructured addresses</a> (S1) and the <a href="https://pages-jpmcib.jpmorgan.com/rs/726-KZY-402/images/ISO20022_Mapping_Guide.pdf" rel="noopener">J.P. Morgan ISO 20022 mapping guide</a> (S2). No SWIFT handbook, usage guideline or official translation rule was used.</li>
+        <li>Engine: libxml2 via <a href="https://github.com/noppa/xmllint-wasm" rel="noopener">xmllint-wasm</a> (MIT licence), the same as the <a href="../">Payment file check</a>.</li>
+        <li>Samples: made-up companies, published example IBANs, made-up BICs (bank code XMPL) and made-up UETRs. Never real messages.</li>
+      </ul>
+    </section>
+
+    <p class="foot">Created by <a href="/">Nawres Skhairia</a> through vibe coding, and tested line by line. A work in progress: feedback is welcome, <a href="/#contact">get in touch</a>. <a href="/privacy/">Privacy</a></p>
+  </main>
+
+  <dialog id="pasteDlg" aria-labelledby="pasteTitle">
+    <form method="dialog" class="dlg">
+      <h2 id="pasteTitle">Paste an MT103</h2>
+      <p class="muted">Made-up messages only, please. Blocks 1 to 5, or just the fields of block 4.</p>
+      <textarea id="pasteText" rows="16" spellcheck="false" placeholder="{1:F01XMPLDEFFAXXX0000000000}{2:I103XMPLFRPPXXXXN}{3:{121:…}}{4:&#10;:20:…&#10;-}"></textarea>
+      <div class="dlg-actions"><button value="cancel" class="tb">Cancel</button><button value="ok" class="tb tb-main">Convert</button></div>
+    </form>
+  </dialog>
+
+  <script type="module" src="../js/mt-app.js"></script>
+</body>
+</html>
