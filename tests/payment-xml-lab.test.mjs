@@ -11,7 +11,7 @@ const { generate, SCENARIOS, sample } = await import(new URL('js/factory.js', ba
 const xsd = readFileSync(new URL('schemas/pain.001.001.09.xsd', base), 'utf8');
 
 const validateSchema = async (xml) => {
-  const r = await validateXML({ xml: [{ fileName: 'payment.xml', contents: xml }], schema: [{ fileName: 'pain.001.001.09.xsd', contents: xsd }], modifyArguments: (a) => a.concat(['--nonet']), maxMemoryPages: 32768 });
+  const r = await validateXML({ xml: [{ fileName: 'payment.xml', contents: xml }], schema: [{ fileName: 'pain.001.001.09.xsd', contents: xsd }], modifyArguments: (a) => a.concat(['--nonet']), maxMemoryPages: 4096 });
   return { valid: r.valid, errors: r.errors.map((e) => ({ line: e.loc ? e.loc.lineNumber : null, raw: e.rawMessage, message: e.rawMessage.replace(/^payment\.xml:\d+:\s*/, '') })) };
 };
 const procDate = '2026-11-16';
@@ -33,6 +33,16 @@ for (const count of [1, 100, 10000]) {
   const r = await check(g.xml, { procDate, validateSchema });
   ok(r.findings.length === 0 && r.verdict === 'Accepted', `AT2 valid ${count}`, ids(r).join(' '));
   if (count === 10000) console.log(`   10,000 payments: ${(g.xml.length / 1048576).toFixed(1)} MB, checked in ${Date.now() - t} ms`);
+}
+// Size limit: a file just under 10 MB must be checked in full within the engine limits (256 MB memory)
+{
+  let n = 21000, g = generate({ scenario: 'valid', count: n, procDate });
+  while (Buffer.byteLength(g.xml) > 10 * 1024 * 1024) { n -= 500; g = generate({ scenario: 'valid', count: n, procDate }); }
+  const t = Date.now(); const r = await check(g.xml, { bytes: Buffer.byteLength(g.xml), procDate, validateSchema });
+  ok(r.verdict === 'Accepted' && r.summary.payments === n, `10 MB file (${n} payments, ${(Buffer.byteLength(g.xml) / 1048576).toFixed(1)} MB)`, r.verdictLine);
+  console.log(`   ${n} payments, ${(Buffer.byteLength(g.xml) / 1048576).toFixed(1)} MB, checked in ${Date.now() - t} ms`);
+  const big = g.xml + ' '.repeat(10 * 1024 * 1024 - Buffer.byteLength(g.xml) + 1);
+  ok((await check(big, { bytes: Buffer.byteLength(big), procDate, validateSchema })).status === 'refused', 'Over 10 MB refused');
 }
 // AT3 / AT4 / AT6 every scenario
 for (const s of SCENARIOS.filter((x) => x.expect)) {

@@ -3,7 +3,7 @@
 // Adapted from xmllint-wasm 5.3.0 index-browser.mjs (MIT, see ../vendor/xmllint-5.3.0/COPYING).
 
 const MESSAGE_KEY = 'xmllint-wasm';
-export const TIME_LIMIT_MS = 30000;
+export const TIME_LIMIT_MS = 20000;
 const schemaCache = new Map();
 
 export async function loadSchema(url) {
@@ -26,7 +26,7 @@ export function validate(xmlText, schemaText, schemaName) {
   // --nonet: never fetch anything. No --noent, no --loaddtd, no --dtdvalid:
   // entities are not expanded and no DTD is read (and the safety gate already refused any DOCTYPE).
   const args = ['--schema', schemaName, '--noout', '--nonet', 'payment.xml'];
-  const job = { inputFiles, args, initialMemory: 256, maxMemory: 8192 };
+  const job = { inputFiles, args, initialMemory: 256, maxMemory: 4096 };
   job[MESSAGE_KEY] = true;
 
   return new Promise((resolve, reject) => {

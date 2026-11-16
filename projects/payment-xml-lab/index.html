@@ -78,9 +78,9 @@
     <section class="more">
       <h2>How it checks a file</h2>
       <ol class="pipeline">
-        <li><b>Safety gate</b><span>Up to 25 MB. Files with a DOCTYPE or ENTITY are refused, which blocks the classic XML attacks (XXE, "billion laughs").</span></li>
+        <li><b>Safety gate</b><span>Up to 10 MB. Files with a DOCTYPE or ENTITY are refused, which blocks the classic XML attacks (XXE, "billion laughs").</span></li>
         <li><b>1 · Well-formed XML</b><span>Every tag opened is closed, in the right order.</span></li>
-        <li><b>2 · Official schema</b><span>The unchanged ISO 20022 pain.001.001.09 schema, checked by libxml2 compiled to WebAssembly, in a separate worker that is stopped after 30 seconds.</span></li>
+        <li><b>2 · Official schema</b><span>The unchanged ISO 20022 pain.001.001.09 schema, checked by libxml2 compiled to WebAssembly, in a separate worker that is stopped after 20 seconds.</span></li>
         <li><b>3 · SEPA rules</b><span>What the schema cannot see: sums and counts, IBAN check digits, 2 decimals in euro, character set, dates. Amounts are added exactly, never as floating point.</span></li>
         <li><b>Report</b><span>Each finding at its line, with its path, what was expected and found, and how to fix it. Export as HTML, JSON or JUnit for a build pipeline.</span></li>
       </ol>

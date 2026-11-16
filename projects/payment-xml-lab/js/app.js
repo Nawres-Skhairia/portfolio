@@ -6,7 +6,7 @@ import { toHtml, toJson, toJUnit } from './reports.js';
 
 const $ = (id) => document.getElementById(id);
 const h = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
-const CHECK_LIMIT_MS = 30000;
+const CHECK_LIMIT_MS = 20000;
 const XSD_URL = new URL('../schemas/' + SUPPORTED.xsd, import.meta.url).href;
 
 const state = { src: '', lines: [''], fileName: '', bytes: 0, report: null, filter: 'all', sel: -1, shown: [], lineMarks: new Map() };
@@ -80,7 +80,7 @@ async function load(text, fileName, bytesArr) {
 const fmtBytes = (n) => (n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : n > 1024 ? Math.round(n / 1024) + ' KB' : n + ' bytes');
 
 async function loadFile(file) {
-  if (file.size > MAX_BYTES) return showRefused(file.name, `This file is ${fmtBytes(file.size)}. The limit is 25 MB.`);
+  if (file.size > MAX_BYTES) return showRefused(file.name, `This file is ${fmtBytes(file.size)}. The limit is 10 MB.`);
   const buf = new Uint8Array(await file.arrayBuffer());
   let text;
   try { text = new TextDecoder('utf-8', { fatal: true }).decode(buf); } catch (e) { return showRefused(file.name, 'This file is not valid UTF-8 text. Only UTF-8 files are checked here (SEPA files are UTF-8).'); }

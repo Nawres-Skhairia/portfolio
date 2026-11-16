@@ -6,10 +6,10 @@ import { explain } from './messages.js';
 
 export const TOOL = { name: 'Payment XML Lab (ISO 20022)', version: '0.1.0' };
 export const SUPPORTED = { ns: 'urn:iso:std:iso:20022:tech:xsd:pain.001.001.09', id: 'pain.001.001.09', xsd: 'pain.001.001.09.xsd' };
-export const MAX_BYTES = 25 * 1024 * 1024;
+export const MAX_BYTES = 10 * 1024 * 1024;
 
 export function safetyGate(src, bytes) {
-  if (bytes > MAX_BYTES) return `This file is ${(bytes / 1048576).toFixed(1)} MB. The limit is 25 MB.`;
+  if (bytes > MAX_BYTES) return `This file is ${(bytes / 1048576).toFixed(1)} MB. The limit is 10 MB.`;
   if (!src.trim()) return 'The file is empty.';
   const enc = (src.match(/^\uFEFF?<\?xml[^>]*encoding\s*=\s*["']([^"']+)["']/) || [])[1];
   if (enc && !/^utf-?8$/i.test(enc)) return `The file says it is encoded as ${enc}. Only UTF-8 files are checked here (SEPA files are UTF-8).`;
