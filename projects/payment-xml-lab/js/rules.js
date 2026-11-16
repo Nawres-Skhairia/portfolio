@@ -332,7 +332,7 @@ export const RULES = [
             message: `The ${who} address is unstructured (address lines without ${missing}). ` + (after ? 'From 22 November 2026 the SEPA guidelines no longer allow this.' : 'The SEPA guidelines allow this only until 21 November 2026.'),
             expected: 'TwnNm and Ctry', found: missing + ' missing', fix: `Add ${missing}, so the address becomes hybrid (town, country and up to 2 address lines) or fully structured.` });
         } else {
-          out.push({ el: adr, severity: 'error', message: `The ${who} address is structured but has no ${missing}. The SEPA guidelines make town and country mandatory.`, expected: 'TwnNm and Ctry', found: missing + ' missing', fix: `Add ${missing}.` });
+          out.push({ el: adr, severity: 'error', message: `The ${who} address is structured but has no ${missing}. The SEPA guidelines make town and country mandatory.`, expected: 'TwnNm and Ctry', found: missing + ' missing', fix: !town && ctry && adr.children.filter((c) => c.localName).length === 1 ? 'Add the town name, or remove the postal address.' : `Add ${missing}.` });
         }
       }
       return out;
