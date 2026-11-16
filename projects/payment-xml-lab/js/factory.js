@@ -82,7 +82,7 @@ export function toXml(m, comment) {
     L.push(`      <CtrlSum>${b.sum ?? sumStr(b.txs)}</CtrlSum>`);
     if (b.svc) L.push(`      <PmtTpInf><SvcLvl><Cd>${b.svc}</Cd></SvcLvl></PmtTpInf>`);
     L.push(`      <ReqdExctnDt><Dt>${b.execDate}</Dt></ReqdExctnDt>`);
-    L.push(`      <Dbtr><Nm>${esc(b.dbtr.name)}</Nm></Dbtr>`);
+    L.push(b.dbtr.name == null ? '      <Dbtr/>' : `      <Dbtr><Nm>${esc(b.dbtr.name)}</Nm></Dbtr>`);
     L.push(`      <DbtrAcct><Id><IBAN>${b.dbtr.iban}</IBAN></Id></DbtrAcct>`);
     L.push(`      <DbtrAgt><FinInstnId><BICFI>${b.dbtr.bic}</BICFI></FinInstnId></DbtrAgt>`);
     if (b.chrgBr) L.push(`      <ChrgBr>${b.chrgBr}</ChrgBr>`);
@@ -102,7 +102,7 @@ export function toXml(m, comment) {
       if (t.ustrd.length || t.strd) {
         L.push('        <RmtInf>');
         for (const u of t.ustrd) L.push(`          <Ustrd>${esc(u)}</Ustrd>`);
-        if (t.strd) L.push('          <Strd><CdtrRefInf><Tp><CdOrPrtry><Cd>SCOR</Cd></CdOrPrtry></Tp><Ref>RF18539007547034</Ref></CdtrRefInf></Strd>');
+        for (let k = 0; k < (t.strd === true ? 1 : t.strd || 0); k++) L.push('          <Strd><CdtrRefInf><Tp><CdOrPrtry><Cd>SCOR</Cd></CdOrPrtry></Tp><Ref>RF18539007547034</Ref></CdtrRefInf></Strd>');
         L.push('        </RmtInf>');
       }
       L.push('      </CdtTrfTxInf>');
@@ -142,8 +142,10 @@ export const SCENARIOS = [
   { id: 'charset', label: 'Accent and "&" in the text', expect: 'SCT-14', at: ['Ustrd', 0], apply: (m) => { tx(m).ustrd = ['Facture 42 Café & Co']; } },
   { id: 'duplicate-e2e', label: 'Same EndToEndId twice', expect: 'SCT-15', at: ['EndToEndId', 1], min: 2, apply: (m) => { tx(m, 1).e2e = tx(m, 0).e2e; } },
   { id: 'remittance-both', label: 'Structured and unstructured remittance', expect: 'SCT-16', at: ['Strd', 0], apply: (m) => { tx(m).strd = true; } },
+  { id: 'strd-twice', label: 'Two structured remittance blocks', expect: 'SCT-16', at: ['Strd', 1], apply: (m) => { tx(m).ustrd = []; tx(m).strd = 2; } },
   { id: 'date-closed', label: 'Execution date on a Saturday', expect: 'SCT-17', at: ['Dt', 0], apply: (m, o) => { m.batches[0].execDate = nextSaturday(o.procDate); } },
   { id: 'creditor-name', label: 'Creditor without a name', expect: 'SCT-18', at: ['Cdtr', 0], apply: (m) => { tx(m).cdtr = { ...tx(m).cdtr, name: null }; } },
+  { id: 'debtor-name', label: 'Debtor without a name', expect: 'SCT-18', at: ['Dbtr', 0], apply: (m) => { m.batches[0].dbtr.name = null; } },
   { id: 'duplicate-batch', label: 'Same batch ID twice', expect: 'SCT-19', at: ['PmtInfId', 1], min: 2, apply: (m) => {
     const b = m.batches[0]; const half = Math.ceil(b.txs.length / 2);
     m.batches.push({ ...b, dbtr: { ...b.dbtr }, txs: b.txs.slice(half) }); b.txs = b.txs.slice(0, half);
@@ -155,6 +157,7 @@ export const SCENARIOS = [
   { id: 'xsd-amount', label: 'Amount written with a comma', expect: 'XSD', at: ['InstdAmt', 0], apply: (m) => { tx(m).amount = '1250,00'; } },
   { id: 'xsd-bic', label: 'BIC in a wrong format', expect: 'XSD', at: ['BICFI', 1], apply: (m) => { tx(m).cdtr = { ...tx(m).cdtr, bic: 'XMPL1DE' }; } },
   { id: 'xsd-datetime', label: 'Creation time not in ISO format', expect: 'XSD', at: ['CreDtTm', 0], apply: (m) => { m.created = m.created.replace('T', ' '); } },
+  { id: 'xsd-long-remit', label: 'Remittance text over 140 characters', expect: 'XSD', at: ['Ustrd', 0], apply: (m) => { tx(m).ustrd = ['Invoice 2026-118 '.repeat(9)]; } },
   { id: 'xsd-long-id', label: 'EndToEndId over 35 characters', expect: 'XSD', at: ['EndToEndId', 0], apply: (m) => { tx(m).e2e = 'E2E-0001-REFERENCE-TOO-LONG-FOR-ISO-20022'; } },
   { id: 'xsd-unknown', label: 'Unknown element', expect: 'XSD', at: ['Note', 0], apply: (m) => { tx(m).extra = '<Note>Please pay fast</Note>'; } },
   // layer 1

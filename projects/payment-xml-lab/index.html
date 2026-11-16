@@ -25,7 +25,7 @@
 
   <main class="wrap">
     <section class="intro">
-      <h1>Is this payment file ready for the bank?</h1>
+      <h1>Check a payment file before it goes to the bank.</h1>
       <p>Drop a SEPA credit transfer file (pain.001). It is checked against the official ISO 20022 schema and a catalogue of SEPA rules, and every problem is shown at its exact line, in plain words, with how to fix it.</p>
     </section>
 
@@ -88,14 +88,14 @@
 
       <h2 id="catalogue">Rule catalogue <span class="muted" id="catVersion"></span></h2>
       <div class="table-wrap"><table class="cat" id="catTable">
-        <thead><tr><th>ID</th><th>What it checks</th><th>Severity</th><th>Valid</th><th>Invalid</th><th>Source</th><th></th></tr></thead>
+        <thead><tr><th>ID</th><th>What it checks</th><th>Severity</th><th>Valid</th><th>Invalid</th><th>Source</th><th><span class="vh">Try it</span></th></tr></thead>
         <tbody></tbody>
       </table></div>
 
       <h2>Sources and licences</h2>
       <ul class="sources">
         <li>Schema: ISO 20022 pain.001.001.09, served unchanged from this site. ISO 20022 message schemas are published free of charge by the ISO 20022 Registration Authority at <a href="https://www.iso20022.org/" rel="noopener">iso20022.org</a>. This is not the official ISO 20022 site. See <a href="schemas/NOTICE.md">NOTICE</a>.</li>
-        <li>SEPA rules: written in our own words from the European Payments Council's public <a href="https://www.europeanpaymentscouncil.eu/what-we-do/epc-payment-schemes/sepa-credit-transfer/sepa-credit-transfer-rulebook-and" rel="noopener">SEPA Credit Transfer guidelines</a>. Rules marked "common bank practice" are not in the guidelines.</li>
+        <li>SEPA rules: written in our own words, based on the European Payments Council's <a href="https://www.europeanpaymentscouncil.eu/what-we-do/epc-payment-schemes/sepa-credit-transfer/sepa-credit-transfer-rulebook-and" rel="noopener">SEPA Credit Transfer Customer-to-PSP Implementation Guidelines (EPC132-08)</a>, © European Payments Council. They are not copied from it; check the version your bank applies. Rules marked "common bank practice" are not in the guidelines.</li>
         <li>Engine: libxml2 via <a href="https://github.com/noppa/xmllint-wasm" rel="noopener">xmllint-wasm</a> (MIT licence).</li>
         <li>Test data: made-up companies, published example IBANs and made-up BICs (bank code XMPL). Never real accounts.</li>
       </ul>

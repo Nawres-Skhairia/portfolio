@@ -131,7 +131,7 @@ function renderStatus() {
   }
   $('facts').replaceChildren(...facts);
   const kind = r.verdict === 'Accepted' ? 'ok' : r.verdict === 'Accepted with warnings' ? 'warn' : r.verdict === 'Rejected' ? 'bad' : 'none';
-  const secs = r.timings.totalMs != null ? ` · checked in ${(r.timings.totalMs / 1000).toFixed(r.timings.totalMs < 10000 ? 1 : 0)} s` : '';
+  const secs = r.timings.totalMs != null && r.verdict !== 'Not checked' ? ` · checked in ${(r.timings.totalMs / 1000).toFixed(r.timings.totalMs < 10000 ? 1 : 0)} s` : '';
   setVerdict(r.verdict, (r.verdict === 'Not checked' ? r.reason : r.verdictLine.replace(/^[^:]*:?\s*/, '') || 'No findings') + secs, kind);
   const c = r.counts;
   $('cAll').textContent = r.findings.length; $('cXsd').textContent = c.xsd + c.xml; $('cRule').textContent = c.ruleErrors; $('cWarn').textContent = c.warnings;

@@ -6,7 +6,8 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const { validateXML } = require(process.env.XMLLINT_WASM || 'xmllint-wasm');
 const base = new URL('../projects/payment-xml-lab/', import.meta.url);
-const { check } = await import(new URL('js/engine.js', base));
+const { check, detect } = await import(new URL('js/engine.js', base));
+const detectNs = (s) => detect(s).id;
 const { generate, SCENARIOS, sample } = await import(new URL('js/factory.js', base));
 const xsd = readFileSync(new URL('schemas/pain.001.001.09.xsd', base), 'utf8');
 
@@ -43,6 +44,28 @@ for (const count of [1, 100, 10000]) {
   console.log(`   ${n} payments, ${(Buffer.byteLength(g.xml) / 1048576).toFixed(1)} MB, checked in ${Date.now() - t} ms`);
   const big = g.xml + ' '.repeat(10 * 1024 * 1024 - Buffer.byteLength(g.xml) + 1);
   ok((await check(big, { bytes: Buffer.byteLength(big), procDate, validateSchema })).status === 'refused', 'Over 10 MB refused');
+}
+// Mia's cases (PORT-40 comment 10591)
+{
+  const v = generate({ scenario: 'valid', count: 3, procDate }).xml;
+  const xsiFirst = v.replace('<Document xmlns=', '<Document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns=');
+  const r1 = await check(xsiFirst, { procDate, validateSchema });
+  ok(r1.status === 'checked' && r1.verdict === 'Accepted', 'xmlns:xsi before xmlns is still pain.001.001.09', r1.verdictLine);
+  const pref = v.replace('<Document xmlns=', '<p:Document xmlns:p=').replace('</Document>', '</p:Document>');
+  ok(detectNs(pref) === 'pain.001.001.09', 'prefixed root detected');
+  const cmt = v.replace('<Document', '<!-- an old note: <!DOCTYPE was removed -->\n<Document');
+  const r2 = await check(cmt, { procDate, validateSchema });
+  ok(r2.status === 'checked', 'DOCTYPE inside a comment is not refused', r2.reason);
+  const open = v.replace('<Document', '<!-- unterminated <!DOCTYPE d [<!ENTITY x "y">]>\n<Document');
+  ok((await check(open, { procDate, validateSchema })).status === 'refused', 'DOCTYPE after an unterminated comment is refused');
+  const ly = v.replace('IE29AIBK93115212345678', 'LY83002048000020100120361').replace(/<IBAN>[A-Z]{2}\d{2}\w+<\/IBAN>/, (x) => x);
+  const r3 = await check(v.replace(/(<CdtrAcct>\s*<Id><IBAN>)[^<]+/, '$1LY83002048000020100120361'), { procDate, validateSchema });
+  ok(!r3.findings.some((f) => f.id === 'SCT-05'), 'valid Libyan IBAN (25) accepted', ids(r3).join(' '));
+  const r4 = await check(v.replace(/(<CdtrAcct>\s*<Id><IBAN>)[^<]+/, '$1RU0204452560040702810412345678901'), { procDate, validateSchema });
+  ok(!r4.findings.some((f) => f.id === 'SCT-05'), 'valid Russian IBAN (33) accepted', ids(r4).join(' '));
+  const xi = v.replace('</CdtrAcct>', '</CdtrAcct>\n        <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="x.xml"/>');
+  const r5 = await check(xi, { procDate, validateSchema });
+  ok(r5.findings.length === 1, 'XInclude element gives one finding', ids(r5).join(' '));
 }
 // AT3 / AT4 / AT6 every scenario
 for (const s of SCENARIOS.filter((x) => x.expect)) {

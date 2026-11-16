@@ -15,7 +15,7 @@ export const SOURCES = {
 };
 
 // ---------- reference data ----------
-export const IBAN_LENGTH = { AD: 24, AE: 23, AL: 28, AT: 20, AZ: 28, BA: 20, BE: 16, BG: 22, BH: 22, BR: 29, BY: 28, CH: 21, CR: 22, CY: 28, CZ: 24, DE: 22, DK: 18, DO: 28, EE: 20, EG: 29, ES: 24, FI: 18, FO: 18, FR: 27, GB: 22, GE: 22, GI: 23, GL: 18, GR: 27, GT: 28, HR: 21, HU: 28, IE: 22, IL: 23, IQ: 23, IS: 26, IT: 27, JO: 30, KW: 30, KZ: 20, LB: 28, LC: 32, LI: 21, LT: 20, LU: 20, LV: 21, MC: 27, MD: 24, ME: 22, MK: 19, MR: 27, MT: 31, MU: 30, NL: 18, NO: 15, PK: 24, PL: 28, PS: 29, PT: 25, QA: 29, RO: 24, RS: 22, SA: 24, SC: 31, SE: 24, SI: 19, SK: 24, SM: 27, ST: 25, SV: 28, TL: 23, TN: 24, TR: 26, UA: 29, VA: 22, VG: 24, XK: 20 };
+export const IBAN_LENGTH = { AD: 24, AE: 23, AL: 28, AT: 20, AZ: 28, BA: 20, BE: 16, BG: 22, BH: 22, BI: 27, BR: 29, BY: 28, DJ: 27, FK: 18, HN: 28, LY: 25, MN: 20, NI: 28, OM: 23, RU: 33, SD: 18, SO: 23, YE: 30, CH: 21, CR: 22, CY: 28, CZ: 24, DE: 22, DK: 18, DO: 28, EE: 20, EG: 29, ES: 24, FI: 18, FO: 18, FR: 27, GB: 22, GE: 22, GI: 23, GL: 18, GR: 27, GT: 28, HR: 21, HU: 28, IE: 22, IL: 23, IQ: 23, IS: 26, IT: 27, JO: 30, KW: 30, KZ: 20, LB: 28, LC: 32, LI: 21, LT: 20, LU: 20, LV: 21, MC: 27, MD: 24, ME: 22, MK: 19, MR: 27, MT: 31, MU: 30, NL: 18, NO: 15, PK: 24, PL: 28, PS: 29, PT: 25, QA: 29, RO: 24, RS: 22, SA: 24, SC: 31, SE: 24, SI: 19, SK: 24, SM: 27, ST: 25, SV: 28, TL: 23, TN: 24, TR: 26, UA: 29, VA: 22, VG: 24, XK: 20 };
 // ISO 3166 alpha-2 (current), for the country part of a BIC
 const COUNTRIES = new Set('AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS XK YE YT ZA ZM ZW'.split(' '));
 // EPC basic Latin character set, in our words: a-z A-Z 0-9 / - ? : ( ) . , ' + and space
@@ -217,12 +217,11 @@ export const RULES = [
     },
   },
   {
-    id: 'SCT-13', title: 'Names have at most 70 characters, remittance text at most 140', severity: 'error', source: 'epc',
-    good: 'a 40-character name', bad: 'a 90-character name (the schema allows 140)', scenario: 'name-length',
+    id: 'SCT-13', title: 'Names have at most 70 characters', severity: 'error', source: 'epc',
+    good: 'a 40-character name', bad: 'a 90-character name (the schema allows 140)', scenario: 'name-length', note: 'Remittance text (140) is checked by the schema.',
     check({ root }) {
       const out = [];
       for (const el of all(root, 'Nm')) { const v = text(el) || ''; if (v.length > 70) out.push({ el, message: `This name has ${v.length} characters. The schema allows 140, SEPA only 70.`, expected: 'at most 70 characters', found: short(v), fix: 'Shorten the name.' }); }
-      for (const el of all(root, 'Ustrd')) { const v = text(el) || ''; if (v.length > 140) out.push({ el, message: `This remittance text has ${v.length} characters; SEPA allows 140.`, expected: 'at most 140 characters', found: short(v), fix: 'Shorten the text.' }); }
       return out;
     },
   },
@@ -252,8 +251,8 @@ export const RULES = [
     },
   },
   {
-    id: 'SCT-16', title: 'Remittance is either structured or one unstructured line, not both', severity: 'error', source: 'epc',
-    good: 'one <Ustrd>', bad: '<Ustrd> and <Strd> together, or two <Ustrd>', scenario: 'remittance-both',
+    id: 'SCT-16', title: 'Remittance is one unstructured line or one structured block, not both', severity: 'error', source: 'epc',
+    good: 'one <Ustrd>', bad: '<Ustrd> and <Strd> together, two <Ustrd> or two <Strd>', scenario: 'remittance-both',
     check({ txs }) {
       const out = [];
       for (const tx of txs) {
@@ -261,6 +260,7 @@ export const RULES = [
         const u = kids(r, 'Ustrd'), s = kids(r, 'Strd');
         if (u.length && s.length) out.push({ el: s[0], message: 'This payment has both unstructured and structured remittance information. SEPA allows one or the other.', fix: 'Keep either Ustrd or Strd.' });
         else if (u.length > 1) out.push({ el: u[1], message: `This payment has ${u.length} unstructured remittance lines. SEPA allows one.`, fix: 'Join them into one Ustrd of at most 140 characters.' });
+        else if (s.length > 1) out.push({ el: s[1], message: `This payment has ${s.length} structured remittance blocks. SEPA allows one.`, fix: 'Keep one Strd.' });
       }
       return out;
     },
@@ -274,10 +274,11 @@ export const RULES = [
     },
   },
   {
-    id: 'SCT-18', title: 'Every creditor has a name', severity: 'error', source: 'epc',
+    id: 'SCT-18', title: 'Every debtor and creditor has a name', severity: 'error', source: 'epc',
     good: '<Cdtr><Nm>Alder Example Studio</Nm></Cdtr>', bad: '<Cdtr/> with no name (the schema allows it)', scenario: 'creditor-name',
-    check({ txs }) {
-      return txs.filter((tx) => !text(path(tx, 'Cdtr', 'Nm'))).map((tx) => ({ el: kid(tx, 'Cdtr') || tx, message: 'The creditor has no name. The schema allows that, SEPA does not.', expected: 'a name', found: '(none)', fix: 'Add Nm with the name of the person or company being paid.' }));
+    check({ pmtInfs, txs }) {
+      const dbtr = pmtInfs.filter((pi) => !text(path(pi, 'Dbtr', 'Nm'))).map((pi) => ({ el: kid(pi, 'Dbtr') || kid(pi, 'PmtInfId') || pi, message: 'The debtor (payer) has no name. The schema allows that, SEPA does not.', expected: 'a name', found: '(none)', fix: 'Add Nm with the name of the account holder who pays.' }));
+      return dbtr.concat(txs.filter((tx) => !text(path(tx, 'Cdtr', 'Nm'))).map((tx) => ({ el: kid(tx, 'Cdtr') || tx, message: 'The creditor has no name. The schema allows that, SEPA does not.', expected: 'a name', found: '(none)', fix: 'Add Nm with the name of the person or company being paid.' })));
     },
   },
   {

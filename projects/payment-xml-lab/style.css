@@ -92,11 +92,14 @@ input[type=date], input[type=number], select, textarea { font: inherit; font-siz
 .row { position: absolute; left: 0; right: 0; height: 20px; line-height: 20px; white-space: pre; display: flex; }
 .row.m-error { background: #fff6f5; } .row.m-warning { background: #fffbf0; }
 .row.sel { background: #e8f0fc; box-shadow: inset 3px 0 0 var(--accent); }
-.gut { position: sticky; left: 0; flex: none; width: 66px; display: flex; align-items: center; justify-content: flex-end; gap: 4px; padding-right: 10px; color: #9aa3ad; background: #f7f8fa; border-right: 1px solid var(--line2); user-select: none; z-index: 1; }
+.gut { position: sticky; left: 0; flex: none; width: 66px; display: flex; align-items: center; justify-content: flex-end; gap: 4px; padding-right: 10px; color: #5f6b77; background: #f7f8fa; border-right: 1px solid var(--line2); user-select: none; z-index: 1; }
 .row.sel .gut { background: #dfe9f8; color: var(--ink); }
 .ln { min-width: 3ch; text-align: right; }
-.mk { order: -1; width: 10px; height: 10px; border-radius: 50%; border: 0; padding: 0; cursor: pointer; flex: none; }
-.mk-error { background: var(--err); } .mk-warning { background: #d99a1c; }
+.mk { order: -1; position: relative; width: 24px; height: 24px; margin: -2px -6px -2px -8px; border: 0; padding: 0; background: none; cursor: pointer; flex: none; z-index: 2; }
+.mk::before { content: ""; position: absolute; left: 7px; top: 7px; width: 10px; height: 10px; border-radius: 50%; }
+.mk-error::before { background: var(--err); } .mk-warning::before { background: #d99a1c; }
+.mk:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 6px; }
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .txt { padding-left: 12px; color: #1d2733; }
 .t-tag { color: #1f4f99; } .t-pun { color: #8a96a3; } .t-att { color: #8a4b0f; } .t-com { color: #6a7b6a; font-style: italic; }
 .drop { position: absolute; inset: 0; background: rgba(27, 47, 75, .86); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; z-index: 5; border-radius: 10px; }
@@ -134,7 +137,7 @@ input[type=date], input[type=number], select, textarea { font: inherit; font-siz
 .pipeline b { font-size: 14px; }
 .pipeline span { color: var(--soft); }
 .honest { margin-top: 12px; background: #eef3fa; border: 1px solid #cddbef; border-radius: 10px; padding: 10px 14px; font-size: 14px; }
-.table-wrap { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+.table-wrap { position: relative; overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
 .cat { border-collapse: collapse; width: 100%; font-size: 13.5px; }
 .cat th, .cat td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line2); }
 .cat th { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--soft); background: #fafbfc; }

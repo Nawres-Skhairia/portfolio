@@ -15,15 +15,40 @@ export function safetyGate(src, bytes) {
   if (/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/.test(src)) return 'The file contains control characters that XML does not allow (often a sign it is UTF-16, not UTF-8). Only UTF-8 files are checked here.';
   const enc = (src.match(/^\uFEFF?<\?xml[^>]*encoding\s*=\s*["']([^"']+)["']/) || [])[1];
   if (enc && !/^utf-?8$/i.test(enc)) return `The file says it is encoded as ${enc}. Only UTF-8 files are checked here (SEPA files are UTF-8).`;
-  if (/<!DOCTYPE/i.test(src)) return 'The file contains a DOCTYPE. Payment files never need one, and DOCTYPEs can be used to attack XML readers, so the file is refused.';
-  if (/<!ENTITY/i.test(src)) return 'The file declares an ENTITY. Payment files never need one, so the file is refused.';
+  const noComments = stripComments(src);
+  if (/<!DOCTYPE/i.test(noComments)) return 'The file contains a DOCTYPE. Payment files never need one, and DOCTYPEs can be used to attack XML readers, so the file is refused.';
+  if (/<!ENTITY/i.test(noComments)) return 'The file declares an ENTITY. Payment files never need one, so the file is refused.';
   return null;
 }
 
+// Comments removed with a linear scan (no backtracking). An unterminated comment keeps the rest of the file,
+// so anything after it is still checked.
+function stripComments(src) {
+  let out = '', i = 0;
+  for (;;) {
+    const a = src.indexOf('<!--', i);
+    if (a < 0) return out + src.slice(i);
+    const b = src.indexOf('-->', a + 4);
+    if (b < 0) return out + src.slice(i);
+    out += src.slice(i, a); i = b + 3;
+  }
+}
+function stripPIs(src) {
+  let out = '', i = 0;
+  for (;;) {
+    const a = src.indexOf('<?', i); if (a < 0) return out + src.slice(i);
+    const b = src.indexOf('?>', a + 2); if (b < 0) return out + src.slice(i);
+    out += src.slice(i, a); i = b + 2;
+  }
+}
+
 export function detect(src) {
-  const m = src.replace(/<\?[\s\S]*?\?>|<!--[\s\S]*?-->/g, '').match(/<([\w.-]+:)?([\w.-]+)\b([^>]*)>/);
+  const m = stripPIs(stripComments(src)).match(/<([\w.-]+:)?([\w.-]+)\b([^>]*)>/);
   if (!m) return { kind: 'not-iso', label: 'No XML element found' };
-  const ns = (m[3].match(/xmlns(?::[\w.-]+)?\s*=\s*["']([^"']+)["']/) || [])[1] || '';
+  // the namespace of the root element: the default xmlns, or xmlns:prefix when the root has a prefix
+  const prefix = m[1] ? m[1].slice(0, -1) : '';
+  const nsRe = prefix ? new RegExp('\\sxmlns:' + prefix.replace(/[.-]/g, '\\$&') + '\\s*=\\s*["\']([^"\']+)["\']') : /\sxmlns\s*=\s*["']([^"']+)["']/;
+  const ns = (m[3].match(nsRe) || [])[1] || '';
   if (ns === SUPPORTED.ns) return { kind: 'supported', id: SUPPORTED.id, ns };
   const iso = ns.match(/^urn:iso:std:iso:20022:tech:xsd:([a-z]{4}\.\d{3}\.\d{3}\.\d{2})$/);
   if (iso) return { kind: 'unsupported', id: iso[1], ns };
@@ -61,7 +86,9 @@ export async function check(src, { bytes = src.length, procDate, validateSchema,
 
   onStage('tree');
   const tree = parseTree(src);
+  const seen = new Set();
   for (const e of res.errors) {
+    const key = e.line + '|' + e.message; if (seen.has(key)) continue; seen.add(key);
     const x = explain(e.message);
     const onLine = (e.line && tree.byLine.get(e.line)) || [];
     const el = onLine.find((c) => c.localName === x.element) || onLine[0] || null;
