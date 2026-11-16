@@ -17,6 +17,9 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
+      - name: Vendored engine and schema are unchanged (SHA-256)
+        working-directory: projects/payment-xml-lab
+        run: sha256sum -c SHA256SUMS
       - name: Install the same libxml2 engine (xmllint-wasm 5.3.0, pinned)
         run: npm install --no-save --ignore-scripts xmllint-wasm@5.3.0
       - name: Check every scenario

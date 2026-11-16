@@ -11,6 +11,8 @@ export const MAX_BYTES = 10 * 1024 * 1024;
 export function safetyGate(src, bytes) {
   if (bytes > MAX_BYTES) return `This file is ${(bytes / 1048576).toFixed(1)} MB. The limit is 10 MB.`;
   if (!src.trim()) return 'The file is empty.';
+  // XML 1.0 forbids these control characters. A NUL also means a UTF-16 file read as UTF-8, which could hide a DOCTYPE.
+  if (/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/.test(src)) return 'The file contains control characters that XML does not allow (often a sign it is UTF-16, not UTF-8). Only UTF-8 files are checked here.';
   const enc = (src.match(/^\uFEFF?<\?xml[^>]*encoding\s*=\s*["']([^"']+)["']/) || [])[1];
   if (enc && !/^utf-?8$/i.test(enc)) return `The file says it is encoded as ${enc}. Only UTF-8 files are checked here (SEPA files are UTF-8).`;
   if (/<!DOCTYPE/i.test(src)) return 'The file contains a DOCTYPE. Payment files never need one, and DOCTYPEs can be used to attack XML readers, so the file is refused.';

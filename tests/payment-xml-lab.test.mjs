@@ -73,6 +73,11 @@ for (const s of SCENARIOS.filter((x) => x.expect)) {
   ok(r.status === 'refused', 'Safety: DOCTYPE and ENTITY refused', r.reason);
   const xxe = '<?xml version="1.0"?><!DOCTYPE d [<!ENTITY x SYSTEM "file:///etc/passwd">]><Document/>';
   ok((await check(xxe, { procDate, validateSchema })).status === 'refused', 'Safety: external entity refused');
+  // UTF-16LE without BOM decodes as "valid UTF-8" full of NULs: it must be refused before libxml2 sees it (Noah, PR 5)
+  const u16 = new TextDecoder('utf-8', { fatal: true }).decode(Buffer.from('<?xml version="1.0" encoding="UTF-16"?><!DOCTYPE d [<!ENTITY x SYSTEM "pain.001.001.09.xsd">]><d>&x;</d>', 'utf16le'));
+  ok((await check(u16, { procDate, validateSchema })).status === 'refused', 'Safety: BOM-less UTF-16LE refused');
+  const ctl = (await check('<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.001.001.09">\u0001</Document>', { procDate, validateSchema }));
+  ok(ctl.status === 'refused', 'Safety: control characters refused');
 }
 console.log(`${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

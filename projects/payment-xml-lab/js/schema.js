@@ -2,6 +2,8 @@
 // The worker is killed after TIME_LIMIT_MS. No network: the schema is a file served by this site.
 // Adapted from xmllint-wasm 5.3.0 index-browser.mjs (MIT, see ../vendor/xmllint-5.3.0/COPYING).
 
+import { scriptURL } from './tt.js';
+
 const MESSAGE_KEY = 'xmllint-wasm';
 export const TIME_LIMIT_MS = 20000;
 const schemaCache = new Map();
@@ -30,7 +32,7 @@ export function validate(xmlText, schemaText, schemaName) {
   job[MESSAGE_KEY] = true;
 
   return new Promise((resolve, reject) => {
-    const worker = new Worker(new URL('../vendor/xmllint-5.3.0/xmllint-browser.mjs', import.meta.url), { type: 'module' });
+    const worker = new Worker(scriptURL(new URL('../vendor/xmllint-5.3.0/xmllint-browser.mjs', import.meta.url)), { type: 'module' });
     const timer = setTimeout(() => {
       worker.terminate();
       reject(new Error('The schema check took longer than ' + TIME_LIMIT_MS / 1000 + ' seconds and was stopped.'));

@@ -3,6 +3,7 @@ import { RULES, SOURCES, CATALOGUE_VERSION, nextBusinessDay } from './rules.js';
 import { SCENARIOS, generate, sample } from './factory.js';
 import { SUPPORTED, TOOL, MAX_BYTES } from './engine.js';
 import { toHtml, toJson, toJUnit } from './reports.js';
+import { scriptURL } from './tt.js';
 
 const $ = (id) => document.getElementById(id);
 const h = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
@@ -24,7 +25,7 @@ const xsdReady = fetch(XSD_URL, { credentials: 'same-origin' }).then((r) => { if
 let worker = null, jobId = 0, pending = null;
 function getWorker(xsdText) {
   if (worker) return worker;
-  worker = new Worker(new URL('./check-worker.js', import.meta.url), { type: 'module' });
+  worker = new Worker(scriptURL(new URL('./check-worker.js', import.meta.url)), { type: 'module' });
   worker.addEventListener('message', (e) => {
     const d = e.data; if (!pending || d.id !== pending.id) return;
     if (d.type === 'stage') stage(d.stage === 'schema' ? 'schema' : d.stage === 'rules' ? 'rules' : null);
