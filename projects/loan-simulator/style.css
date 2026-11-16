@@ -162,3 +162,5 @@ th { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: v
   details > summary { list-style: none; }
   .panel, .card, .ccard { break-inside: avoid; }
 }
+
+.gauge .limit35 { left: 35%; }
