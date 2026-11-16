@@ -15,35 +15,28 @@ export function safetyGate(src, bytes) {
   if (/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/.test(src)) return 'The file contains control characters that XML does not allow (often a sign it is UTF-16, not UTF-8). Only UTF-8 files are checked here.';
   const enc = (src.match(/^\uFEFF?<\?xml[^>]*encoding\s*=\s*["']([^"']+)["']/) || [])[1];
   if (enc && !/^utf-?8$/i.test(enc)) return `The file says it is encoded as ${enc}. Only UTF-8 files are checked here (SEPA files are UTF-8).`;
-  const noComments = stripComments(src);
-  if (/<!DOCTYPE/i.test(noComments)) return 'The file contains a DOCTYPE. Payment files never need one, and DOCTYPEs can be used to attack XML readers, so the file is refused.';
-  if (/<!ENTITY/i.test(noComments)) return 'The file declares an ENTITY. Payment files never need one, so the file is refused.';
+  // Checked on the raw text, anywhere, even inside comments: the gate must never disagree with the parser (Noah, PR 5).
+  if (/<!DOCTYPE/i.test(src)) return 'The file contains the text <!DOCTYPE. Payment files never need one, and DOCTYPEs can be used to attack XML readers, so the file is refused. Remove it, even if it is inside a comment.';
+  if (/<!ENTITY/i.test(src)) return 'The file contains the text <!ENTITY. Payment files never need one, so the file is refused. Remove it, even if it is inside a comment.';
   return null;
 }
 
-// Comments removed with a linear scan (no backtracking). An unterminated comment keeps the rest of the file,
-// so anything after it is still checked.
-function stripComments(src) {
-  let out = '', i = 0;
+// The root start tag, found by reading the prolog in order (declaration, PIs, comments, whitespace), as a parser does.
+function rootTag(src) {
+  let i = 0;
   for (;;) {
-    const a = src.indexOf('<!--', i);
-    if (a < 0) return out + src.slice(i);
-    const b = src.indexOf('-->', a + 4);
-    if (b < 0) return out + src.slice(i);
-    out += src.slice(i, a); i = b + 3;
-  }
-}
-function stripPIs(src) {
-  let out = '', i = 0;
-  for (;;) {
-    const a = src.indexOf('<?', i); if (a < 0) return out + src.slice(i);
-    const b = src.indexOf('?>', a + 2); if (b < 0) return out + src.slice(i);
-    out += src.slice(i, a); i = b + 2;
+    while (i < src.length && /\s/.test(src[i])) i++;
+    if (src.startsWith('<?', i)) { const e = src.indexOf('?>', i + 2); if (e < 0) return null; i = e + 2; continue; }
+    if (src.startsWith('<!--', i)) { const e = src.indexOf('-->', i + 4); if (e < 0) return null; i = e + 3; continue; }
+    if (src[i] !== '<') return null;
+    const e = src.indexOf('>', i); if (e < 0) return null;
+    return src.slice(i, e + 1);
   }
 }
 
 export function detect(src) {
-  const m = stripPIs(stripComments(src)).match(/<([\w.-]+:)?([\w.-]+)\b([^>]*)>/);
+  const tag = rootTag(src);
+  const m = tag && tag.match(/^<([\w.-]+:)?([\w.-]+)\b([^>]*)>$/);
   if (!m) return { kind: 'not-iso', label: 'No XML element found' };
   // the namespace of the root element: the default xmlns, or xmlns:prefix when the root has a prefix
   const prefix = m[1] ? m[1].slice(0, -1) : '';

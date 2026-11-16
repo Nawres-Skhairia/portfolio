@@ -55,7 +55,16 @@ for (const count of [1, 100, 10000]) {
   ok(detectNs(pref) === 'pain.001.001.09', 'prefixed root detected');
   const cmt = v.replace('<Document', '<!-- an old note: <!DOCTYPE was removed -->\n<Document');
   const r2 = await check(cmt, { procDate, validateSchema });
-  ok(r2.status === 'checked', 'DOCTYPE inside a comment is not refused', r2.reason);
+  ok(r2.status === 'refused' && /even if it is inside a comment/.test(r2.reason), 'DOCTYPE text anywhere is refused, with a clear message', r2.reason);
+  // Noah's attack files on fa67398: a "<!--" inside a processing instruction must not hide a DOCTYPE
+  const NS = 'urn:iso:std:iso:20022:tech:xsd:pain.001.001.09';
+  const a1 = `<?xml version="1.0"?><?pi <!-- ?><!DOCTYPE d [<!ENTITY sec SYSTEM "file:///pain.001.001.09.xsd">]><!-- --><Document xmlns="${NS}">&sec;</Document>`;
+  ok((await check(a1, { procDate, validateSchema })).status === 'refused', 'Noah attack 1 (PI hides comment start) refused');
+  const a2 = `<?xml version="1.0" encoding="UTF-8" ?><?x <!--?>\n<!DOCTYPE d [<!ENTITY sec SYSTEM "file:///pain.001.001.09.xsd">]>\n<?y -->?><Document xmlns="${NS}">&sec;</Document>`;
+  ok((await check(a2, { procDate, validateSchema })).status === 'refused', 'Noah attack 2 (PI pair around DOCTYPE) refused');
+  const a3 = `<?xml version="1.0"?><![CDATA[<!--]]><Document xmlns="${NS}"><CstmrCdtTrfInitn/></Document>`;
+  const r3x = await check(a3, { procDate, validateSchema });
+  ok(r3x.status === 'not-wellformed' || r3x.status === 'refused' || r3x.status === 'not-iso', 'CDATA before the root never passes', r3x.status + ' ' + (r3x.reason || ''));
   const open = v.replace('<Document', '<!-- unterminated <!DOCTYPE d [<!ENTITY x "y">]>\n<Document');
   ok((await check(open, { procDate, validateSchema })).status === 'refused', 'DOCTYPE after an unterminated comment is refused');
   const ly = v.replace('IE29AIBK93115212345678', 'LY83002048000020100120361').replace(/<IBAN>[A-Z]{2}\d{2}\w+<\/IBAN>/, (x) => x);
