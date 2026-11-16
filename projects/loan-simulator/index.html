@@ -7,6 +7,15 @@
   <meta name="description" content="See what a loan really costs, compare two bank offers side by side, check if it fits your budget, and share the result. A free tool by Nawres Skhairia.">
   <meta property="og:title" content="Loan Simulator · What does your loan really cost?">
   <meta property="og:description" content="Compare two bank offers, see the true cost and how much you save by repaying early. Free, instant, private.">
+  <meta property="og:type" content="website">
+  <link rel="canonical" href="https://nawres-skhairia.vercel.app/projects/loan-simulator/">
+  <meta property="og:url" content="https://nawres-skhairia.vercel.app/projects/loan-simulator/">
+  <meta property="og:site_name" content="Nawres Skhairia">
+  <meta property="og:image" content="https://nawres-skhairia.vercel.app/assets/og/loan-simulator.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Loan simulator comparing two loan offers with their fees">
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/assets/fonts/fonts.css">
   <link rel="stylesheet" href="style.css">
@@ -43,7 +52,8 @@
         </div>
         <div class="field">
           <label for="amount">Amount borrowed</label>
-          <input id="amount" type="number" inputmode="decimal" min="100" step="100" value="150000">
+          <input id="amount" aria-describedby="amountErr" type="number" inputmode="decimal" min="1000" max="10000000" step="100" value="150000">
+          <p class="field-error" id="amountErr" hidden></p>
           <input id="amountRange" type="range" min="1000" max="1000000" step="1000" value="150000" aria-label="Amount slider">
         </div>
 
@@ -51,17 +61,20 @@
           <legend><span class="dot a"></span><span class="only-compare">Offer A</span><span class="only-single">Your loan</span></legend>
           <div class="field">
             <label for="rateA">Interest rate (% per year)</label>
-            <input id="rateA" type="number" inputmode="decimal" min="0" max="30" step="0.05" value="3.5">
+            <input id="rateA" aria-describedby="rateAErr" type="number" inputmode="decimal" min="0" max="30" step="0.05" value="3.5">
+          <p class="field-error" id="rateAErr" hidden></p>
             <input id="rateARange" class="only-single" type="range" min="0" max="15" step="0.05" value="3.5" aria-label="Interest rate slider">
           </div>
           <div class="field">
             <label for="yearsA">Duration (years)</label>
-            <input id="yearsA" type="number" inputmode="numeric" min="1" max="40" step="1" value="20">
+            <input id="yearsA" aria-describedby="yearsAErr" type="number" inputmode="numeric" min="1" max="40" step="1" value="20">
+          <p class="field-error" id="yearsAErr" hidden></p>
             <input id="yearsARange" class="only-single" type="range" min="1" max="40" step="1" value="20" aria-label="Duration slider">
           </div>
           <div class="field only-compare">
             <label for="feesA">One-off fees</label>
-            <input id="feesA" type="number" inputmode="decimal" min="0" step="50" value="600">
+            <input id="feesA" aria-describedby="feesAErr" type="number" inputmode="decimal" min="0" step="50" value="600">
+          <p class="field-error" id="feesAErr" hidden></p>
           </div>
         </fieldset>
 
@@ -69,32 +82,38 @@
           <legend><span class="dot b"></span>Offer B</legend>
           <div class="field">
             <label for="rateB">Interest rate (% per year)</label>
-            <input id="rateB" type="number" inputmode="decimal" min="0" max="30" step="0.05" value="3.3">
+            <input id="rateB" aria-describedby="rateBErr" type="number" inputmode="decimal" min="0" max="30" step="0.05" value="3.3">
+          <p class="field-error" id="rateBErr" hidden></p>
           </div>
           <div class="field">
             <label for="yearsB">Duration (years)</label>
-            <input id="yearsB" type="number" inputmode="numeric" min="1" max="40" step="1" value="20">
+            <input id="yearsB" aria-describedby="yearsBErr" type="number" inputmode="numeric" min="1" max="40" step="1" value="20">
+          <p class="field-error" id="yearsBErr" hidden></p>
           </div>
           <div class="field">
             <label for="feesB">One-off fees</label>
-            <input id="feesB" type="number" inputmode="decimal" min="0" step="50" value="5000">
+            <input id="feesB" aria-describedby="feesBErr" type="number" inputmode="decimal" min="0" step="50" value="5000">
+          <p class="field-error" id="feesBErr" hidden></p>
           </div>
         </fieldset>
 
         <div class="field only-single sep">
           <label for="extra">Extra payment each month <span>(optional)</span></label>
-          <input id="extra" type="number" inputmode="decimal" min="0" step="10" value="0">
+          <input id="extra" aria-describedby="extraErr" type="number" inputmode="decimal" min="0" step="10" value="0">
+          <p class="field-error" id="extraErr" hidden></p>
           <p class="hint">Add even a small amount and watch the interest drop.</p>
         </div>
 
         <div class="field sep">
           <label for="income">Your monthly net income <span>(optional)</span></label>
-          <input id="income" type="number" inputmode="decimal" min="0" step="50" value="">
+          <input id="income" aria-describedby="incomeErr" type="number" inputmode="decimal" min="0" step="50" value="">
+          <p class="field-error" id="incomeErr" hidden></p>
           <p class="hint">To check whether the payment fits your budget.</p>
         </div>
       </form>
 
-      <section class="results" aria-live="polite">
+      <section class="results" id="results" aria-live="polite">
+        <p class="fix-note" id="fixNote" hidden>Fix the box marked in red to update the result.</p>
         <div class="insight" id="insight"></div>
 
         <!-- Single mode -->
@@ -186,7 +205,7 @@
   </main>
 
   <footer class="wrap foot">
-    <p>Built by <a href="/">Nawres Skhairia</a>. A work in progress: ideas and feedback are welcome, <a href="/#contact">get in touch</a>. <a href="/privacy/">Privacy</a></p>
+    <p>Created by <a href="/">Nawres Skhairia</a>. A work in progress: ideas and feedback are welcome, <a href="/#contact">get in touch</a>. <a href="/privacy/">Privacy</a></p>
   </footer>
 
   <script src="app.js"></script>
