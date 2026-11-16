@@ -293,7 +293,7 @@
     const q = new URLSearchParams(location.search);
     keys.forEach((k) => { if (q.has(k) && k !== 'currency') $(k).value = q.get(k); });
     if (q.has('currency')) {
-      const c = q.get('currency');
+      const c = q.get('currency').toUpperCase();
       const known = CURRENCIES.includes(c);
       $('currency').value = known ? c : 'EUR';
       $('currencyNote').hidden = known;
@@ -326,7 +326,11 @@
     const t = e.clipboardData ? e.clipboardData.getData('text') : '';
     if (t.includes(',') && e.target.type === 'number' && RULES[e.target.id]) { e.preventDefault(); commaTyped.add(e.target.id); update(); }
   });
-  $('form').addEventListener('input', (e) => { commaTyped.delete(e.target.id); }, true);
+  // The message stays until the visitor empties the box or uses a dot, so "2,5" can never end as 25 without a word.
+  $('form').addEventListener('input', (e) => {
+    const v = e.target.value;
+    if (v === '' || v.includes('.')) commaTyped.delete(e.target.id);
+  }, true);
   $('currency').addEventListener('change', () => { $('currencyNote').hidden = true; });
   ['currency', 'feesA', 'rateB', 'yearsB', 'feesB', 'extra', 'income'].forEach((id) => $(id).addEventListener('input', () => update()));
   $('modeSingle').addEventListener('click', () => setMode('single'));
