@@ -1,0 +1,23 @@
+# Payment XML Lab proof (PORT-40): every factory scenario gives exactly its own finding, valid files give none,
+# the sample gives its 5 planned findings, and DOCTYPE/ENTITY files are refused. No secrets, no deploy.
+name: Payment XML Lab check
+on:
+  pull_request:
+    paths: ['projects/payment-xml-lab/**', 'tests/payment-xml-lab.test.mjs', '.github/workflows/payment-xml-lab.yml']
+permissions:
+  contents: read
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Install the same libxml2 engine (xmllint-wasm 5.3.0, pinned)
+        run: npm install --no-save --ignore-scripts xmllint-wasm@5.3.0
+      - name: Check every scenario
+        run: node tests/payment-xml-lab.test.mjs

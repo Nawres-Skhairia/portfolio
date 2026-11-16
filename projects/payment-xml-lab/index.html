@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Payment XML Lab (ISO 20022) · Nawres Skhairia</title>
+  <meta name="description" content="Check a SEPA credit transfer file (pain.001) against the ISO 20022 schema and SEPA business rules, line by line, in your browser. Files never leave your device.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/fonts/fonts.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="modulepreload" href="js/app.js">
+</head>
+<body>
+  <header class="bar">
+    <div class="bar-in">
+      <a class="home" href="/#work" aria-label="Back to Nawres Skhairia's portfolio">N.&nbsp;Skhairia</a>
+      <div class="brand">
+        <span class="brand-name">Payment XML Lab</span>
+        <span class="brand-sub">ISO 20022 · pain.001.001.09 · SEPA Credit Transfer</span>
+      </div>
+      <p class="device"><span class="dot" aria-hidden="true"></span>Runs on your device. Files are never uploaded or stored.</p>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="intro">
+      <h1>Is this payment file ready for the bank?</h1>
+      <p>Drop a SEPA credit transfer file (pain.001). It is checked against the official ISO 20022 schema and a catalogue of SEPA rules, and every problem is shown at its exact line, in plain words, with how to fix it.</p>
+    </section>
+
+    <div class="toolbar" role="toolbar" aria-label="File actions">
+      <label class="tb tb-main" for="fileIn">Open file<input type="file" id="fileIn" accept=".xml,text/xml,application/xml"></label>
+      <button type="button" class="tb" id="pasteBtn">Paste XML</button>
+      <button type="button" class="tb" id="sampleBtn">Load sample</button>
+      <button type="button" class="tb" id="factoryBtn">Test-data factory</button>
+      <span class="tb-sep" aria-hidden="true"></span>
+      <button type="button" class="tb" id="dlXml" disabled>Download XML</button>
+      <div class="export">
+        <button type="button" class="tb" id="exportBtn" aria-haspopup="true" aria-expanded="false" disabled>Export report</button>
+        <div class="menu" id="exportMenu" hidden>
+          <button type="button" data-export="html">Report (HTML, to print or save as PDF)</button>
+          <button type="button" data-export="json">Findings (JSON)</button>
+          <button type="button" data-export="junit">Test results (JUnit XML)</button>
+        </div>
+      </div>
+      <label class="proc" for="procDate">Processing date <input type="date" id="procDate"></label>
+    </div>
+
+    <section class="status" id="status" aria-live="polite">
+      <div class="facts" id="facts"></div>
+      <div class="verdict" id="verdict"></div>
+    </section>
+    <ol class="stages" id="stages" aria-label="Check progress">
+      <li data-stage="read">Read</li><li data-stage="schema">XML and schema</li><li data-stage="rules">SEPA rules</li><li data-stage="report">Report</li>
+    </ol>
+
+    <div class="filters" role="group" aria-label="Filter findings">
+      <button type="button" class="flt on" data-filter="all">All <b id="cAll">0</b></button>
+      <button type="button" class="flt f-xsd" data-filter="xsd">Schema errors <b id="cXsd">0</b></button>
+      <button type="button" class="flt f-rule" data-filter="rule">Rule errors <b id="cRule">0</b></button>
+      <button type="button" class="flt f-warn" data-filter="warn">Warnings <b id="cWarn">0</b></button>
+      <p class="hint" id="hint">Use J and K (or the arrow keys) to move between findings.</p>
+    </div>
+
+    <div class="bench" id="bench">
+      <section class="pane code-pane" aria-label="The file">
+        <div class="pane-head"><span id="fileName">No file</span><span id="fileMeta" class="muted"></span></div>
+        <div class="code" id="code" tabindex="0" aria-label="File contents with line numbers"><div class="code-space" id="codeSpace"></div></div>
+        <div class="drop" id="drop" hidden><p>Drop the XML file to check it here</p></div>
+      </section>
+      <section class="pane find-pane" aria-label="Findings">
+        <div class="pane-head"><span>Findings</span><span id="findMeta" class="muted"></span></div>
+        <ol class="findings" id="findings"></ol>
+      </section>
+    </div>
+
+    <section class="more">
+      <h2>How it checks a file</h2>
+      <ol class="pipeline">
+        <li><b>Safety gate</b><span>Up to 25 MB. Files with a DOCTYPE or ENTITY are refused, which blocks the classic XML attacks (XXE, "billion laughs").</span></li>
+        <li><b>1 · Well-formed XML</b><span>Every tag opened is closed, in the right order.</span></li>
+        <li><b>2 · Official schema</b><span>The unchanged ISO 20022 pain.001.001.09 schema, checked by libxml2 compiled to WebAssembly, in a separate worker that is stopped after 30 seconds.</span></li>
+        <li><b>3 · SEPA rules</b><span>What the schema cannot see: sums and counts, IBAN check digits, 2 decimals in euro, character set, dates. Amounts are added exactly, never as floating point.</span></li>
+        <li><b>Report</b><span>Each finding at its line, with its path, what was expected and found, and how to fix it. Export as HTML, JSON or JUnit for a build pipeline.</span></li>
+      </ol>
+      <p class="honest"><b>Not a certified validator.</b> It checks the official schema and the rules listed below; your bank may apply more. Nothing you open here is sent anywhere: the file is read in this browser tab and forgotten when you close it.</p>
+
+      <h2 id="catalogue">Rule catalogue <span class="muted" id="catVersion"></span></h2>
+      <div class="table-wrap"><table class="cat" id="catTable">
+        <thead><tr><th>ID</th><th>What it checks</th><th>Severity</th><th>Valid</th><th>Invalid</th><th>Source</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+
+      <h2>Sources and licences</h2>
+      <ul class="sources">
+        <li>Schema: ISO 20022 pain.001.001.09, served unchanged from this site. ISO 20022 message schemas are published free of charge by the ISO 20022 Registration Authority at <a href="https://www.iso20022.org/" rel="noopener">iso20022.org</a>. This is not the official ISO 20022 site. See <a href="schemas/NOTICE.md">NOTICE</a>.</li>
+        <li>SEPA rules: written in our own words from the European Payments Council's public <a href="https://www.europeanpaymentscouncil.eu/what-we-do/epc-payment-schemes/sepa-credit-transfer/sepa-credit-transfer-rulebook-and" rel="noopener">SEPA Credit Transfer guidelines</a>. Rules marked "common bank practice" are not in the guidelines.</li>
+        <li>Engine: libxml2 via <a href="https://github.com/noppa/xmllint-wasm" rel="noopener">xmllint-wasm</a> (MIT licence).</li>
+        <li>Test data: made-up companies, published example IBANs and made-up BICs (bank code XMPL). Never real accounts.</li>
+      </ul>
+    </section>
+
+    <p class="foot">Created by <a href="/">Nawres Skhairia</a> through vibe coding, and tested line by line. A work in progress: feedback is welcome, <a href="/#contact">get in touch</a>. <a href="/privacy/">Privacy</a></p>
+  </main>
+
+  <dialog id="pasteDlg" aria-labelledby="pasteTitle">
+    <form method="dialog" class="dlg">
+      <h2 id="pasteTitle">Paste XML</h2>
+      <textarea id="pasteText" rows="14" spellcheck="false" placeholder="&lt;Document xmlns=&quot;urn:iso:std:iso:20022:tech:xsd:pain.001.001.09&quot;&gt;…"></textarea>
+      <div class="dlg-actions"><button value="cancel" class="tb">Cancel</button><button value="ok" class="tb tb-main" id="pasteOk">Check</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="factDlg" aria-labelledby="factTitle">
+    <form method="dialog" class="dlg">
+      <h2 id="factTitle">Test-data factory</h2>
+      <p class="muted">Builds a pain.001.001.09 file with made-up data: valid, or broken on purpose in one place. The comment at the top of each file says which finding it must give, so it can serve as a test oracle.</p>
+      <label class="fld">Scenario <select id="fScenario"></select></label>
+      <div class="fld-row">
+        <label class="fld">Payments <input type="number" id="fCount" min="1" max="10000" value="25"></label>
+        <label class="fld">Execution date <input type="date" id="fDate"></label>
+        <label class="fld">Seed <input type="number" id="fSeed" min="1" max="999999" value="2026"></label>
+      </div>
+      <div class="dlg-actions"><button value="cancel" class="tb">Cancel</button><button value="ok" class="tb tb-main">Generate and check</button></div>
+    </form>
+  </dialog>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
