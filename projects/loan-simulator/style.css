@@ -46,6 +46,11 @@ input[type=number], select {
   border-radius: 10px; background: #fff; color: var(--ink); width: 100%;
 }
 input[type=number]:focus, select:focus { outline: 2px solid var(--green); outline-offset: 1px; border-color: var(--green); }
+input[type=number].invalid { border-color: var(--rust); background: #fdf3ef; }
+input[type=number].invalid:focus { outline-color: var(--rust); }
+.field-error { margin: 0; font-size: 14px; color: var(--rust); font-weight: 700; }
+.fix-note { margin: 0 0 12px; padding: 10px 14px; border-radius: 10px; background: #fdf3ef; color: var(--rust); font-weight: 700; }
+.results.stale > :not(.fix-note) { opacity: .4; transition: opacity .2s; }
 input[type=range] { width: 100%; accent-color: var(--green); height: 28px; }
 .sep { border-top: 1px dashed var(--line); padding-top: 18px; }
 .hint { font-size: 14px; color: var(--soft); }

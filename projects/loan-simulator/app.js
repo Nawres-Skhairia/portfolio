@@ -25,11 +25,50 @@
     if (m) parts.push(m + (m === 1 ? ' month' : ' months'));
     return parts.join(' ') || '0 months';
   }
-  const num = (id, min, max, fallback) => {
-    let v = parseFloat($(id).value);
-    if (!isFinite(v)) v = fallback;
-    return Math.min(max, Math.max(min, v));
+  /* ---------- input rules (PORT-12): never calculate with a number that is not the one on screen ---------- */
+  const RULES = {
+    amount: { min: 1000, max: 10000000, msg: 'Enter an amount between 1,000 and 10,000,000.', neg: 'A loan cannot be negative. Enter an amount between 1,000 and 10,000,000.' },
+    rateA: { min: 0, max: 30, msg: 'Enter a rate between 0 and 30%.' },
+    rateB: { min: 0, max: 30, msg: 'Enter a rate between 0 and 30%.' },
+    yearsA: { min: 1, max: 40, whole: true, msg: 'Enter a whole number of years between 1 and 40.' },
+    yearsB: { min: 1, max: 40, whole: true, msg: 'Enter a whole number of years between 1 and 40.' },
+    feesA: { min: 0, msg: 'Enter 0 or more. Fees cannot be negative.' },
+    feesB: { min: 0, msg: 'Enter 0 or more. Fees cannot be negative.' },
+    extra: { min: 0, msg: 'Enter 0 or more. An extra payment cannot be negative.' },
+    income: { min: 0, optional: true, msg: 'Enter 0 or more, or leave it empty.' }
   };
+  const FIELDS = {
+    single: ['amount', 'rateA', 'yearsA', 'extra', 'income'],
+    compare: ['amount', 'rateA', 'yearsA', 'feesA', 'rateB', 'yearsB', 'feesB', 'income']
+  };
+  // Returns an error message, or '' when the value on screen is valid.
+  function problem(id) {
+    const el = $(id), rule = RULES[id], raw = el.value.trim();
+    if (el.validity && el.validity.badInput) return rule.msg;
+    if (raw === '') return rule.optional ? '' : rule.msg;
+    const v = Number(raw);
+    if (!isFinite(v)) return rule.msg;
+    if (v < 0 && rule.neg) return rule.neg;
+    if (v < rule.min || (rule.max !== undefined && v > rule.max) || (rule.whole && !Number.isInteger(v))) return rule.msg;
+    return '';
+  }
+  function showProblem(id, msg) {
+    const el = $(id), err = $(id + 'Err');
+    el.classList.toggle('invalid', !!msg);
+    if (msg) el.setAttribute('aria-invalid', 'true'); else el.removeAttribute('aria-invalid');
+    err.textContent = msg; err.hidden = !msg;
+  }
+  // Validates the boxes used in the current mode; returns true when all are valid.
+  function validate() {
+    let ok = true;
+    Object.keys(RULES).forEach((id) => {
+      const msg = FIELDS[mode].includes(id) ? problem(id) : '';
+      showProblem(id, msg);
+      if (msg) ok = false;
+    });
+    return ok;
+  }
+  const val = (id) => { const raw = $(id).value.trim(); return raw === '' ? 0 : Number(raw); };
 
   /* ---------- maths: fixed-rate amortising loan ---------- */
   function simulate(P, annualRate, n, extra) {
@@ -135,7 +174,7 @@
 
   /* ---------- affordability ---------- */
   function afford(monthly, cur) {
-    const income = num('income', 0, 1e9, 0);
+    const income = val('income');
     if (!income) { $('afford').hidden = true; return; }
     $('afford').hidden = false;
     const pct = (monthly / income) * 100;
@@ -154,13 +193,18 @@
   /* ---------- main update ---------- */
   function update(opts) {
     const animate = !!(opts && opts.animate);
+    const valid = validate();
+    // Invalid input: keep the last valid result on screen, faded, and say why.
+    $('results').classList.toggle('stale', !valid);
+    $('fixNote').hidden = valid;
+    if (!valid) return;
     const cur = $('currency').value;
-    const P = num('amount', 1, 1e10, 150000);
-    const rateA = num('rateA', 0, 30, 3.5), yearsA = Math.round(num('yearsA', 1, 40, 20));
+    const P = val('amount');
+    const rateA = val('rateA'), yearsA = val('yearsA');
     const nA = yearsA * 12;
 
     if (mode === 'single') {
-      const extra = num('extra', 0, 1e9, 0);
+      const extra = val('extra');
       const base = simulate(P, rateA, nA, 0);
       const plan = extra > 0 ? simulate(P, rateA, nA, extra) : null;
       const shown = plan || base;
@@ -195,8 +239,8 @@
       ).join('');
       afford(base.pay + extra, cur);
     } else {
-      const feesA = num('feesA', 0, 1e9, 0), feesB = num('feesB', 0, 1e9, 0);
-      const rateB = num('rateB', 0, 30, 3.2), yearsB = Math.round(num('yearsB', 1, 40, 20));
+      const feesA = val('feesA'), feesB = val('feesB');
+      const rateB = val('rateB'), yearsB = val('yearsB');
       const nB = yearsB * 12;
       const A = simulate(P, rateA, nA, 0), B = simulate(P, rateB, nB, 0);
       const costA = A.totalInt + feesA, costB = B.totalInt + feesB;
@@ -245,7 +289,7 @@
     if (q.get('mode') === 'compare') mode = 'compare';
   }
   function syncRanges() {
-    [['amount', 'amountRange'], ['rateA', 'rateARange'], ['yearsA', 'yearsARange']].forEach(([a, b]) => { $(b).value = $(a).value; });
+    [['amount', 'amountRange'], ['rateA', 'rateARange'], ['yearsA', 'yearsARange']].forEach(([a, b]) => { if (!problem(a)) $(b).value = $(a).value; });
   }
 
   function setMode(m) {
@@ -258,7 +302,7 @@
 
   /* ---------- wiring ---------- */
   [['amount', 'amountRange'], ['rateA', 'rateARange'], ['yearsA', 'yearsARange']].forEach(([a, b]) => {
-    $(a).addEventListener('input', () => { $(b).value = $(a).value; update(); });
+    $(a).addEventListener('input', () => { if (!problem(a)) $(b).value = $(a).value; update(); });
     $(b).addEventListener('input', () => { $(a).value = $(b).value; update(); });
   });
   ['currency', 'feesA', 'rateB', 'yearsB', 'feesB', 'extra', 'income'].forEach((id) => $(id).addEventListener('input', () => update()));
