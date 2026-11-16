@@ -70,15 +70,42 @@ for (const f of files.filter((p) => extname(p) === '.html')) {
   }
 }
 
-// 5. CSS files: outside loads (fonts, images) and missing files
-for (const f of files.filter((p) => extname(p) === '.css')) {
-  const css = readFileSync(f, 'utf8');
+// 5. CSS: .css files, <style> blocks and style="" attributes in HTML: outside loads and missing files
+function checkCss(f, css) {
   for (const m of css.matchAll(/url\(\s*["']?([^"')]+)["']?\s*\)|@import\s+["']([^"']+)["']/gi)) {
     const url = (m[1] || m[2]).trim();
     if (/^(data:|#)/i.test(url)) continue;
     if (isExternal(url) && !ownSite(url)) { fail(rel(f), `loads a file from another website: ${url}`); continue; }
     if (!exists(f, isExternal(url) ? new URL(url, SITE).pathname : url)) fail(rel(f), `points to a missing file: ${url}`);
   }
+}
+for (const f of files) {
+  if (extname(f) === '.css') checkCss(f, readFileSync(f, 'utf8'));
+  if (extname(f) === '.html') {
+    const html = readFileSync(f, 'utf8');
+    for (const m of html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)) checkCss(f, m[1]);
+    for (const m of html.matchAll(/\sstyle\s*=\s*(?:"([^"]*)"|'([^']*)')/gi)) checkCss(f, m[1] || m[2] || '');
+  }
+}
+
+// 5b. Scripts (.js files and inline <script> blocks): code that contacts another website
+const JS_CALLS = [
+  /\b(?:fetch|import|importScripts|sendBeacon)\s*\(\s*['"`]((?:https?:)?\/\/[^'"`\s]+)/g,
+  /\bnew\s+(?:Worker|SharedWorker|WebSocket|EventSource|Request)\s*\(\s*['"`]((?:https?:|wss?:)?\/\/[^'"`\s]+)/g,
+  /\.open\s*\(\s*['"`][A-Za-z]+['"`]\s*,\s*['"`]((?:https?:)?\/\/[^'"`\s]+)/g,
+  /\.(?:src|action)\s*=\s*['"`]((?:https?:)?\/\/[^'"`\s]+)/g,
+  /\bfrom\s+['"`]((?:https?:)?\/\/[^'"`\s]+)/g,
+];
+function checkJs(f, js) {
+  for (const re of JS_CALLS) for (const m of js.matchAll(re)) {
+    const url = m[1].replace(/^wss?:/i, 'https:');
+    if (!ownSite(url)) fail(rel(f), `script contacts another website: ${m[1]}`);
+  }
+}
+for (const f of files) {
+  if (rel(f).startsWith('.github')) continue;
+  if (['.js', '.mjs', '.cjs'].includes(extname(f))) checkJs(f, readFileSync(f, 'utf8'));
+  if (extname(f) === '.html') for (const m of readFileSync(f, 'utf8').matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)) checkJs(f, m[1]);
 }
 
 // 6. Sitemap addresses
