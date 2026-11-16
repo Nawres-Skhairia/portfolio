@@ -85,9 +85,25 @@ for (const s of SCENARIOS.filter((x) => x.expect)) {
     const got = ids(r);
     const want = s.expect + (s.at ? '@' + line : '');
     const good = s.expect === 'XML' ? r.status === 'not-wellformed' && r.findings.length === 1 && r.layers.xsd === 'not run' && r.layers.rules === 'not run'
-      : got.length === 1 && got[0] === want;
+      : got.length === 1 && got[0] === want && (!s.sev || r.findings.find((f) => f.layer === 'rule').severity === s.sev);
     ok(good, `AT3 ${s.id} (${count})`, `want ${want}, got ${got.join(' ') || 'nothing'}`);
   }
+}
+// Sophie's EPC132-08 2025 corrections
+{
+  const { RULES, SOURCES } = await import(new URL('js/rules.js', base));
+  ok(SOURCES.epc.name === 'EPC132-08 SCT Customer-to-PSP Implementation Guidelines 2025 v1.0' && SOURCES.epc.url.endsWith('.pdf'), 'EPC source title and PDF link');
+  ok(RULES.length === 21, '21 rules in the catalogue');
+  const sev = (r, id) => r.findings.filter((f) => f.id === id).map((f) => f.severity).join(',');
+  const un = generate({ scenario: 'address-unstructured', count: 3, procDate }).xml;
+  ok(sev(await check(un, { procDate, validateSchema }), 'SCT-21') === 'warning', 'Unstructured address is a warning before 22 Nov 2026');
+  ok(sev(await check(un, { procDate: '2026-11-22', validateSchema }), 'SCT-21') === 'error', 'Unstructured address is an error from 22 Nov 2026');
+  const hybrid = un.replace('<PstlAdr><Ctry>DE</Ctry>', '<PstlAdr><TwnNm>Berlin</TwnNm><Ctry>DE</Ctry>');
+  const rh = await check(hybrid, { procDate: '2026-11-22', validateSchema });
+  ok(!rh.findings.some((f) => f.id === 'SCT-21' || f.layer === 'xsd'), 'Hybrid address (town, country, 2 lines) is fine after 22 Nov 2026', ids(rh).join(' '));
+  const wrongSvc = generate({ scenario: 'valid', count: 3, procDate }).xml.replace('<Cd>SEPA</Cd>', '<Cd>NURG</Cd>');
+  ok(sev(await check(wrongSvc, { procDate, validateSchema }), 'SCT-09') === 'error', 'Wrong service level stays an error');
+  ok(sev(await check(generate({ scenario: 'method', count: 3, procDate }).xml, { procDate, validateSchema }), 'SCT-09') === 'error', 'Method not TRF stays an error');
 }
 // AT5 other messages
 {

@@ -326,7 +326,7 @@ for (const r of RULES) {
   const btn = h('button', 'tb tb-small', 'Try it'); btn.type = 'button';
   btn.addEventListener('click', () => { runFactory(r.scenario); window.scrollTo({ top: $('bench').offsetTop - 120, behavior: 'smooth' }); });
   const tdBtn = h('td'); tdBtn.append(btn);
-  tr.append(h('td', 'mono', r.id), what, h('td', 'sev-' + r.severity, r.severity === 'error' ? 'Error' : 'Warning'), h('td', 'mono small', r.good), h('td', 'mono small', r.bad), srcTd, tdBtn);
+  tr.append(h('td', 'mono', r.id), what, h('td', 'sev-' + r.severity, r.sevLabel || (r.severity === 'error' ? 'Error' : 'Warning')), h('td', 'mono small', r.good), h('td', 'mono small', r.bad), srcTd, tdBtn);
   tbody.append(tr);
 }
 

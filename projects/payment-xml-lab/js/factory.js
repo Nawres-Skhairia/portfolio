@@ -18,7 +18,7 @@ const ACCOUNTS = [
   { iban: 'FI2112345600000785', bic: 'XMPLFIHHXXX' },
   { iban: 'PT50000201231234567890154', bic: 'XMPLPTPLXXX' },
 ];
-const DEBTOR = { name: 'Lumen Example Trading BV', iban: 'NL91ABNA0417164300', bic: 'XMPLNL2AXXX' };
+const DEBTOR = { name: 'Lumen Example Trading BV', iban: 'NL91ABNA0417164300', bic: 'XMPLNL2AXXX', addr: { StrtNm: 'Voorbeeldstraat', BldgNb: '12', PstCd: '3511 AB', TwnNm: 'Utrecht', Ctry: 'NL' } };
 const CREDITORS = ['Alder Example Studio', 'Birch Example Logistics', 'Cedar Example Foods', 'Dune Example Print', 'Elm Example Repairs',
   'Fjord Example Travel', 'Grove Example Office Supplies', 'Harbor Example Cleaning', 'Iris Example Design', 'Juniper Example Tech'];
 const PURPOSES = ['Invoice', 'Order', 'Contract', 'Service', 'Rent'];
@@ -28,6 +28,9 @@ function rng(seed) {
   let a = seed >>> 0;
   return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 }
+// a postal address on one line: structured fields in schema order, then address lines
+const adrXml = (a) => !a ? '' : '<PstlAdr>' + ['StrtNm', 'BldgNb', 'PstCd', 'TwnNm', 'Ctry'].filter((k) => a[k]).map((k) => `<${k}>${esc(a[k])}</${k}>`).join('')
+  + (a.lines || []).map((l) => `<AdrLine>${esc(l)}</AdrLine>`).join('') + '</PstlAdr>';
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 export function makeModel({ count = 3, seed = 2026, execDate, created }) {
@@ -47,7 +50,7 @@ export function makeModel({ count = 3, seed = 2026, execDate, created }) {
     msgId: 'PXL-' + execDate.replace(/-/g, '') + '-' + seed,
     created: created || execDate + 'T09:00:00',
     initg: DEBTOR.name,
-    batches: [{ id: 'BATCH-' + seed + '-1', method: 'TRF', svc: 'SEPA', execDate, chrgBr: 'SLEV', dbtr: { ...DEBTOR }, txs }],
+    batches: [{ id: 'BATCH-' + seed + '-1', method: 'TRF', svc: 'SEPA', execDate, chrgBr: 'SLEV', dbtr: { ...DEBTOR, addr: { ...DEBTOR.addr } }, txs }],
     header: {}, // optional overrides of NbOfTxs / CtrlSum written in the file
   };
 }
@@ -71,7 +74,7 @@ export function toXml(m, comment) {
   if (!m.omitMsgId) L.push(`      <MsgId>${esc(m.msgId)}</MsgId>`);
   L.push(`      <CreDtTm>${esc(m.created)}</CreDtTm>`);
   L.push(`      <NbOfTxs>${m.header.nb ?? all.length}</NbOfTxs>`);
-  L.push(`      <CtrlSum>${m.header.sum ?? sumStr(all)}</CtrlSum>`);
+  if (m.header.sum !== false) L.push(`      <CtrlSum>${m.header.sum ?? sumStr(all)}</CtrlSum>`);
   L.push(`      <InitgPty><Nm>${esc(m.initg)}</Nm></InitgPty>`);
   L.push('    </GrpHdr>');
   for (const b of m.batches) {
@@ -82,7 +85,7 @@ export function toXml(m, comment) {
     L.push(`      <CtrlSum>${b.sum ?? sumStr(b.txs)}</CtrlSum>`);
     if (b.svc) L.push(`      <PmtTpInf><SvcLvl><Cd>${b.svc}</Cd></SvcLvl></PmtTpInf>`);
     L.push(`      <ReqdExctnDt><Dt>${b.execDate}</Dt></ReqdExctnDt>`);
-    L.push(b.dbtr.name == null ? '      <Dbtr/>' : `      <Dbtr><Nm>${esc(b.dbtr.name)}</Nm></Dbtr>`);
+    L.push(b.dbtr.name == null ? '      <Dbtr/>' : `      <Dbtr><Nm>${esc(b.dbtr.name)}</Nm>${adrXml(b.dbtr.addr)}</Dbtr>`);
     L.push(`      <DbtrAcct><Id><IBAN>${b.dbtr.iban}</IBAN></Id></DbtrAcct>`);
     L.push(`      <DbtrAgt><FinInstnId><BICFI>${b.dbtr.bic}</BICFI></FinInstnId></DbtrAgt>`);
     if (b.chrgBr) L.push(`      <ChrgBr>${b.chrgBr}</ChrgBr>`);
@@ -93,7 +96,7 @@ export function toXml(m, comment) {
       L.push(`          <InstdAmt Ccy="${esc(t.ccy)}">${esc(t.amount)}</InstdAmt>`);
       L.push('        </Amt>');
       const agt = `        <CdtrAgt><FinInstnId><BICFI>${esc(t.cdtr.bic)}</BICFI></FinInstnId></CdtrAgt>`;
-      const cdtr = t.cdtr.name == null ? '        <Cdtr/>' : `        <Cdtr><Nm>${esc(t.cdtr.name)}</Nm></Cdtr>`;
+      const cdtr = t.cdtr.name == null ? '        <Cdtr/>' : `        <Cdtr><Nm>${esc(t.cdtr.name)}</Nm>${adrXml(t.cdtr.addr)}</Cdtr>`;
       if (t.swapAgent) L.push(cdtr, agt); else L.push(agt, cdtr);
       L.push('        <CdtrAcct>');
       L.push(`          <Id><IBAN>${esc(t.cdtr.iban)}</IBAN></Id>`);
@@ -126,6 +129,7 @@ export const SCENARIOS = [
   { id: 'header-count', label: 'Header count wrong', expect: 'SCT-01', at: ['NbOfTxs', 0], apply: (m) => { m.header.nb = m.batches[0].txs.length + 1; } },
   { id: 'batch-count', label: 'Batch count wrong', expect: 'SCT-02', at: ['NbOfTxs', 1], apply: (m) => { m.batches[0].nb = m.batches[0].txs.length + 2; } },
   { id: 'header-sum', label: 'Header control sum wrong', expect: 'SCT-03', at: ['CtrlSum', 0], apply: (m) => { m.header.sum = bump(m.batches[0].txs); } },
+  { id: 'header-no-sum', label: 'Header control sum missing', expect: 'SCT-03', at: ['NbOfTxs', 0], apply: (m) => { m.header.sum = false; } },
   { id: 'batch-sum', label: 'Batch control sum wrong', expect: 'SCT-04', at: ['CtrlSum', 1], apply: (m) => { m.batches[0].sum = bump(m.batches[0].txs); } },
   { id: 'iban-checksum', label: 'IBAN with a wrong digit', expect: 'SCT-05', at: ['IBAN', 1], apply: (m) => { tx(m).cdtr = { ...tx(m).cdtr, iban: 'DE89370400440532013001' }; } },
   { id: 'iban-length', label: 'IBAN too short for its country', expect: 'SCT-05', at: ['IBAN', 1], apply: (m) => { tx(m).cdtr = { ...tx(m).cdtr, iban: 'DE8937040044053201300' }; } },
@@ -134,7 +138,7 @@ export const SCENARIOS = [
   { id: 'amount-decimals', label: 'Amount with 3 decimals', expect: 'SCT-08', at: ['InstdAmt', 0], apply: (m) => { tx(m).amount = '150.255'; } },
   { id: 'amount-zero', label: 'Amount of 0.00', expect: 'SCT-08', at: ['InstdAmt', 0], apply: (m) => { tx(m).amount = '0.00'; } },
   { id: 'method', label: 'Payment method not TRF', expect: 'SCT-09', at: ['PmtMtd', 0], apply: (m) => { m.batches[0].method = 'CHK'; } },
-  { id: 'no-sepa', label: 'No SEPA service level', expect: 'SCT-09', at: ['PmtInfId', 0], apply: (m) => { m.batches[0].svc = null; } },
+  { id: 'no-sepa', label: 'No service level (warning)', expect: 'SCT-09', sev: 'warning', at: ['PmtInfId', 0], apply: (m) => { m.batches[0].svc = null; } },
   { id: 'charges', label: 'Charge bearer not SLEV', expect: 'SCT-10', at: ['ChrgBr', 0], apply: (m) => { m.batches[0].chrgBr = 'DEBT'; } },
   { id: 'date-past', label: 'Execution date in the past', expect: 'SCT-11', at: ['Dt', 0], apply: (m, o) => { m.batches[0].execDate = prevBusinessDay(addDays(o.procDate, -6)); } },
   { id: 'reference-slash', label: 'Reference with "//"', expect: 'SCT-12', at: ['EndToEndId', 0], apply: (m) => { tx(m).e2e = 'E2E//0001'; } },
@@ -151,6 +155,9 @@ export const SCENARIOS = [
     m.batches.push({ ...b, dbtr: { ...b.dbtr }, txs: b.txs.slice(half) }); b.txs = b.txs.slice(0, half);
   } },
   { id: 'same-account', label: 'Debtor pays its own account', expect: 'SCT-20', at: ['IBAN', 1], apply: (m) => { tx(m).cdtr = { ...tx(m).cdtr, iban: m.batches[0].dbtr.iban }; } },
+  { id: 'address-unstructured', label: 'Creditor address with address lines only', expect: 'SCT-21', at: ['PstlAdr', 1], apply: (m) => { tx(m).cdtr = { ...tx(m).cdtr, addr: { Ctry: 'DE', lines: ['Beispielweg 4', '10115 Berlin'] } }; } },
+  { id: 'address-three-lines', label: 'Debtor address with 3 address lines', expect: 'SCT-21', sev: 'error', at: ['AdrLine', 2], apply: (m) => { m.batches[0].dbtr.addr = { TwnNm: 'Utrecht', Ctry: 'NL', lines: ['Voorbeeldstraat 12', 'Floor 3', 'Building B'] }; } },
+  { id: 'address-no-town', label: 'Structured debtor address without a town', expect: 'SCT-21', sev: 'error', at: ['PstlAdr', 0], apply: (m) => { delete m.batches[0].dbtr.addr.TwnNm; } },
   // layer 2: schema
   { id: 'xsd-missing', label: 'Mandatory MsgId missing', expect: 'XSD', at: ['CreDtTm', 0], apply: (m) => { m.omitMsgId = true; } },
   { id: 'xsd-order', label: 'Elements in the wrong order', expect: 'XSD', at: ['CdtrAgt', 0], apply: (m) => { tx(m).swapAgent = true; } },

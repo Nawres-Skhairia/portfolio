@@ -3,11 +3,11 @@
 // Rules are written in our own words; sources are credited and linked, not copied.
 import { kid, kids, path, text, all } from './tree.js';
 
-export const CATALOGUE_VERSION = '2026.11-mvp1';
+export const CATALOGUE_VERSION = '2026.11-mvp2';
 
 export const SOURCES = {
   iso: { name: 'ISO 20022 pain.001.001.09 message definition', url: 'https://www.iso20022.org/iso-20022-message-definitions' },
-  epc: { name: 'EPC SEPA Credit Transfer customer-to-bank implementation guidelines', url: 'https://www.europeanpaymentscouncil.eu/what-we-do/epc-payment-schemes/sepa-credit-transfer/sepa-credit-transfer-rulebook-and' },
+  epc: { name: 'EPC132-08 SCT Customer-to-PSP Implementation Guidelines 2025 v1.0', url: 'https://www.europeanpaymentscouncil.eu/sites/default/files/kb/file/2025-10/EPC132-08%20SCT%20C2PSP%20IG%202025%20V1.0.pdf' },
   iban: { name: 'ISO 13616 IBAN: length per country and mod-97 check digits', url: 'https://www.swift.com/standards/data-standards/iban-international-bank-account-number' },
   bic: { name: 'ISO 9362 BIC structure', url: 'https://www.swift.com/standards/data-standards/bic-business-identifier-code' },
   t2: { name: 'TARGET closing days (European Central Bank)', url: 'https://www.ecb.europa.eu/paym/target/html/index.en.html' },
@@ -96,6 +96,7 @@ function sumCheck(el, txs, where) {
 export const RULES = [
   {
     id: 'SCT-01', title: 'Number of payments in the group header matches the file', severity: 'error', source: 'iso',
+    note: 'The bank checks this by agreement with its customer.',
     good: '<NbOfTxs>3</NbOfTxs> with 3 payments', bad: '<NbOfTxs>4</NbOfTxs> with 3 payments', scenario: 'header-count',
     check({ root, txs }) {
       const el = path(root, 'GrpHdr', 'NbOfTxs'); const n = text(el);
@@ -114,9 +115,15 @@ export const RULES = [
     },
   },
   {
-    id: 'SCT-03', title: 'Control sum in the group header equals the sum of all amounts', severity: 'error', source: 'iso',
-    good: '<CtrlSum>1150.255</CtrlSum> for 500 + 500 + 150.255', bad: '<CtrlSum>1250.00</CtrlSum> for the same amounts', scenario: 'header-sum',
-    check({ root, txs }) { return sumCheck(path(root, 'GrpHdr', 'CtrlSum'), txs, 'the file'); },
+    id: 'SCT-03', title: 'Control sum in the group header is present and equals the sum of all amounts', severity: 'error', source: 'epc',
+    note: 'The SEPA guidelines make it mandatory; the bank checks the sum by agreement with its customer.',
+    good: '<CtrlSum>1150.255</CtrlSum> for 500 + 500 + 150.255', bad: '<CtrlSum>1250.00</CtrlSum> for the same amounts, or no CtrlSum', scenario: 'header-sum',
+    check({ root, txs }) {
+      const gh = kid(root, 'GrpHdr'); if (!gh) return [];
+      const el = kid(gh, 'CtrlSum');
+      if (!el) return [{ el: kid(gh, 'NbOfTxs') || gh, message: 'The group header has no control sum. The schema allows that, the SEPA guidelines do not.', expected: 'CtrlSum', found: '(none)', fix: 'Add <CtrlSum> after NbOfTxs with the total of all amounts, so the bank can check that nothing was lost or added.' }];
+      return sumCheck(el, txs, 'the file');
+    },
   },
   {
     id: 'SCT-04', title: 'Control sum in each payment batch equals its amounts', severity: 'error', source: 'iso',
@@ -174,6 +181,7 @@ export const RULES = [
   },
   {
     id: 'SCT-09', title: 'Payment method is TRF and the service level is SEPA', severity: 'error', source: 'epc',
+    sevLabel: 'Error (warning when the service level is missing)',
     good: '<PmtMtd>TRF</PmtMtd> and <SvcLvl><Cd>SEPA</Cd>', bad: '<PmtMtd>CHK</PmtMtd>, or no SEPA service level', scenario: 'method',
     check({ pmtInfs }) {
       const out = [];
@@ -186,7 +194,9 @@ export const RULES = [
         const missing = txs.filter((tx) => text(path(tx, 'PmtTpInf', 'SvcLvl', 'Cd')) !== 'SEPA');
         if (missing.length) {
           const el = path(pi, 'PmtTpInf', 'SvcLvl', 'Cd') || kid(pi, 'PmtTpInf') || kid(pi, 'PmtInfId') || pi;
-          out.push({ el, message: piSvc ? `Service level is ${piSvc}, not SEPA.` : 'The batch has no SEPA service level, so it is not marked as a SEPA credit transfer.', expected: 'SEPA', found: piSvc || '(none)', fix: 'Add <PmtTpInf><SvcLvl><Cd>SEPA</Cd></SvcLvl></PmtTpInf> to the batch.' });
+          const wrong = piSvc || text(missing.map((tx) => path(tx, 'PmtTpInf', 'SvcLvl', 'Cd')).find((c) => text(c)));
+          if (wrong) out.push({ el, message: `Service level is ${wrong}, not SEPA.`, expected: 'SEPA', found: wrong, fix: 'Set the service level code to SEPA.' });
+          else out.push({ el, severity: 'warning', message: 'The batch has no service level. The SEPA guidelines recommend SEPA, and some banks require it.', expected: 'SEPA', found: '(none)', fix: 'Add <PmtTpInf><SvcLvl><Cd>SEPA</Cd></SvcLvl></PmtTpInf> to the batch.' });
         }
       }
       return out;
@@ -302,7 +312,34 @@ export const RULES = [
       return out;
     },
   },
+  {
+    id: 'SCT-21', title: 'Debtor and creditor addresses are structured or hybrid (town and country given)', severity: 'warning', source: 'epc',
+    sevLabel: 'Warning, error from 22 Nov 2026',
+    note: 'Sections 1.7, 2.23 and 2.118: from 22 November 2026 addresses made only of address lines are no longer allowed. The guidelines give this date based on the information available when they were published.',
+    good: '<PstlAdr><TwnNm>Utrecht</TwnNm><Ctry>NL</Ctry></PstlAdr>', bad: '<PstlAdr><Ctry>NL</Ctry><AdrLine>Main St 1, Utrecht</AdrLine></PstlAdr>', scenario: 'address-unstructured',
+    check({ pmtInfs, txs, procDate }) {
+      const after = (procDate || '') >= ADDRESS_DEADLINE;
+      const parties = pmtInfs.map((pi) => ['debtor', kid(pi, 'Dbtr')]).concat(txs.map((tx) => ['creditor', kid(tx, 'Cdtr')]));
+      const out = [];
+      for (const [who, party] of parties) {
+        const adr = party && kid(party, 'PstlAdr'); if (!adr) continue;
+        const lines = kids(adr, 'AdrLine'), town = text(kid(adr, 'TwnNm')), ctry = text(kid(adr, 'Ctry'));
+        if (lines.length > 2) out.push({ el: lines[2], severity: 'error', message: `The ${who} address has ${lines.length} address lines. SEPA allows at most 2.`, expected: 'at most 2 AdrLine', found: String(lines.length), fix: 'Move the details into structured elements (StrtNm, BldgNb, PstCd, TwnNm, Ctry) and keep at most 2 address lines.' });
+        if (town && ctry) continue;
+        const missing = [!town && 'TwnNm', !ctry && 'Ctry'].filter(Boolean).join(' and ');
+        if (lines.length) {
+          out.push({ el: adr, severity: after ? 'error' : 'warning',
+            message: `The ${who} address is unstructured (address lines without ${missing}). ` + (after ? 'From 22 November 2026 the SEPA guidelines no longer allow this.' : 'The SEPA guidelines allow this only until 21 November 2026.'),
+            expected: 'TwnNm and Ctry', found: missing + ' missing', fix: `Add ${missing}, so the address becomes hybrid (town, country and up to 2 address lines) or fully structured.` });
+        } else {
+          out.push({ el: adr, severity: 'error', message: `The ${who} address is structured but has no ${missing}. The SEPA guidelines make town and country mandatory.`, expected: 'TwnNm and Ctry', found: missing + ' missing', fix: `Add ${missing}.` });
+        }
+      }
+      return out;
+    },
+  },
 ];
+export const ADDRESS_DEADLINE = '2026-11-22';
 
 export function runRules(tree, procDate) {
   const doc = tree.documentElement;
@@ -316,7 +353,7 @@ export function runRules(tree, procDate) {
   const findings = [];
   for (const r of RULES) {
     for (const f of r.check(ctx)) {
-      findings.push({ layer: 'rule', id: r.id, severity: r.severity, title: r.title, source: r.source, line: f.el ? f.el.line : null, col: f.el ? f.el.col : null, path: f.el ? f.el.path : '', element: f.el ? f.el.localName : '', message: f.message, expected: f.expected || null, found: f.found || null, fix: f.fix });
+      findings.push({ layer: 'rule', id: r.id, severity: f.severity || r.severity, title: r.title, source: r.source, line: f.el ? f.el.line : null, col: f.el ? f.el.col : null, path: f.el ? f.el.path : '', element: f.el ? f.el.localName : '', message: f.message, expected: f.expected || null, found: f.found || null, fix: f.fix });
     }
   }
   const amounts = txs.map((tx) => money(text(amtEl(tx)))).filter((v) => v != null);
