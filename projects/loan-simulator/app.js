@@ -321,6 +321,11 @@
   $('form').addEventListener('keydown', (e) => {
     if (e.key === ',' && e.target.type === 'number' && RULES[e.target.id]) { e.preventDefault(); commaTyped.add(e.target.id); update(); }
   });
+  // A pasted "3,5" or "1,000" is refused the same way: browsers may otherwise turn it into 35 or 1000 without a word.
+  $('form').addEventListener('paste', (e) => {
+    const t = e.clipboardData ? e.clipboardData.getData('text') : '';
+    if (t.includes(',') && e.target.type === 'number' && RULES[e.target.id]) { e.preventDefault(); commaTyped.add(e.target.id); update(); }
+  });
   $('form').addEventListener('input', (e) => { commaTyped.delete(e.target.id); }, true);
   $('currency').addEventListener('change', () => { $('currencyNote').hidden = true; });
   ['currency', 'feesA', 'rateB', 'yearsB', 'feesB', 'extra', 'income'].forEach((id) => $(id).addEventListener('input', () => update()));
