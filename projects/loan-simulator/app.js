@@ -357,6 +357,7 @@
   let rt;
   window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => update(), 150); });
 
+  $('form').addEventListener('submit', (e) => e.preventDefault()); // was an inline onsubmit (PORT-26)
   fromURL();
   syncRanges();
   setMode(mode);
