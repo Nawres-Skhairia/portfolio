@@ -306,6 +306,23 @@ for (const t of ['', 'abc', 'a'.repeat(55), 'a'.repeat(56), 'a'.repeat(64), 'ZoÃ
   ok(view(a) === view(b), 'AT12 identical matches');
 }
 
+// Daniel (PORT-42 10669): a refused invoice list or a cancelled column dialog never leaves the old run usable
+{
+  const { stmt } = await session();
+  const statement = { reconcilable: true, stmt };
+  ok(E.readyToReconcile(statement, readInvoices(invoiceCsv())).ok, 'ready: good statement and good invoices');
+  const tooMany = readInvoices('invoice,customer,amount,currency\n' + Array.from({ length: 5001 }, (_, i) => `INV-${i},A,1.00,EUR`).join('\n'));
+  const r1 = E.readyToReconcile(statement, tooMany);
+  ok(!r1.ok && r1.why === 'invoices' && /5,001 invoices.*limit is 5,000/.test(r1.message), 'not ready: 5,001 invoices, and the reason is shown', r1.message);
+  const odd = readInvoices('Ref,Who,Value,Cur\nINV-1,A,10.00,EUR\n');
+  const r2 = E.readyToReconcile(statement, E.mappingCancelled(odd));
+  ok(!r2.ok && /columns were not chosen/.test(r2.message), 'not ready: column dialog cancelled', r2.message);
+  ok(!E.readyToReconcile({ reconcilable: false }, readInvoices(invoiceCsv())).ok && !E.readyToReconcile(null, null).ok, 'not ready: no statement or refused statement');
+  const app = readFileSync(new URL('js/rec-app.js', base), 'utf8');
+  const startFn = app.slice(app.indexOf('function start('), app.indexOf('// ---------- tolerance'));
+  ok(/clearRun\(\);[\s\S]*readyToReconcile\(/.test(startFn), 'start() clears the old run before checking the inputs');
+}
+
 // Daniel's measure: 2,000 entries against 3,000 invoices
 {
   const invoices = Array.from({ length: 3000 }, (_, i) => ({ number: `INV-${100000 + i}`, customer: `Customer ${i % 400}`, account: null, amount: BigInt(10000000 + (i % 977) * 100000), currency: 'EUR', due: '2026-11-10', reference: null }));

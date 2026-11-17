@@ -1,7 +1,7 @@
 // Reconciliation Workbench: the page. Everything happens in this tab; nothing is uploaded or stored.
 import { readStatement, CAMT, STM_RULES, fmt } from './camt053.js';
 import { readInvoices, INVOICE_FIELDS, MAX_INVOICE_BYTES } from './invoices.js';
-import { createSession, accept, reject, manual, manualPreview, undo, changeSettings, personDecisions, verifyTrail, REC_RULES, REC_TOOL, REC_CATALOGUE_VERSION, TREATMENT, DEFAULT_SETTINGS, amt, remShown, openOf } from './rec-engine.js';
+import { createSession, accept, reject, manual, manualPreview, undo, changeSettings, personDecisions, verifyTrail, readyToReconcile, mappingCancelled, REC_RULES, REC_TOOL, REC_CATALOGUE_VERSION, TREATMENT, DEFAULT_SETTINGS, amt, remShown, openOf } from './rec-engine.js';
 import { trailCsv, trailJsonl, openInvoicesCsv, recHtml, recJUnit, parseTrail } from './rec-reports.js';
 import { REC_SAMPLES, SAMPLE_ACCOUNT } from './rec-samples.js';
 import { validate, loadSchema } from './schema.js';
@@ -34,9 +34,12 @@ async function run() {
   if (state.inv.needsMapping && state.inv.headers.length) { render(); askMapping(); return; }
   start();
 }
+// an old result never stays on screen once the inputs change (Daniel, PORT-42 10669)
+function clearRun() { state.session = null; state.sel = null; state.manual = null; }
 function start(settings) {
   const st = state.statement;
-  if (st && st.reconcilable && state.inv.ok) {
+  clearRun();
+  if (readyToReconcile(st, state.inv).ok) {
     state.session = createSession({ stmt: st.stmt, invoices: state.inv.invoices, settings: settings || readTolerance() || DEFAULT_SETTINGS,
       inputs: { stmtName: state.stmtName, stmtSha: sha256(state.stmtSrc), invName: state.invName, invSha: sha256(state.invSrc) } });
     state.filter = state.session.view.counts.review ? 'review' : 'all';
@@ -318,7 +321,7 @@ $('invIn').addEventListener('change', async (e) => {
   const f = e.target.files[0]; e.target.value = ''; if (!f) return;
   state.invSrc = f.size > MAX_INVOICE_BYTES ? 'x'.repeat(MAX_INVOICE_BYTES + 1) : await readText(f, MAX_INVOICE_BYTES); state.invName = f.name; state.sample = false; sel.value = '';
   state.inv = readInvoices(state.invSrc);
-  if (state.inv.needsMapping && state.inv.headers.length) { askMapping(); return; }
+  if (state.inv.needsMapping && state.inv.headers.length) { clearRun(); render(); askMapping(); return; }
   start();
 });
 function askMapping() {
@@ -336,7 +339,7 @@ function askMapping() {
   $('mapDlg').showModal();
 }
 $('mapDlg').addEventListener('close', () => {
-  if ($('mapDlg').returnValue !== 'ok') { render(); return; }
+  if ($('mapDlg').returnValue !== 'ok') { state.inv = mappingCancelled(state.inv); start(); return; }
   const mapping = {}; let decimal = null;
   for (const s of $('mapFields').querySelectorAll('select')) { if (s.dataset.key === '_decimal') decimal = s.value || null; else if (s.value !== '') mapping[s.dataset.key] = Number(s.value); }
   state.inv = readInvoices(state.invSrc, { mapping, decimal });

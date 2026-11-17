@@ -126,6 +126,16 @@ function paidIn(e, ccy) { if (e.ccy === ccy) return e.amt; if (e.instd && e.inst
 function orderEntries(entries) {
   return entries.slice().sort((a, b) => (a.bookDate < b.bookDate ? -1 : a.bookDate > b.bookDate ? 1 : 0) || (a.ref < b.ref ? -1 : a.ref > b.ref ? 1 : 0) || a.idx - b.idx);
 }
+// whether a run can start from these inputs; when it cannot, the page shows why and keeps no old result (Daniel, PORT-42 10669)
+export function readyToReconcile(statement, inv) {
+  if (!statement || !statement.reconcilable) return { ok: false, why: 'statement' };
+  if (!inv || !inv.ok) return { ok: false, why: 'invoices', message: (inv && inv.error) || 'The invoice list was not read.' };
+  return { ok: true };
+}
+// the column dialog was closed without choosing: the list counts as not read
+export function mappingCancelled(inv) {
+  return { ...inv, ok: false, needsMapping: false, invoices: [], error: 'The columns were not chosen, so nothing was reconciled. Load the invoice list again to choose them.' };
+}
 export function createSession({ stmt, invoices, settings = DEFAULT_SETTINGS, inputs = {}, clock }) {
   const s = {
     stmt, entries: orderEntries(stmt.entries), invoices: invoices.slice(), settings: { ...settings }, inputs,

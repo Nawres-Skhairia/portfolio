@@ -80,7 +80,7 @@ export function readInvoices(src, opts = {}) {
   const sep = out.sep = guessSep(text);
   const rows = splitCsv(text, sep).filter((r) => !r.cells[0].startsWith('#'));
   if (rows.length < 2) return { ...out, error: 'The invoice list needs a header line and at least one invoice.' };
-  if (rows.length - 1 > MAX_INVOICES) return { ...out, error: `The list has ${rows.length - 1} invoices. The limit is ${MAX_INVOICES.toLocaleString('en')}.` };
+  if (rows.length - 1 > MAX_INVOICES) return { ...out, error: `The list has ${(rows.length - 1).toLocaleString('en')} invoices. The limit is ${MAX_INVOICES.toLocaleString('en')}.` };
   const headers = out.headers = rows[0].cells.map((c) => c.trim());
   let mapping = opts.mapping;
   if (!mapping) {
