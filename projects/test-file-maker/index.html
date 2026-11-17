@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Test File Maker · Nawres Skhairia</title>
+  <meta name="description" content="Make a SEPA payment file (pain.001) with made-up data, valid or with one mistake planted on purpose, to test a payment system. Runs in your browser.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="/assets/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/instrument-serif-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/assets/fonts/site-fonts.css">
+  <link rel="stylesheet" href="/projects/payment-xml-lab/style.css">
+  <link rel="stylesheet" href="/projects/payment-xml-lab/mt.css">
+  <link rel="stylesheet" href="/assets/tool-theme.css">
+  <link rel="stylesheet" href="/projects/payment-xml-lab/theme.css">
+  <script src="/assets/theme.js"></script>
+  <link rel="modulepreload" href="/projects/payment-xml-lab/js/maker-app.js">
+</head>
+<body>
+  <header class="bar">
+    <div class="bar-in">
+      <a class="home back" href="/#work" aria-label="Back to Nawres Skhairia's portfolio">Nawres Skhairia</a>
+      <div class="brand">
+        <span class="brand-name">Test File Maker</span>
+        <span class="brand-sub">ISO 20022 · pain.001.001.09 · made-up data</span>
+      </div>
+      <p class="device"><span class="dot" aria-hidden="true"></span>Runs on your device. Nothing is uploaded or stored.</p>
+      <button class="theme-switch" type="button" aria-label="Dark theme" aria-pressed="false"><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 14.6A8.5 8.5 0 0 1 9.4 3.5a8.5 8.5 0 1 0 11.1 11.1z"/></svg></button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="intro">
+      <h1>Make a payment file with one mistake in it, on purpose.</h1>
+      <p>Testers need broken files to prove that a payment system catches errors. Pick a mistake, press Make, and get a SEPA payment file (pain.001) with made-up data. The first line of the file says which finding it must give.</p>
+    </section>
+
+    <form class="maker" id="makerForm">
+      <label class="fld">Mistake to plant <select id="fScenario"></select></label>
+      <div class="fld-row">
+        <label class="fld">Payments <input type="number" id="fCount" min="1" max="10000" value="25"></label>
+        <label class="fld">Execution date <input type="date" id="fDate"></label>
+        <label class="fld">Seed <input type="number" id="fSeed" min="1" max="999999" value="2026"></label>
+      </div>
+      <div class="maker-go"><button type="submit" class="tb tb-main">Make the file</button></div>
+    </form>
+
+    <section class="maker-out" id="out" hidden aria-live="polite">
+      <p class="maker-what" id="what"></p>
+      <div class="toolbar">
+        <button type="button" class="tb tb-main" id="dl">Download the file</button>
+        <a class="tb" id="openCheck" href="/projects/payment-file-check/">Open in Payment File Check</a>
+      </div>
+      <pre class="maker-pre" id="pre" tabindex="0" aria-label="Start of the file"></pre>
+    </section>
+
+    <section class="more">
+      <p class="honest"><b>Made-up data only.</b> Pretend companies, published example IBANs and a made-up bank. Every file is built in this browser tab; nothing is sent anywhere.</p>
+    </section>
+
+    <p class="foot">Created by <a href="/">Nawres Skhairia</a> through vibe coding. A work in progress: feedback is welcome, <a href="/#contact">get in touch</a>. <a href="/privacy/">Privacy</a></p>
+  </main>
+
+  <script type="module" src="/projects/payment-xml-lab/js/maker-app.js"></script>
+  <script src="/assets/page-fx.js" defer></script>
+</body>
+</html>

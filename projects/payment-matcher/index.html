@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Payment Matcher · Nawres Skhairia</title>
+  <meta name="description" content="Match a made-up ISO 20022 bank statement (camt.053) with open invoices. Every match explains itself, the rest waits for a person, and every decision goes into a fingerprinted audit trail. Runs in your browser.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="/assets/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/instrument-serif-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/assets/fonts/site-fonts.css">
+  <link rel="stylesheet" href="/projects/payment-xml-lab/style.css">
+  <link rel="stylesheet" href="/projects/payment-xml-lab/rec.css">
+  <link rel="stylesheet" href="/assets/tool-theme.css">
+  <link rel="stylesheet" href="/projects/payment-xml-lab/theme.css">
+  <script src="/assets/theme.js"></script>
+  <link rel="modulepreload" href="/projects/payment-xml-lab/js/rec-app.js">
+</head>
+<body>
+  <header class="bar">
+    <div class="bar-in">
+      <a class="home back" href="/#work" aria-label="Back to Nawres Skhairia's portfolio">Nawres Skhairia</a>
+      <div class="brand">
+        <span class="brand-name">Payment Matcher</span>
+        <span class="brand-sub">ISO 20022 camt.053.001.08 bank statement ↔ open invoices · rules only</span>
+      </div>
+      <p class="device"><span class="dot" aria-hidden="true"></span>Runs on your device. Nothing is uploaded or stored.</p>
+      <button class="theme-switch" type="button" aria-label="Dark theme" aria-pressed="false"><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 14.6A8.5 8.5 0 0 1 9.4 3.5a8.5 8.5 0 1 0 11.1 11.1z"/></svg></button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="intro">
+      <h1>Match bank payments with open invoices.</h1>
+      <p>Press one button. Payments that clearly pay an invoice are matched for you, and you only answer the ones that need a person, one at a time.</p>
+      <p class="honest-top"><b>A demonstration, not accounting software.</b> No AI here, on purpose: every match follows a rule you can read. Please open made-up files only.</p>
+    </section>
+
+    <section class="pm" id="pm" aria-live="polite">
+      <div class="pm-start" id="pmStart">
+        <p class="pm-ready" id="pmReady">Loading the made-up bank statement and invoices…</p>
+        <button type="button" class="pm-go" id="pmGo" disabled>Match them</button>
+        <p class="pm-own-link"><button type="button" class="linkish" id="pmOwnBtn" aria-expanded="false" aria-controls="pmOwn">Use your own files</button></p>
+        <div class="pm-own" id="pmOwn" hidden>
+          <p class="muted small">A bank statement (ISO 20022 camt.053.001.08, XML) and a list of open invoices (CSV). They are read in this browser tab only.</p>
+          <label class="tb" for="stmtIn">Open statement<input type="file" id="stmtIn" accept=".xml,application/xml,text/xml"></label>
+          <label class="tb" for="invIn">Open invoices<input type="file" id="invIn" accept=".csv,text/csv,text/plain"></label>
+        </div>
+      </div>
+      <p class="pm-msg" id="pmMsg" hidden></p>
+      <div class="pm-result" id="pmResult" hidden>
+        <div class="pm-boxes" role="group" aria-label="Results">
+          <button type="button" class="pm-box b-paid" data-box="paid"><b id="pmPaidN">0</b><span>Paid</span></button>
+          <button type="button" class="pm-box b-check on" data-box="check"><b id="pmCheckN">0</b><span>Please check</span></button>
+          <button type="button" class="pm-box b-lost" data-box="lost"><b id="pmLostN">0</b><span>Not found</span></button>
+        </div>
+        <div class="pm-view" id="pmView"></div>
+      </div>
+    </section>
+
+    <details class="adv" id="adv">
+      <summary>Advanced</summary>
+    <div class="toolbar" role="toolbar" aria-label="Files and actions">
+      <label class="fld-inline" for="sampleSel">Sample <select id="sampleSel"></select></label>
+      <span class="tb-sep" aria-hidden="true"></span>
+      <form class="tol" id="tolForm" aria-label="Tolerance for small differences">
+        <label for="tolAbs">Tolerance</label> <input type="text" inputmode="decimal" id="tolAbs" size="6" value="5.00" aria-label="Tolerance amount">
+        <label for="tolPct">or</label> <input type="text" inputmode="decimal" id="tolPct" size="4" value="0.5" aria-label="Tolerance percent"> %
+        <button type="submit" class="tb tb-small" id="tolBtn">Apply</button>
+      </form>
+      <span class="tb-sep" aria-hidden="true"></span>
+      <button type="button" class="tb" id="manualBtn" disabled>Match by hand</button>
+      <button type="button" class="tb" id="undoBtn" disabled>Undo</button>
+      <div class="export">
+        <button type="button" class="tb" id="exportBtn" aria-haspopup="true" aria-expanded="false" disabled>Export</button>
+        <div class="menu" id="exportMenu" hidden>
+          <button type="button" data-export="html">Reconciliation report (HTML, to print or save as PDF)</button>
+          <button type="button" data-export="trail-csv">Audit trail (CSV)</button>
+          <button type="button" data-export="trail-jsonl">Audit trail (JSON Lines)</button>
+          <button type="button" data-export="open-csv">Open invoices left (CSV)</button>
+          <button type="button" data-export="junit">Test results (JUnit XML)</button>
+        </div>
+      </div>
+    </div>
+
+    <section class="status" id="status" aria-live="polite">
+      <div class="facts" id="facts"></div>
+      <div class="verdict" id="verdict"></div>
+    </section>
+    <p class="banner" id="banner"></p>
+    <p class="integrity" id="integrity"></p>
+    <ol class="findings rec-stm" id="stmtFindings" hidden></ol>
+
+    <div id="workArea">
+      <div class="filters" role="group" aria-label="Show entries">
+        <button type="button" class="flt" data-filter="auto">Auto-matched <b id="c-auto">0</b></button>
+        <button type="button" class="flt" data-filter="person">Decided by you <b id="c-person">0</b></button>
+        <button type="button" class="flt s-review on" data-filter="review">To review <b id="c-review">0</b></button>
+        <button type="button" class="flt s-lost" data-filter="unmatched">Unmatched <b id="c-unmatched">0</b></button>
+        <button type="button" class="flt" data-filter="all">All entries <b id="c-all">0</b></button>
+        <p class="hint" id="invCount"></p>
+      </div>
+      <p class="lead" id="lead"></p>
+
+      <div class="rec-bench">
+        <section class="pane" aria-label="Statement entries">
+          <div class="pane-head"><span>Statement entries</span><span class="muted" id="entMeta"></span></div>
+          <ul class="rlist" id="entList"></ul>
+        </section>
+        <section class="pane" aria-label="Match cards">
+          <div class="pane-head"><span>Match cards</span><span class="muted" id="cardMeta"></span></div>
+          <div class="cards" id="cards" tabindex="0"></div>
+        </section>
+        <section class="pane" aria-label="Open invoices">
+          <div class="pane-head"><span>Invoices</span><span class="muted" id="invMeta"></span></div>
+          <ul class="rlist" id="invList"></ul>
+        </section>
+      </div>
+
+      <section class="manual" id="manualPanel" hidden aria-label="Match by hand">
+        <h2>Match by hand</h2>
+        <p class="muted">Click entries on the left and invoices on the right to add or remove them.</p>
+        <div class="mp-sel" id="mpSel"></div>
+        <div class="mp-bal" id="mpBal"></div>
+        <div class="mp-treat" id="mpTreat"></div>
+        <label class="fld" for="mpReason">Reason (needed) <input type="text" id="mpReason" maxlength="500" placeholder="For example: customer confirmed by e-mail that this pays both invoices"></label>
+        <p class="mp-err" id="mpErr"></p>
+        <div class="dlg-actions"><button type="button" class="tb" id="mpCancel">Cancel</button><button type="button" class="tb tb-main" id="mpOk">Record manual match</button></div>
+      </section>
+    </div>
+
+    <section class="block">
+      <h2>Audit trail <span class="muted" id="trailMeta"></span></h2>
+      <p class="muted trail-intro">Every line carries the fingerprint (SHA-256) of the line before it. A change to an exported trail can be found by comparing it with the final fingerprint printed in the report. <label class="tb tb-small" for="verifyIn">Check this trail<input type="file" id="verifyIn" accept=".csv,.jsonl,.json,.txt,text/csv,application/json,text/plain"></label></p>
+      <p class="verify" id="verifyOut" aria-live="polite"></p>
+      <div class="table-wrap" tabindex="0" role="region" aria-label="Audit trail table (scrolls sideways)"><table class="cat trail" id="trailTable">
+        <thead><tr><th>#</th><th>Time</th><th>Actor</th><th>Action</th><th>Entries</th><th>Invoices</th><th>Rule</th><th>Paid</th><th>Difference</th><th>Reason or detail</th><th>Fingerprint</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+      <p class="muted small trail-limit">Honest limit: without a server or a signing key, someone could rebuild the whole chain after an edit. The check proves a trail is unchanged only against the final fingerprint printed in the report, so keep the report.</p>
+    </section>
+
+    <section class="block">
+      <h2>Totals <span class="muted">every entry in one place, every amount accounted for</span></h2>
+      <ul class="totals" id="totals"></ul>
+    </section>
+
+    <section class="more">
+      <h2 id="catalogue">Rules <span class="muted" id="catVersion"></span></h2>
+      <p class="muted small">Run in this order; an entry used by one rule is not reused by a later one, and an invoice is never used twice. Only REC-01 and REC-02 match without a person.</p>
+      <div class="table-wrap" tabindex="0" role="region" aria-label="Rule catalogue table (scrolls sideways)"><table class="cat" id="catTable">
+        <thead><tr><th>ID</th><th>Rule</th><th>Gives</th><th>What it does</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+
+    </section>
+    </details>
+
+    <section class="more">
+      <p class="honest"><b>A demonstration, not accounting software. It does not post anything to a ledger.</b> Not certified. The rules are our own, written in our own words. Check results against your own accounting system. Nothing you open here is sent anywhere: the files are read in this browser tab and forgotten when you close it.</p>
+
+      <h2>Sources and licences</h2>
+      <ul class="sources">
+        <li>Schema: ISO 20022 camt.053.001.08 (bank statement), a public copy taken unchanged from a public source, not yet compared byte for byte with the file on iso20022.org (see <a href="/projects/payment-xml-lab/schemas/NOTICE.md">NOTICE</a>). ISO 20022 message schemas are published free of charge at <a href="https://www.iso20022.org/" rel="noopener">iso20022.org</a>, which is not this site.</li>
+        <li>RF creditor references: the check digits are verified with the public modulo 97 method of ISO 11649, written in our own code.</li>
+        <li>Engine: libxml2 via <a href="https://github.com/noppa/xmllint-wasm" rel="noopener">xmllint-wasm</a> (MIT licence), the same as the <a href="/projects/payment-file-check/">Payment file check</a>.</li>
+        <li>Samples: made-up companies, a published example IBAN for the account, made-up customer accounts (bank code XMPL) and a made-up bank (BIC XMPLDEFF). Never real statements.</li>
+      </ul>
+    </section>
+
+    <p class="foot">Created by <a href="/">Nawres Skhairia</a> through vibe coding. A work in progress: feedback is welcome, <a href="/#contact">get in touch</a>. <a href="/privacy/">Privacy</a></p>
+  </main>
+
+  <dialog id="rejDlg" aria-labelledby="rejTitle">
+    <form method="dialog" class="dlg">
+      <h2 id="rejTitle">Reject this match</h2>
+      <p class="muted" id="rejWhat"></p>
+      <label class="fld" for="rejReason">Reason (needed)</label>
+      <textarea id="rejReason" rows="3" maxlength="500" placeholder="For example: customer says this payment is for a different order"></textarea>
+      <p class="mp-err" id="rejErr"></p>
+      <div class="dlg-actions"><button value="cancel" class="tb" formnovalidate>Cancel</button><button value="ok" class="tb tb-main" id="rejOk">Reject</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="mapDlg" aria-labelledby="mapTitle">
+    <form method="dialog" class="dlg">
+      <h2 id="mapTitle">Which column is which?</h2>
+      <p class="muted" id="mapWhy"></p>
+      <div id="mapFields"></div>
+      <div class="dlg-actions"><button value="cancel" class="tb">Cancel</button><button value="ok" class="tb tb-main">Read the invoices</button></div>
+    </form>
+  </dialog>
+
+  <script type="module" src="/projects/payment-xml-lab/js/rec-app.js"></script>
+  <script src="/assets/page-fx.js" defer></script>
+</body>
+</html>

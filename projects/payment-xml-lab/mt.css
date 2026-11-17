@@ -1,0 +1,47 @@
+/* MT to MX Migration Lab: additions to the Payment Lab styles */
+.suite { display: flex; gap: 4px; margin-left: 12px; }
+.suite a { color: #b9c6d8; text-decoration: none; font-size: 13px; padding: 6px 10px; border-radius: 6px; white-space: nowrap; }
+.suite a:hover { color: #fff; background: rgba(255, 255, 255, .08); }
+.suite a[aria-current="page"] { color: #fff; background: rgba(255, 255, 255, .14); }
+.honest-top { margin-top: 8px; font-size: 13.5px; color: var(--soft); }
+.fld-inline { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; }
+.fld-inline select { max-width: 260px; }
+.banner { margin: 4px 0 10px; font-size: 14px; color: var(--ink); }
+.mt-bench { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); }
+.code.lc { height: 520px; }
+.lc .row { position: static; cursor: pointer; }
+.lc .row:hover { background: #f4f7fb; }
+.lc .row.linked { background: #eef6ee; box-shadow: inset 3px 0 0 var(--ok); }
+.lc .row.linked .gut { background: #e1f0e4; }
+.t-blk { color: #8a4b0f; }
+.block { margin-top: 26px; }
+.block h2 { font-family: var(--serif); font-size: 22px; margin-bottom: 10px; }
+.block h2 .muted { font-family: var(--sans); font-size: 14px; }
+.mt-findings { max-height: none; }
+.mt-card.sev-info { border-left-color: #8a96a3; }
+.mt-card.sev-info .sev { color: var(--soft); }
+.why { margin-top: 4px; font-size: 13.5px; color: var(--soft); }
+.st { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .03em; padding: 2px 8px; border-radius: 999px; white-space: nowrap; border: 1px solid transparent; }
+.st-mapped { background: var(--ok-bg); color: var(--ok); border-color: #b9dfc8; }
+.st-transformed { background: #e8f0fc; color: var(--accent); border-color: #c3d5f2; }
+.st-defaulted { background: #f0f1f3; color: #4a5561; border-color: var(--line); }
+.st-lost { background: var(--err-bg); color: var(--err); border-color: #f2c3bf; }
+.st-review { background: var(--warn-bg); color: var(--warn); border-color: #f0d79e; }
+.s-mapped b { color: var(--ok); } .s-transformed b { color: var(--accent); } .s-lost b { color: var(--err); } .s-review b { color: var(--warn); }
+.map td, .rv td { vertical-align: top; }
+.map tbody tr { cursor: pointer; }
+.map tbody tr:hover { background: #f7f9fc; }
+.map tr.hot { background: #eef6ee; }
+.pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.rv tr.cut td:last-child { color: var(--err); font-weight: 500; }
+.rv-intro { font-size: 13.5px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.rv-src { font-size: 13px; margin: 6px 0 0; }
+.choice { font-style: italic; color: var(--soft); }
+@media (max-width: 1000px) { .mt-bench { grid-template-columns: 1fr; } .code.lc { height: 380px; } }
+@media (max-width: 600px) { .suite { margin-left: 0; } .bar-in { flex-wrap: wrap; } }
+
+/* Olivia, spec v1.1: the red status and the grey band on the pacs.008 panel */
+.learn-band { margin: 0; padding: 6px 12px; font-size: 12px; font-weight: 700; color: #3d4650; background: #e4e7eb; border-bottom: 1px solid var(--line); }
+.learn-band[hidden] { display: none; }
+.v-reject { color: var(--err); font-weight: 600; }
+.v-sym { font-weight: 800; }

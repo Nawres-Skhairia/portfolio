@@ -108,6 +108,31 @@ for (const f of files) {
   if (extname(f) === '.html') for (const m of readFileSync(f, 'utf8').matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)) checkJs(f, m[1]);
 }
 
+// 7. Safety rules (Noah, PORT-26): every HTML page must get a CSP, X-Frame-Options and Permissions-Policy from
+// vercel.json, and never two CSPs (the browser would enforce both, and the stricter one silently wins).
+// Vercel matches "source" with path-to-regexp; our sources use only plain text and regex groups, so they are read
+// as regular expressions. A source with :name parameters is reported, so this check never guesses.
+if (existsSync(vj)) {
+  let rules = [];
+  try { rules = JSON.parse(readFileSync(vj, 'utf8')).headers || []; } catch { rules = []; }
+  const compiled = [];
+  for (const r of rules) {
+    if (/(^|\/):[A-Za-z]/.test(r.source)) { fail('vercel.json', `source ${r.source} uses :parameters, which this check cannot read`); continue; }
+    try { compiled.push({ re: new RegExp('^' + r.source + '$'), headers: r.headers || [] }); } catch (e) { fail('vercel.json', `source ${r.source} is not a valid pattern (${e.message})`); }
+  }
+  const NEEDED = ['Content-Security-Policy', 'X-Frame-Options', 'Permissions-Policy'];
+  for (const f of files.filter((p) => extname(p) === '.html' && !rel(p).startsWith('.github'))) {
+    const r = '/' + rel(f).split('\\').join('/');
+    const addrs = r.endsWith('/index.html') ? [r.slice(0, -'index.html'.length), r.slice(0, -'/index.html'.length) || '/', r] : [r, r.replace(/\.html$/, '')];
+    for (const a of addrs) {
+      const got = compiled.filter((c) => c.re.test(a)).flatMap((c) => c.headers.map((h) => h.key.toLowerCase()));
+      for (const k of NEEDED) if (!got.includes(k.toLowerCase())) fail(rel(f), `served at ${a} without a ${k} header`);
+      const csp = got.filter((k) => k === 'content-security-policy').length;
+      if (csp > 1) fail(rel(f), `served at ${a} with ${csp} Content-Security-Policy headers`);
+    }
+  }
+} else fail('vercel.json', 'missing, so no page gets a safety rule');
+
 // 6. Sitemap addresses
 const sm = join(ROOT, 'sitemap.xml');
 if (existsSync(sm)) {

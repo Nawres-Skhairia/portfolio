@@ -1,0 +1,142 @@
+// Payment XML Lab: automatic proof (PORT-40). Every factory scenario must give exactly its own finding at the
+// line written in the file's top comment; valid files must give none; the sample must give its 5 planned findings.
+// Run: npm i --no-save xmllint-wasm@5.3.0 && node tests/payment-xml-lab.test.mjs
+import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
+const { validateXML } = require(process.env.XMLLINT_WASM || 'xmllint-wasm');
+const base = new URL('../projects/payment-xml-lab/', import.meta.url);
+const { check, detect } = await import(new URL('js/engine.js', base));
+const detectNs = (s) => detect(s).id;
+const { generate, SCENARIOS, sample } = await import(new URL('js/factory.js', base));
+const xsd = readFileSync(new URL('schemas/pain.001.001.09.xsd', base), 'utf8');
+
+const validateSchema = async (xml) => {
+  const r = await validateXML({ xml: [{ fileName: 'payment.xml', contents: xml }], schema: [{ fileName: 'pain.001.001.09.xsd', contents: xsd }], modifyArguments: (a) => a.concat(['--nonet']), maxMemoryPages: 4096 });
+  return { valid: r.valid, errors: r.errors.map((e) => ({ line: e.loc ? e.loc.lineNumber : null, raw: e.rawMessage, message: e.rawMessage.replace(/^payment\.xml:\d+:\s*/, '') })) };
+};
+const procDate = '2026-11-16';
+let failed = 0, passed = 0;
+const ok = (cond, name, detail) => { if (cond) passed++; else { failed++; console.log('FAIL', name, detail ? '\n   ' + detail : ''); } };
+const ids = (r) => r.findings.map((f) => (f.layer === 'xsd' ? 'XSD' : f.layer === 'xml' ? 'XML' : f.id) + '@' + f.line);
+
+// AT1 sample
+{
+  const r = await check(sample(procDate), { procDate, validateSchema });
+  const got = r.findings.map((f) => f.layer === 'xsd' ? 'XSD:' + f.element : f.id);
+  ok(JSON.stringify(got) === JSON.stringify(['XSD:CreDtTm', 'SCT-03', 'SCT-08', 'SCT-05', 'SCT-14']), 'AT1 sample findings', got.join(', ') + ' | ' + ids(r).join(' '));
+  ok(r.verdict === 'Rejected', 'AT1 verdict', r.verdictLine);
+}
+// AT2 valid files
+for (const count of [1, 100, 10000]) {
+  const t = Date.now();
+  const g = generate({ scenario: 'valid', count, procDate });
+  const r = await check(g.xml, { procDate, validateSchema });
+  ok(r.findings.length === 0 && r.verdict === 'Accepted', `AT2 valid ${count}`, ids(r).join(' '));
+  if (count === 10000) console.log(`   10,000 payments: ${(g.xml.length / 1048576).toFixed(1)} MB, checked in ${Date.now() - t} ms`);
+}
+// Size limit: a file just under 10 MB must be checked in full within the engine limits (256 MB memory)
+{
+  let n = 21000, g = generate({ scenario: 'valid', count: n, procDate });
+  while (Buffer.byteLength(g.xml) > 10 * 1024 * 1024) { n -= 500; g = generate({ scenario: 'valid', count: n, procDate }); }
+  const t = Date.now(); const r = await check(g.xml, { bytes: Buffer.byteLength(g.xml), procDate, validateSchema });
+  ok(r.verdict === 'Accepted' && r.summary.payments === n, `10 MB file (${n} payments, ${(Buffer.byteLength(g.xml) / 1048576).toFixed(1)} MB)`, r.verdictLine);
+  console.log(`   ${n} payments, ${(Buffer.byteLength(g.xml) / 1048576).toFixed(1)} MB, checked in ${Date.now() - t} ms`);
+  const big = g.xml + ' '.repeat(10 * 1024 * 1024 - Buffer.byteLength(g.xml) + 1);
+  ok((await check(big, { bytes: Buffer.byteLength(big), procDate, validateSchema })).status === 'refused', 'Over 10 MB refused');
+}
+// Mia's cases (PORT-40 comment 10591)
+{
+  const v = generate({ scenario: 'valid', count: 3, procDate }).xml;
+  const xsiFirst = v.replace('<Document xmlns=', '<Document xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns=');
+  const r1 = await check(xsiFirst, { procDate, validateSchema });
+  ok(r1.status === 'checked' && r1.verdict === 'Accepted', 'xmlns:xsi before xmlns is still pain.001.001.09', r1.verdictLine);
+  const pref = v.replace('<Document xmlns=', '<p:Document xmlns:p=').replace('</Document>', '</p:Document>');
+  ok(detectNs(pref) === 'pain.001.001.09', 'prefixed root detected');
+  const cmt = v.replace('<Document', '<!-- an old note: <!DOCTYPE was removed -->\n<Document');
+  const r2 = await check(cmt, { procDate, validateSchema });
+  ok(r2.status === 'refused' && /even if it is inside a comment/.test(r2.reason), 'DOCTYPE text anywhere is refused, with a clear message', r2.reason);
+  // Noah's attack files on fa67398: a "<!--" inside a processing instruction must not hide a DOCTYPE
+  const NS = 'urn:iso:std:iso:20022:tech:xsd:pain.001.001.09';
+  const a1 = `<?xml version="1.0"?><?pi <!-- ?><!DOCTYPE d [<!ENTITY sec SYSTEM "file:///pain.001.001.09.xsd">]><!-- --><Document xmlns="${NS}">&sec;</Document>`;
+  ok((await check(a1, { procDate, validateSchema })).status === 'refused', 'Noah attack 1 (PI hides comment start) refused');
+  const a2 = `<?xml version="1.0" encoding="UTF-8" ?><?x <!--?>\n<!DOCTYPE d [<!ENTITY sec SYSTEM "file:///pain.001.001.09.xsd">]>\n<?y -->?><Document xmlns="${NS}">&sec;</Document>`;
+  ok((await check(a2, { procDate, validateSchema })).status === 'refused', 'Noah attack 2 (PI pair around DOCTYPE) refused');
+  const a3 = `<?xml version="1.0"?><![CDATA[<!--]]><Document xmlns="${NS}"><CstmrCdtTrfInitn/></Document>`;
+  const r3x = await check(a3, { procDate, validateSchema });
+  ok(r3x.status === 'not-wellformed' || r3x.status === 'refused' || r3x.status === 'not-iso', 'CDATA before the root never passes', r3x.status + ' ' + (r3x.reason || ''));
+  const open = v.replace('<Document', '<!-- unterminated <!DOCTYPE d [<!ENTITY x "y">]>\n<Document');
+  ok((await check(open, { procDate, validateSchema })).status === 'refused', 'DOCTYPE after an unterminated comment is refused');
+  const ly = v.replace('IE29AIBK93115212345678', 'LY83002048000020100120361').replace(/<IBAN>[A-Z]{2}\d{2}\w+<\/IBAN>/, (x) => x);
+  const r3 = await check(v.replace(/(<CdtrAcct>\s*<Id><IBAN>)[^<]+/, '$1LY83002048000020100120361'), { procDate, validateSchema });
+  ok(!r3.findings.some((f) => f.id === 'SCT-05'), 'valid Libyan IBAN (25) accepted', ids(r3).join(' '));
+  const r4 = await check(v.replace(/(<CdtrAcct>\s*<Id><IBAN>)[^<]+/, '$1RU0204452560040702810412345678901'), { procDate, validateSchema });
+  ok(!r4.findings.some((f) => f.id === 'SCT-05'), 'valid Russian IBAN (33) accepted', ids(r4).join(' '));
+  const xi = v.replace('</CdtrAcct>', '</CdtrAcct>\n        <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="x.xml"/>');
+  const r5 = await check(xi, { procDate, validateSchema });
+  ok(r5.findings.length === 1, 'XInclude element gives one finding', ids(r5).join(' '));
+}
+// AT3 / AT4 / AT6 every scenario
+for (const s of SCENARIOS.filter((x) => x.expect)) {
+  for (const count of [3, 25]) {
+    const g = generate({ scenario: s.id, count, procDate });
+    const r = await check(g.xml, { procDate, validateSchema });
+    const line = Number((g.xml.match(/at line (\d+)/) || [])[1]);
+    const got = ids(r);
+    const want = s.expect + (s.at ? '@' + line : '');
+    const good = s.expect === 'XML' ? r.status === 'not-wellformed' && r.findings.length === 1 && r.layers.xsd === 'not run' && r.layers.rules === 'not run'
+      : got.length === 1 && got[0] === want && (!s.sev || r.findings.find((f) => f.layer === 'rule').severity === s.sev);
+    ok(good, `AT3 ${s.id} (${count})`, `want ${want}, got ${got.join(' ') || 'nothing'}`);
+  }
+}
+// Sophie's EPC132-08 2025 corrections
+{
+  const { RULES, SOURCES } = await import(new URL('js/rules.js', base));
+  ok(SOURCES.epc.name === 'EPC132-08 SCT Customer-to-PSP Implementation Guidelines 2025 v1.0' && SOURCES.epc.url.endsWith('.pdf'), 'EPC source title and PDF link');
+  ok(RULES.length === 21, '21 rules in the catalogue');
+  const sev = (r, id) => r.findings.filter((f) => f.id === id).map((f) => f.severity).join(',');
+  const un = generate({ scenario: 'address-unstructured', count: 3, procDate }).xml;
+  ok(sev(await check(un, { procDate, validateSchema }), 'SCT-21') === 'warning', 'Unstructured address is a warning before 22 Nov 2026');
+  ok(sev(await check(un, { procDate: '2026-11-22', validateSchema }), 'SCT-21') === 'error', 'Unstructured address is an error from 22 Nov 2026');
+  const hybrid = un.replace('<PstlAdr><Ctry>DE</Ctry>', '<PstlAdr><TwnNm>Berlin</TwnNm><Ctry>DE</Ctry>');
+  const rh = await check(hybrid, { procDate: '2026-11-22', validateSchema });
+  ok(!rh.findings.some((f) => f.id === 'SCT-21' || f.layer === 'xsd'), 'Hybrid address (town, country, 2 lines) is fine after 22 Nov 2026', ids(rh).join(' '));
+  const wrongSvc = generate({ scenario: 'valid', count: 3, procDate }).xml.replace('<Cd>SEPA</Cd>', '<Cd>NURG</Cd>');
+  ok(sev(await check(wrongSvc, { procDate, validateSchema }), 'SCT-09') === 'error', 'Wrong service level stays an error');
+  ok(sev(await check(generate({ scenario: 'method', count: 3, procDate }).xml, { procDate, validateSchema }), 'SCT-09') === 'error', 'Method not TRF stays an error');
+}
+// AT5 other messages
+{
+  const r1 = await check('<?xml version="1.0"?><Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.001.001.03"><CstmrCdtTrfInitn/></Document>', { procDate, validateSchema });
+  ok(r1.status === 'unsupported' && /pain\.001\.001\.03/.test(r1.reason), 'AT5 pain.001.001.03', r1.reason);
+  const r2 = await check('<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.08"><BkToCstmrStmt/></Document>', { procDate, validateSchema });
+  ok(r2.status === 'unsupported' && /camt\.053/.test(r2.reason), 'AT5 camt.053', r2.reason);
+  const r3 = await check('<note><to>Someone</to></note>', { procDate, validateSchema });
+  ok(r3.status === 'not-iso', 'AT5 random XML', r3.reason);
+}
+// Safety gate
+{
+  const bomb = '<?xml version="1.0"?><!DOCTYPE lolz [<!ENTITY lol "lol"><!ENTITY lol2 "&lol;&lol;">]><Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.001.001.09">&lol2;</Document>';
+  const r = await check(bomb, { procDate, validateSchema });
+  ok(r.status === 'refused', 'Safety: DOCTYPE and ENTITY refused', r.reason);
+  const xxe = '<?xml version="1.0"?><!DOCTYPE d [<!ENTITY x SYSTEM "file:///etc/passwd">]><Document/>';
+  ok((await check(xxe, { procDate, validateSchema })).status === 'refused', 'Safety: external entity refused');
+  // UTF-16LE without BOM decodes as "valid UTF-8" full of NULs: it must be refused before libxml2 sees it (Noah, PR 5)
+  const u16 = new TextDecoder('utf-8', { fatal: true }).decode(Buffer.from('<?xml version="1.0" encoding="UTF-16"?><!DOCTYPE d [<!ENTITY x SYSTEM "pain.001.001.09.xsd">]><d>&x;</d>', 'utf16le'));
+  ok((await check(u16, { procDate, validateSchema })).status === 'refused', 'Safety: BOM-less UTF-16LE refused');
+  const ctl = (await check('<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.001.001.09">\u0001</Document>', { procDate, validateSchema }));
+  ok(ctl.status === 'refused', 'Safety: control characters refused');
+}
+// Daniel's hands-on Minors (PORT-40 10667)
+{
+  const { safetyGate, sizeWords } = await import(new URL('js/engine.js', base));
+  ok(safetyGate('x', 10 * 1048576 + 100) === 'This file is just over the 10 MB limit.', 'size: 10.0 MB reads as just over the limit');
+  ok(sizeWords(12.4 * 1048576) === 'This file is 12.4 MB. The limit is 10 MB.', 'size: 12.4 MB says the size');
+  const deep = '<?xml version="1.0" encoding="UTF-8"?><Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.001.001.09">' + '<a>'.repeat(300) + '</a>'.repeat(300) + '</Document>';
+  const r = await check(deep, { procDate, validateSchema });
+  ok(r.status === 'not-wellformed' && /nested more than 256 levels deep/.test(r.findings[0].message) && !r.findings.some((f) => /XML_PARSE_HUGE/.test(f.message + f.fix)), 'nesting bomb in plain words', r.findings[0] && r.findings[0].message);
+  const app = readFileSync(new URL('js/app.js', base), 'utf8');
+  ok(/MAX_SHOWN = 500/.test(app) && /all\.slice\(0, MAX_SHOWN\)/.test(app), 'findings list capped at 500 cards');
+}
+console.log(`${passed} passed, ${failed} failed`);
+process.exit(failed ? 1 : 0);

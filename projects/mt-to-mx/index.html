@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>MT to MX Converter · Nawres Skhairia</title>
+  <meta name="description" content="Turn a made-up MT103 into an ISO 20022 pacs.008, field by field, and see what is mapped, changed, defaulted, cut or lost. Runs in your browser.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="/assets/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/instrument-serif-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/assets/fonts/site-fonts.css">
+  <link rel="stylesheet" href="/projects/payment-xml-lab/style.css">
+  <link rel="stylesheet" href="/projects/payment-xml-lab/mt.css">
+  <link rel="stylesheet" href="/assets/tool-theme.css">
+  <link rel="stylesheet" href="/projects/payment-xml-lab/theme.css">
+  <script src="/assets/theme.js"></script>
+  <link rel="modulepreload" href="/projects/payment-xml-lab/js/mt-app.js">
+</head>
+<body>
+  <header class="bar">
+    <div class="bar-in">
+      <a class="home back" href="/#work" aria-label="Back to Nawres Skhairia's portfolio">Nawres Skhairia</a>
+      <div class="brand">
+        <span class="brand-name">MT to MX Converter</span>
+        <span class="brand-sub">MT103 → ISO 20022 pacs.008.001.08 · simplified mapping</span>
+      </div>
+      <p class="device"><span class="dot" aria-hidden="true"></span>Runs on your device. Nothing is uploaded or stored.</p>
+      <button class="theme-switch" type="button" aria-label="Dark theme" aria-pressed="false"><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 14.6A8.5 8.5 0 0 1 9.4 3.5a8.5 8.5 0 1 0 11.1 11.1z"/></svg></button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="intro">
+      <h1>See what an old payment message loses on its way to ISO 20022.</h1>
+      <p>Paste an MT103 and get the pacs.008 version, field by field. Every piece of data gets a status (mapped, transformed, defaulted, cut or lost, or needs review), and the result is checked against the ISO 20022 schema.</p>
+      <p class="honest-top"><b>Not SWIFT's official translation and not CBPR+ validated. For learning and testing only.</b> A simplified mapping, not certified and not affiliated with SWIFT. Please paste made-up messages only: real ones hold names and accounts.</p>
+    </section>
+
+    <div class="toolbar" role="toolbar" aria-label="Message actions">
+      <label class="fld-inline" for="sampleSel">Sample <select id="sampleSel"></select></label>
+      <button type="button" class="tb tb-main" id="pasteBtn">Paste MT103</button>
+      <label class="tb" for="fileIn">Open file<input type="file" id="fileIn" accept=".txt,.fin,.mt,.mt103,text/plain"></label>
+      <span class="tb-sep" aria-hidden="true"></span>
+      <button type="button" class="tb" id="dlXml" disabled>Download pacs.008</button>
+      <div class="export">
+        <button type="button" class="tb" id="exportBtn" aria-haspopup="true" aria-expanded="false" disabled>Export report</button>
+        <div class="menu" id="exportMenu" hidden>
+          <button type="button" data-export="html">Mapping report (HTML, to print or save as PDF)</button>
+          <button type="button" data-export="csv">Mapping table (CSV)</button>
+          <button type="button" data-export="json">Findings (JSON)</button>
+          <button type="button" data-export="junit">Test results (JUnit XML)</button>
+        </div>
+      </div>
+    </div>
+
+    <section class="status" id="status" aria-live="polite">
+      <div class="facts" id="facts"></div>
+      <div class="verdict" id="verdict"></div>
+    </section>
+    <p class="banner" id="banner"></p>
+
+    <div class="filters" role="group" aria-label="Filter the mapping table">
+      <button type="button" class="flt on" data-filter="all">All <b id="cAll">0</b></button>
+      <button type="button" class="flt s-mapped" data-filter="mapped">Mapped <b id="c-mapped">0</b></button>
+      <button type="button" class="flt s-transformed" data-filter="transformed">Transformed <b id="c-transformed">0</b></button>
+      <button type="button" class="flt s-defaulted" data-filter="defaulted">Defaulted <b id="c-defaulted">0</b></button>
+      <button type="button" class="flt s-lost" data-filter="lost">Cut or lost <b id="c-lost">0</b></button>
+      <button type="button" class="flt s-review" data-filter="review">Needs review <b id="c-review">0</b></button>
+      <p class="hint">Click a line on either side to see where it comes from or goes to.</p>
+    </div>
+
+    <div class="bench mt-bench">
+      <section class="pane" aria-label="MT103">
+        <div class="pane-head"><span id="mtName">MT103</span><span id="mtMeta" class="muted"></span></div>
+        <div class="code lc" id="mtCode" tabindex="0" aria-label="MT103 with line numbers"></div>
+      </section>
+      <section class="pane" aria-label="Generated pacs.008">
+        <div class="pane-head"><span>pacs.008.001.08</span><span id="xsdMeta" class="muted"></span></div>
+        <p class="learn-band" id="learnBand" hidden>For learning only: a bank would refuse this MT before any conversion.</p>
+        <div class="code lc" id="mxCode" tabindex="0" aria-label="Generated pacs.008 with line numbers"></div>
+      </section>
+    </div>
+
+    <section class="block">
+      <h2>Findings <span class="muted" id="findMeta"></span></h2>
+      <ol class="findings mt-findings" id="findings"></ol>
+    </section>
+
+    <section class="block">
+      <h2>Mapping table <span class="muted" id="rowMeta"></span></h2>
+      <div class="table-wrap" tabindex="0" role="region" aria-label="Field-by-field mapping table (scrolls sideways)"><table class="cat map" id="mapTable">
+        <thead><tr><th>MT field</th><th>MT value</th><th>Rule</th><th>pacs.008 element</th><th>pacs.008 value</th><th>Status</th><th>Explanation</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </section>
+
+    <section class="block">
+      <h2>Reverse check <span class="muted">if this pacs.008 goes back to an MT party</span></h2>
+      <p class="muted rv-intro">Lines of 35 characters, a fixed number of lines per field, and the MT character set. <button type="button" class="tb tb-small" id="nativeBtn">Try it on a native pacs.008</button> <button type="button" class="tb tb-small" id="ownBtn" hidden>Back to the converted message</button></p>
+      <p class="rv-src" id="rvSrc"></p>
+      <div class="table-wrap" tabindex="0" role="region" aria-label="Reverse check table (scrolls sideways)"><table class="cat rv" id="rvTable">
+        <thead><tr><th>pacs.008 element</th><th>MT field</th><th>Before</th><th>After</th><th>What happens</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </section>
+
+    <section class="more">
+      <h2 id="catalogue">Mapping rules <span class="muted" id="catVersion"></span></h2>
+      <div class="table-wrap" tabindex="0" role="region" aria-label="Rule catalogue table (scrolls sideways)"><table class="cat" id="catTable">
+        <thead><tr><th>ID</th><th>MT</th><th>pacs.008</th><th>Can give</th><th>What it does</th><th>Source</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+      <p class="muted small">"Would be rejected" means the MT breaks a format rule of this catalogue: the MT103 format itself (field tags, lengths, characters, mandatory fields, formats such as the :32A: date) or a rule marked above. It is our own check, not SWIFT's network validation.</p>
+
+      <p class="honest"><b>Not SWIFT's official translation and not CBPR+ validated. For learning and testing only.</b> Simplified, not certified and not affiliated with SWIFT. The mapping follows the rules above, written in our own words; where no public source confirms a rule it says "Our documented choice". Check results against your bank's or SWIFT's own tools. Nothing you paste here is sent anywhere: it is read in this browser tab and forgotten when you close it.</p>
+
+      <h2>Sources and licences</h2>
+      <ul class="sources">
+        <li>Schema: ISO 20022 pacs.008.001.08, a public copy taken unchanged from a public source, not yet compared byte for byte with the file on iso20022.org (see <a href="/projects/payment-xml-lab/schemas/NOTICE.md">NOTICE</a>). ISO 20022 message schemas are published free of charge at <a href="https://www.iso20022.org/" rel="noopener">iso20022.org</a>, which is not this site.</li>
+        <li>Public sources, linked and not copied: <a href="https://www.swift.com/standards/iso-20022/iso-20022-faqs/iso-20022-removal-unstructured-address" rel="noopener">Swift FAQ on the removal of unstructured addresses</a> (S1). No SWIFT handbook, usage guideline or official translation rule was used.</li>
+        <li>Engine: libxml2 via <a href="https://github.com/noppa/xmllint-wasm" rel="noopener">xmllint-wasm</a> (MIT licence), the same as the <a href="/projects/payment-file-check/">Payment file check</a>.</li>
+        <li>Samples: made-up companies, published example IBANs, made-up BICs (bank code XMPL) and made-up UETRs. Never real messages.</li>
+      </ul>
+    </section>
+
+    <p class="foot">Created by <a href="/">Nawres Skhairia</a> through vibe coding. A work in progress: feedback is welcome, <a href="/#contact">get in touch</a>. <a href="/privacy/">Privacy</a></p>
+  </main>
+
+  <dialog id="pasteDlg" aria-labelledby="pasteTitle">
+    <form method="dialog" class="dlg">
+      <h2 id="pasteTitle">Paste an MT103</h2>
+      <p class="muted">Made-up messages only, please. Blocks 1 to 5, or just the fields of block 4.</p>
+      <textarea id="pasteText" rows="16" spellcheck="false" placeholder="{1:F01XMPLDEFFAXXX0000000000}{2:I103XMPLFRPPXXXXN}{3:{121:…}}{4:&#10;:20:…&#10;-}"></textarea>
+      <div class="dlg-actions"><button value="cancel" class="tb">Cancel</button><button value="ok" class="tb tb-main">Convert</button></div>
+    </form>
+  </dialog>
+
+  <script type="module" src="/projects/payment-xml-lab/js/mt-app.js"></script>
+  <script src="/assets/page-fx.js" defer></script>
+</body>
+</html>

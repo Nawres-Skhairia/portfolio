@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Payment File Check · Nawres Skhairia</title>
+  <meta name="description" content="Check a SEPA credit transfer file (pain.001) against the ISO 20022 schema and SEPA business rules, line by line, in your browser. Files never leave your device.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="/assets/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/instrument-serif-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/assets/fonts/site-fonts.css">
+  <link rel="stylesheet" href="/projects/payment-xml-lab/style.css">
+  <link rel="stylesheet" href="/projects/payment-xml-lab/mt.css">
+  <link rel="stylesheet" href="/assets/tool-theme.css">
+  <link rel="stylesheet" href="/projects/payment-xml-lab/theme.css">
+  <script src="/assets/theme.js"></script>
+  <link rel="modulepreload" href="/projects/payment-xml-lab/js/app.js">
+</head>
+<body>
+  <header class="bar">
+    <div class="bar-in">
+      <a class="home back" href="/#work" aria-label="Back to Nawres Skhairia's portfolio">Nawres Skhairia</a>
+      <div class="brand">
+        <span class="brand-name">Payment File Check</span>
+        <span class="brand-sub">ISO 20022 · pain.001.001.09 · SEPA Credit Transfer</span>
+      </div>
+      <p class="device"><span class="dot" aria-hidden="true"></span>Runs on your device. Files are never uploaded or stored.</p>
+      <button class="theme-switch" type="button" aria-label="Dark theme" aria-pressed="false"><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 14.6A8.5 8.5 0 0 1 9.4 3.5a8.5 8.5 0 1 0 11.1 11.1z"/></svg></button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="intro">
+      <h1>Check a payment file before it goes to the bank.</h1>
+      <p>Drop a SEPA credit transfer file (pain.001). It is checked against the ISO 20022 schema and a list of SEPA rules, and every problem is shown at its exact line, in plain words, with how to fix it.</p>
+    </section>
+
+    <div class="toolbar" role="toolbar" aria-label="File actions">
+      <label class="tb tb-main" for="fileIn">Open file<input type="file" id="fileIn" accept=".xml,text/xml,application/xml"></label>
+      <button type="button" class="tb" id="pasteBtn">Paste XML</button>
+      <button type="button" class="tb" id="sampleBtn">Load sample</button>
+      <span class="tb-sep" aria-hidden="true"></span>
+      <button type="button" class="tb" id="dlXml" disabled>Download XML</button>
+      <div class="export">
+        <button type="button" class="tb" id="exportBtn" aria-haspopup="true" aria-expanded="false" disabled>Export report</button>
+        <div class="menu" id="exportMenu" hidden>
+          <button type="button" data-export="html">Report (HTML, to print or save as PDF)</button>
+          <button type="button" data-export="json">Findings (JSON)</button>
+          <button type="button" data-export="junit">Test results (JUnit XML)</button>
+        </div>
+      </div>
+      <label class="proc" for="procDate">Processing date <input type="date" id="procDate"></label>
+    </div>
+
+    <section class="status" id="status" aria-live="polite">
+      <div class="facts" id="facts"></div>
+      <div class="verdict" id="verdict"></div>
+    </section>
+    <ol class="stages" id="stages" aria-label="Check progress">
+      <li data-stage="read">Read</li><li data-stage="schema">XML and schema</li><li data-stage="rules">SEPA rules</li><li data-stage="report">Report</li>
+    </ol>
+
+    <div class="filters" role="group" aria-label="Filter findings">
+      <button type="button" class="flt on" data-filter="all">All <b id="cAll">0</b></button>
+      <button type="button" class="flt f-xsd" data-filter="xsd">Schema errors <b id="cXsd">0</b></button>
+      <button type="button" class="flt f-rule" data-filter="rule">Rule errors <b id="cRule">0</b></button>
+      <button type="button" class="flt f-warn" data-filter="warn">Warnings <b id="cWarn">0</b></button>
+      <p class="hint" id="hint">Use J and K (or the arrow keys) to move between findings.</p>
+    </div>
+
+    <div class="bench" id="bench">
+      <section class="pane code-pane" aria-label="The file">
+        <div class="pane-head"><span id="fileName">No file</span><span id="fileMeta" class="muted"></span></div>
+        <div class="code" id="code" tabindex="0" aria-label="File contents with line numbers"><div class="code-space" id="codeSpace"></div></div>
+        <div class="drop" id="drop" hidden><p>Drop the XML file to check it here</p></div>
+      </section>
+      <section class="pane find-pane" aria-label="Findings">
+        <div class="pane-head"><span>Findings</span><span id="findMeta" class="muted"></span></div>
+        <ol class="findings" id="findings"></ol>
+      </section>
+    </div>
+
+    <section class="more">
+      <h2>How it checks a file</h2>
+      <ol class="pipeline">
+        <li><b>Safety gate</b><span>Up to 10 MB. Files with a DOCTYPE or ENTITY are refused, which blocks the classic XML attacks (XXE, "billion laughs").</span></li>
+        <li><b>1 · Well-formed XML</b><span>Every tag opened is closed, in the right order.</span></li>
+        <li><b>2 · Schema</b><span>The ISO 20022 pain.001.001.09 schema, checked by libxml2 compiled to WebAssembly, in a separate worker that is stopped after 20 seconds.</span></li>
+        <li><b>3 · SEPA rules</b><span>What the schema cannot see: sums and counts, IBAN check digits, 2 decimals in euro, character set, dates. Amounts are added exactly, never as floating point.</span></li>
+        <li><b>Report</b><span>Each finding at its line, with its path, what was expected and found, and how to fix it. Export as HTML, JSON or JUnit for a build pipeline.</span></li>
+      </ol>
+      <p class="honest"><b>Not a certified validator.</b> It checks the schema and the rules listed below; your bank may apply more. Nothing you open here is sent anywhere: the file is read in this browser tab and forgotten when you close it.</p>
+
+      <h2 id="catalogue">Rule catalogue <span class="muted" id="catVersion"></span></h2>
+      <div class="table-wrap"><table class="cat" id="catTable">
+        <thead><tr><th>ID</th><th>What it checks</th><th>Severity</th><th>Valid</th><th>Invalid</th><th>Source</th><th><span class="vh">Try it</span></th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+
+      <h2>Sources and licences</h2>
+      <ul class="sources">
+        <li>Schema: ISO 20022 pain.001.001.09, a public copy taken unchanged from a public source, not yet compared byte for byte with the file on iso20022.org (see <a href="/projects/payment-xml-lab/schemas/NOTICE.md">NOTICE</a>). ISO 20022 message schemas are published free of charge at <a href="https://www.iso20022.org/" rel="noopener">iso20022.org</a>, which is not this site.</li><li>Need a broken file to test with? <a href="/projects/test-file-maker/">Test File Maker</a> makes one.</li>
+        <li>SEPA rules: written in our own words, based on the European Payments Council's <a href="https://www.europeanpaymentscouncil.eu/sites/default/files/kb/file/2025-10/EPC132-08%20SCT%20C2PSP%20IG%202025%20V1.0.pdf" rel="noopener">EPC132-08 SCT Customer-to-PSP Implementation Guidelines 2025 v1.0</a> (in force from 5 October 2025), © European Payments Council. They are not copied from it; check the version your bank applies. Rules marked "common bank practice" are not in the guidelines.</li>
+        <li>Engine: libxml2 via <a href="https://github.com/noppa/xmllint-wasm" rel="noopener">xmllint-wasm</a> (MIT licence).</li>
+        <li>Test data: made-up companies, published example IBANs and made-up BICs (bank code XMPL). Never real accounts.</li>
+      </ul>
+    </section>
+
+    <p class="foot">Created by <a href="/">Nawres Skhairia</a> through vibe coding. A work in progress: feedback is welcome, <a href="/#contact">get in touch</a>. <a href="/privacy/">Privacy</a></p>
+  </main>
+
+  <dialog id="pasteDlg" aria-labelledby="pasteTitle">
+    <form method="dialog" class="dlg">
+      <h2 id="pasteTitle">Paste XML</h2>
+      <textarea id="pasteText" rows="14" spellcheck="false" placeholder="&lt;Document xmlns=&quot;urn:iso:std:iso:20022:tech:xsd:pain.001.001.09&quot;&gt;…"></textarea>
+      <div class="dlg-actions"><button value="cancel" class="tb">Cancel</button><button value="ok" class="tb tb-main" id="pasteOk">Check</button></div>
+    </form>
+  </dialog>
+
+  <script type="module" src="/projects/payment-xml-lab/js/app.js"></script>
+  <script src="/assets/page-fx.js" defer></script>
+</body>
+</html>

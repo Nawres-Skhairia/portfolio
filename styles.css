@@ -452,12 +452,12 @@ h2 { font-size: var(--step-3); line-height: 1; letter-spacing: -.025em; max-widt
 
 /* page change: a dark panel sweeps up over the page and the picture of the chosen tool grows to fill the screen;
    the tool page then opens from under the same panel (tool-theme.css). Started by the site script, not shown for reduced motion. */
-.pt-panel { position: fixed; inset: 0; z-index: 200; pointer-events: none; background: var(--ink); transform: translateY(100%); border-radius: 50% 50% 0 0 / 12vh 12vh 0 0; }
+.pt-panel { position: fixed; inset: 0; z-index: 200; pointer-events: none; background: var(--pt-panel, var(--ink)); transform: translateY(100%); border-radius: 50% 50% 0 0 / 12vh 12vh 0 0; }
 .pt-panel.go { animation: pt-up .7s cubic-bezier(.7, 0, .2, 1) forwards; }
 @keyframes pt-up { to { transform: none; border-radius: 0; } }
 .pt-pic { position: fixed; z-index: 201; pointer-events: none; border-radius: 10px; box-shadow: 0 40px 80px -30px rgba(0, 0, 0, .6); object-fit: contain; background: var(--bg-raised); }
 /* coming back from a tool: the panel lifts away */
-.from-tool body::before { content: ""; position: fixed; inset: 0; z-index: 200; pointer-events: none; background: var(--ink); animation: pt-away .8s .05s cubic-bezier(.7, 0, .2, 1) forwards; }
+.from-tool body::before { content: ""; position: fixed; inset: 0; z-index: 200; pointer-events: none; background: var(--pt-panel, var(--ink)); animation: pt-away .8s .05s cubic-bezier(.7, 0, .2, 1) forwards; }
 @keyframes pt-away { to { transform: translateY(-100%); border-radius: 0 0 50% 50% / 0 0 12vh 12vh; } }
 
 @media (prefers-reduced-motion: reduce) {
@@ -495,3 +495,5 @@ body { transition: background-color .4s, color .4s; }
   .nav .cv-pill { padding: 0 2px; }
 }
 @media (max-width: 400px) { .site-head .wrap { padding-inline: 16px; } }
+/* page-change panel: a deep green in dark mode, so moving between pages never flashes bright */
+:root[data-theme="dark"] { --pt-panel: #1c2a24; }
