@@ -1,0 +1,9 @@
+{
+  "name": "my-expense-radar",
+  "private": true,
+  "type": "module",
+  "description": "Private Expense Radar for the site owner: static app plus /api/er (end-to-end encrypted sync).",
+  "engines": { "node": "22.x" },
+  "scripts": { "build": "node build.mjs" },
+  "dependencies": { "postgres": "3.4.7" }
+}

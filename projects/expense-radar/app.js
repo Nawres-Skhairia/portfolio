@@ -1,6 +1,9 @@
 // Expense Radar: screens and interactions. Every figure comes from engine.js; this file shows it and saves changes.
 import * as E from './engine.js';
 import { seed } from './seed.js';
+// The private copy for the site owner (its own address) loads its safe-sync layer; the public tool never does.
+const PERSONAL = document.documentElement.dataset.mode === 'personal';
+const P = PERSONAL ? await import('./personal.js') : null;
 
 const KEY = 'expense-radar-v1';
 const pad = n => String(n).padStart(2, '0');
@@ -21,11 +24,12 @@ function load() {
   } catch (e) { firstVisit = true; /* storage blocked: work in memory */ }
   return seed(TODAY);
 }
-let data = load();
+let data = PERSONAL ? E.emptyData() : load();
+if (PERSONAL) { const d = await P.start({ E, esc, toast: (...a) => toast(...a), openForm: (...a) => openForm(...a), confirmBox: (...a) => confirmBox(...a), download: (...a) => download(...a), render: () => render(), band: () => renderBand(), get: () => data, replace: d => { data = d; render(); }, commit: (d, m) => commit(d, m), today: TODAY }); if (d) data = d; }
 // Ask the browser to keep this data even when space runs low (no prompt in most browsers).
 function keepSafe() { try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().then(ok => { ui.persisted = ok; renderBand(); }); } catch (e) { /* not supported */ } }
 if (data.own) { try { if (navigator.storage && navigator.storage.persisted) navigator.storage.persisted().then(ok => { ui.persisted = ok; if (!ok) keepSafe(); else renderBand(); }); } catch (e) { /* not supported */ } }
-function save() { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) { toast('This browser did not allow saving. Your changes last until you close the tab.'); } }
+function save() { if (PERSONAL) { P.store(data); return; } try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) { toast('This browser did not allow saving. Your changes last until you close the tab.'); } }
 function commit(next, message, undoable = true) {
   const prev = data; data = next; save(); render();
   if (message) toast(message, undoable ? () => { data = prev; save(); render(); toast('Undone.'); } : null);
@@ -45,6 +49,7 @@ const SPEND = E.CATEGORIES.filter(c => !E.INCOME_CATEGORIES.includes(c));
 function route() { const h = location.hash.replace(/^#\/?/, ''); const [p, q] = h.split('?'); return { name: p || 'overview', params: new URLSearchParams(q || '') }; }
 const VIEWS = { overview, transactions, budgets, goals, recurring, analysis, import: importView, reports };
 function render() {
+  if (PERSONAL && P.locked()) { P.gate(); return; }
   if (firstVisit) { $('#main').innerHTML = welcome(); $('#band').innerHTML = ''; document.title = 'Welcome · Expense Radar'; return; }
   const r = route(); const v = VIEWS[r.name] ? r.name : 'overview';
   if (v === 'transactions' && r.params.has('q')) { ui.q = r.params.get('q'); ui.tmonth = ''; history.replaceState(null, '', '#/transactions'); }
@@ -58,6 +63,7 @@ let lastView = '';
 window.addEventListener('hashchange', () => { const v = route().name; render(); if (v !== lastView) { $('#main').focus({ preventScroll: true }); scrollTo(0, 0); } lastView = v; });
 
 function renderBand() {
+  if (PERSONAL) { if (!P.locked()) P.band(); return; }
   if (firstVisit) { $('#band').innerHTML = ''; return; }
   if (!data.own) { $('#band').innerHTML = '<div class="band-in"><span><b>Sample.</b> The made-up money of a fictional person, to look around.</span><span class="grow"></span><button type="button" class="lnk" data-act="reset">Reset the sample</button><button type="button" class="btn sm" data-act="start-own">Start with my own money</button></div>'; return; }
   const last = data.backupAt ? 'Last backup ' + dshort(data.backupAt.slice(0, 10)) + '.' : (data.transactions.length ? 'No backup yet.' : '');
@@ -79,6 +85,7 @@ function backup() {
   renderBand(); toast('Backup downloaded. Keep the file somewhere safe.');
 }
 function restoreFrom(text) {
+  if (PERSONAL && text.includes('"expense-radar-personal"')) { P.restoreEncrypted(text); return; }
   let d; try { const j = JSON.parse(text); d = j && j.app === 'expense-radar' ? j.data : j; } catch (e) { toast('This file is not an Expense Radar backup.'); return; }
   if (!E.isValidData(d) || d.transactions.length > 50000) { toast('This backup could not be read. Nothing was changed.'); return; }
   confirmBox('Restore this backup?', 'It has ' + d.transactions.length + ' transactions. What is on this device now is replaced. You can undo it right after.', 'Restore', () => { commit({ ...d, own: true }, 'Backup restored.'); keepSafe(); });
@@ -519,6 +526,7 @@ function download(name, text, type) { const a = document.createElement('a'); a.h
 document.addEventListener('click', e => {
   const el = e.target.closest('[data-act]'); if (!el) return;
   const id = el.dataset.id;
+  if (PERSONAL && el.dataset.act.startsWith('p-')) { P.act(el.dataset.act, el); return; }
   switch (el.dataset.act) {
     case 'add': txForm(); break;
     case 'quick': quickForm(); break;
@@ -603,10 +611,13 @@ document.addEventListener('drop', e => { const d = e.target.closest && e.target.
 document.addEventListener('keydown', e => { if (e.key === 'n' && !e.ctrlKey && !e.metaKey && !dlg.open && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) { e.preventDefault(); txForm(); } });
 
 document.addEventListener('submit', e => {
+  if (PERSONAL && e.target.matches('[data-form^="p-"]')) { e.preventDefault(); P.submit(e.target); return; }
   if (e.target.matches('[data-form="start-own"]')) { e.preventDefault(); startOwn(e.target.currency.value); }
   if (e.target.matches('[data-form="quick"]')) { e.preventDefault(); const c = e.submitter && e.submitter.value; if (c) quickLog(e.target, c); else { const a = $('#qAmt'); if (a) { $('#qErr').textContent = 'Now tap what it was for.'; $('#qErr').hidden = false; } } }
 });
-if ('serviceWorker' in navigator) window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js', { scope: './' }).catch(() => { /* offline use is optional */ }); });
+// Registered after load; the private copy may reach this line after the load event, so check both.
+const registerSw = () => navigator.serviceWorker.register('sw.js', { scope: './' }).catch(() => { /* offline use is optional */ });
+if ('serviceWorker' in navigator) { if (document.readyState === 'complete') registerSw(); else window.addEventListener('load', registerSw); }
 if (!location.hash) history.replaceState(null, '', '#/overview');
 lastView = route().name;
 render();

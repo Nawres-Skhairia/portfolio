@@ -1,0 +1,18 @@
+/* My Expense Radar: the few screens the private copy adds. Uses the Expense Radar colours. */
+.p-gate { max-width: 560px; }
+.p-form { display: grid; gap: 14px; margin-top: 18px; }
+.p-form .btn { justify-self: start; }
+.p-err { color: var(--bad, #b42318); font-weight: 600; margin: 0; }
+.p-note, .p-tip { border: 1px solid var(--line, #e5e2da); border-radius: 12px; padding: 12px 14px; background: var(--card, #fff); margin: 14px 0 0; }
+.p-code { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: clamp(18px, 5vw, 24px); letter-spacing: .04em; word-break: break-all; padding: 16px; border-radius: 12px; border: 1px dashed var(--line, #e5e2da); background: var(--card, #fff); margin: 18px 0 12px; }
+.p-list { display: grid; gap: 8px; justify-items: start; margin-bottom: 8px; }
+.p-vers { list-style: none; padding: 0; margin: 0; max-height: 50vh; overflow: auto; }
+.p-vers li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line, #e5e2da); }
+.lnk.danger, .btn.danger { color: #fff; }
+.lnk.danger { color: var(--bad, #b42318); }
+.btn.danger { background: var(--bad, #b42318); border-color: var(--bad, #b42318); }
+.check { display: flex; gap: 10px; align-items: flex-start; }
+.check input { width: 20px; height: 20px; margin-top: 2px; }
+.p-list .lnk { text-align: left; }
+/* Before sign-in there is nothing to navigate or add. */
+body.p-locked .tabs, body.p-locked [data-act="quick"], body.p-locked .fab { display: none !important; }
