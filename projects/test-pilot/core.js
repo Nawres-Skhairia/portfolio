@@ -1,6 +1,7 @@
 // Test Pilot core: the test library, the plan check, the expected results ("oracle") and the verdict.
 // Pure functions with no page access, so the same code runs in the page and in the automatic checks.
-// Rule of the design: the AI may READ the story and PLAN tests; it never decides pass, fail or the verdict.
+// Rule of the design: in a later version an AI may READ the story and PLAN tests (this version uses a
+// pre-made plan, no AI); the AI never decides pass, fail or the verdict.
 (function (root) {
   'use strict';
   const C = root.TP_CLOCK;

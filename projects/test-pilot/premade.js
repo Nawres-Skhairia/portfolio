@@ -1,5 +1,5 @@
 // The user story shipped with the page, and the PRE-MADE plan for it (R8: "pre-made plan, no AI").
-// This file is written by hand. When the AI runs, it produces the same two things (rules + plan)
+// This file is written by hand. When AI comes in a later version, it will produce the same two things (rules + plan)
 // from whatever story the visitor typed, and they go through exactly the same check.
 (function (root) {
   'use strict';

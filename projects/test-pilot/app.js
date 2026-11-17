@@ -4,7 +4,7 @@
   const $ = (id) => document.getElementById(id);
   const CORE = window.TP_CORE, PRE = window.TP_PREMADE, CLOCK = window.TP_CLOCK;
 
-  // Builds DOM nodes. Text is always set as text, never as HTML (story and AI text are untrusted).
+  // Builds DOM nodes. Text is always set as text, never as HTML (the story is untrusted; so will AI text be, in a later version).
   function el(tag, cls, ...kids) {
     const n = document.createElement(tag);
     if (cls) n.className = cls;
@@ -93,7 +93,7 @@
     box.story = $('story').value.trim();
     mapState('story', 'done');
 
-    // 2 and 3. Read and Plan. In this preview the pre-made plan is used, labelled "no AI" (R8).
+    // 2 and 3. Read and Plan. In this version the pre-made plan is used, labelled "no AI" (R8).
     const planner = 'premade';
     document.querySelectorAll('[data-who]').forEach((n) => { n.textContent = planner === 'premade' ? 'pre-made' : 'AI'; n.className = 'b ' + (planner === 'premade' ? 'k-pre' : 'k-ai'); });
     mapState('read', 'active'); await sleep(pace);

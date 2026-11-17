@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" width="960" height="600" role="img" aria-labelledby="t d" font-family="Karla, system-ui, sans-serif" xmlns:c2pa="http://c2pa.org/manifest">
   <title id="t">How Test Pilot works</title>
-  <desc id="d">Everything runs in the visitor's browser. Our site sends the page and, only on request, a small AI model. The AI turns the story into rules and a test plan, fixed rules check it, the runner really clicks through the booking form, and the report explains the failing test. Nothing is sent anywhere.</desc>
+  <desc id="d">Everything runs in the visitor's browser. Our site sends the page and a pre-made test plan written by hand (no AI in this version). Fixed rules check the plan, the runner really clicks through the booking form, and the report explains the failing test. Nothing is sent anywhere.</desc>
   <defs>
     <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#1e3a2f"/></marker>
     <marker id="r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#a23b1c"/></marker>
@@ -40,7 +40,7 @@
   <text x="336" y="180" font-size="12.5" fill="#4a4036">the rules the form must</text>
   <text x="336" y="198" font-size="12.5" fill="#4a4036">follow (one fixed story)</text>
 
-  <!-- 2 AI -->
+  <!-- 2 Read and plan (pre-made in this version) -->
   <rect x="540" y="120" width="200" height="116" rx="12" fill="#1e3a2f"/>
   <text x="556" y="146" font-size="12" font-weight="700" fill="#f2c9a8">2</text>
   <text x="572" y="146" font-size="14.5" font-weight="700" fill="#f3ece0">Read and plan</text>
