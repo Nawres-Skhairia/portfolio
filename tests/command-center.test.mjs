@@ -117,7 +117,7 @@ test('insights cite real records and never invent', () => {
 test('status summary uses the real figures', () => {
   const d = data(); const p = d.projects.find(x => x.id === 'p-atlas');
   const s = E.statusSummary(d, p, TODAY);
-  assert.match(s, /^Atlas is /); assert.match(s, /of 8 tasks/);
+  assert.match(s, /^Atlas is /); assert.match(s, /of 10 tasks/);
 });
 
 test('deletion rules', () => {
@@ -146,7 +146,7 @@ test('stored data shape check', () => {
 const AT = '2026-11-17T10:00';
 test('task keys follow the project key', () => {
   const d = data();
-  assert.equal(E.nextKey(d, 'p-atlas'), 'ATL-9');
+  assert.equal(E.nextKey(d, 'p-atlas'), 'ATL-11');
   assert.equal(E.nextKey(d, 'p-delta'), 'DLT-3');
   assert.ok(new Set(d.tasks.map(t => t.key)).size === d.tasks.length, 'keys are unique');
 });
@@ -262,4 +262,20 @@ test('checklist items and archive rules', () => {
   assert.ok(!E.portfolioSummary(ar.data, '2026-11-17').health.some(h => h.project.id === active.id));
   const back = E.restoreProject(ar.data, active.id, 'Ana', 'x');
   assert.ok(E.projectTasks(back.data, active.id).every(x => !x.archivedAt));
+});
+
+test('sub-tasks: one level, same project, freed when the parent is deleted', () => {
+  const d = data();
+  assert.deepEqual(E.subTasks(d, 't-a3').map(t => t.id).sort(), ['t-a3a', 't-a3b']);
+  const sub = d.tasks.find(t => t.id === 't-a3a');
+  assert.ok(E.validateTask({ ...sub, parentId: 't-a3a' }, d).parentId, 'not its own parent');
+  assert.ok(E.validateTask({ ...sub, parentId: 't-a3b' }, d).parentId, 'no sub-task of a sub-task');
+  assert.ok(E.validateTask({ ...sub, parentId: 't-c1' }, d).parentId, 'parent in the same project');
+  assert.ok(E.validateTask({ ...d.tasks.find(t => t.id === 't-a3'), parentId: 't-a4' }, d).parentId, 'a parent cannot become a sub-task');
+  assert.ok(E.validateTask({ ...sub, watchers: Array(21).fill('A') }, d).watchers);
+  assert.ok(E.validateTask({ ...sub, description: 'x'.repeat(4001) }, d).description);
+  const after = E.deleteTask(d, 't-a3');
+  assert.equal(after.tasks.find(t => t.id === 't-a3a').parentId, '');
+  const r = E.updateTask(d, 't-a3', { description: 'New words' }, 'Lina Haddad', '2026-11-17T10:00');
+  assert.equal(r.changes[0].field, 'Description');
 });

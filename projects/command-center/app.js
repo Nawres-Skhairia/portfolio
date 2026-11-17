@@ -2,12 +2,14 @@
 import * as E from './engine.js';
 import { seed } from './seed.js';
 import { api, diff } from './cloud.js';
+import { enhance, setToday } from './controls.js';
 
 const KEY = 'command-center-v2';
 const OLD_KEYS = ['command-center-v1'];
 const pad = n => String(n).padStart(2, '0');
 const now = new Date();
 const TODAY = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
+setToday(TODAY);
 const stamp = () => { const d = new Date(); return TODAY + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes()); };
 
 // ---------- storage (Victoria's rule: one key, workspace only, Reset removes it) ----------
@@ -133,7 +135,7 @@ const ui = {
   risks: { project: '', status: 'open', cell: null },
   deps: { project: '' },
   reports: { type: 'portfolio', project: '' },
-  panel: null, panelTab: 'activity',
+  panel: null, panelTab: 'all',
   mcol: 'To do', doneOpen: false, calMonth: '', calDay: '', calMine: false,
   moreFilters: false, // extra filters stay folded until asked for
 };
@@ -170,6 +172,7 @@ function render() {
   main.classList.toggle('has-ph', !!ctx);
   main.dataset.view = r.name;
   document.body.classList.toggle('task-full', r.name === 'task' && !!ui.panel);
+  if (r.name === 'task') { scrollTo(0, 0); const tb = $('.topbar'); if (tb) document.documentElement.style.setProperty('--top-h', Math.round(tb.getBoundingClientRect().bottom) + 'px'); }
   document.body.classList.toggle('on-board', r.name === 'board');
   renderSide();
   const navKey = r.name === 'project' ? (data.projects.filter(p => p.status !== 'Completed').slice(0, 8).some(p => p.id === r.id) ? 'p-' + r.id : 'projects') : (NAV_OF[r.name] || r.name);
@@ -403,6 +406,12 @@ const canWipe = () => !acct || ['owner', 'admin'].includes(myRole());
 function menuItems(kind) {
   const item = (label, attrs, extra = '') => '<button type="button" role="menuitem" ' + attrs + '>' + label + extra + '</button>';
   const tick = on => on ? '<svg class="i tick" aria-hidden="true"><use href="#i-check"/></svg>' : '';
+  if (kind === 'status') {
+    const t = task(ui.panel); if (!t) return '';
+    const flow = E.TASK_STATUSES.filter(x => x !== 'On hold');
+    return '<p class="m-h">Move ' + esc(t.key) + ' to</p>' + flow.map(st => '<button type="button" role="menuitemradio" aria-checked="' + (t.status === st) + '" data-act="set-status" data-s="' + esc(st) + '">' + lozenge(st) + tick(t.status === st) + '</button>').join('') +
+      (t.status !== 'On hold' ? '<hr>' + item(ic('pause') + 'Pause…', 'data-act="ask-hold" data-id="' + esc(t.id) + '"') : '<hr>' + item('Resume', 'data-act="resume" data-id="' + esc(t.id) + '"'));
+  }
   if (kind === 'ws') {
     const list = acct ? acct.workspaces.map(w => item(esc(w.name), 'data-act="ws-go" data-id="' + esc(w.id) + '"' + (w.id === acct.wsId ? ' aria-current="true"' : ''), tick(w.id === acct.wsId))) : [item('Orbis Studio', 'aria-current="true"', tick(true))];
     return '<p class="m-h">Workspaces</p>' + list.join('') + '<hr>' + item('People and sharing', 'data-href="#/workspace"') +
@@ -416,15 +425,15 @@ function menuItems(kind) {
 function openMenu(btn) {
   const pop = $('#menuPop'); if (menuFrom === btn && !pop.hidden) { closeMenu(); return; }
   closeMenu(); menuFrom = btn; btn.setAttribute('aria-expanded', 'true');
-  pop.innerHTML = menuItems(btn.dataset.menu); pop.hidden = false;
-  pop.setAttribute('aria-label', btn.dataset.menu === 'ws' ? 'Workspace' : 'Your menu');
+  pop.innerHTML = menuItems(btn.dataset.menu); pop.hidden = false; try { pop.showPopover(); } catch (e) {}
+  pop.setAttribute('aria-label', { ws: 'Workspace', status: 'Status' }[btn.dataset.menu] || 'Your menu');
   const b = btn.getBoundingClientRect(); const w = pop.offsetWidth;
   pop.style.top = Math.max(8, Math.min(innerHeight - pop.offsetHeight - 8, b.bottom + 4)) + 'px';
   pop.style.left = Math.max(8, Math.min(innerWidth - w - 8, btn.dataset.menu === 'ws' ? b.left : b.right - w)) + 'px';
   if (window.ccThemeSync) window.ccThemeSync();
   const first = pop.querySelector('[role^="menuitem"]'); if (first) first.focus();
 }
-function closeMenu(back) { const pop = $('#menuPop'); if (pop.hidden) return; pop.hidden = true; if (menuFrom) { menuFrom.setAttribute('aria-expanded', 'false'); if (back) menuFrom.focus(); } menuFrom = null; }
+function closeMenu(back) { const pop = $('#menuPop'); if (pop.hidden) return; try { pop.hidePopover(); } catch (e) {} pop.hidden = true; if (menuFrom) { menuFrom.setAttribute('aria-expanded', 'false'); if (back) menuFrom.focus(); } menuFrom = null; }
 document.addEventListener('click', e => {
   const btn = e.target.closest('[data-menu]'); if (btn) { e.preventDefault(); openMenu(btn); return; }
   const it = e.target.closest('#menuPop [role^="menuitem"]');
@@ -654,40 +663,58 @@ function renderPanel(focus) {
   const p = proj(t.projectId); const all = E.projectTasks(data, t.projectId);
   const waitsFor = (t.deps || []).map(task).filter(Boolean); const blocks = E.dependents(data.tasks, t.id);
   const paused = t.status === 'On hold'; const since = paused ? lastStatusAt(t, 'On hold') : '';
-  const flow = E.TASK_STATUSES.filter(s => s !== 'On hold' && s !== 'Backlog');
   const remindSet = t.remindOn && t.remindOn >= TODAY;
   el.hidden = false;
   const scrollTop = el.querySelector('.pn-body') ? el.querySelector('.pn-body').scrollTop : 0;
   const draft = $('#cText') ? $('#cText').value : '';
-  const depList = list => '<ul class="deps">' + list.map(d => '<li><button type="button" class="bl-title" data-act="open" data-id="' + esc(d.id) + '"><span class="key">' + esc(d.key) + '</span> ' + esc(d.title) + '</button><span class="st st-' + slug(d.status) + '">' + esc(stLabel(d.status)) + '</span></li>').join('') + '</ul>';
-  const statusChip = paused ? pausedChip('Paused' + (since ? ' since ' + fmtDate(since, true) : '')) : t.status === 'Done' ? '<span class="chip2 c-done">' + ic('check') + 'Done</span>' : '<span class="chip2 c-n">' + esc(t.status) + '</span>';
-  el.innerHTML = '<div class="pn-head"><nav class="crumb" aria-label="Where this task is"' + pcs(t.projectId) + '><span class="pd"></span><a href="#/project/' + esc(p.id) + '">' + esc(p.name) + '</a><span aria-hidden="true">›</span><span>' + esc(t.key) + '</span></nav><span class="grow"></span>' +
-      (route().name === 'task' ? '' : '<button type="button" class="icon" data-act="full-page" aria-label="Open as a full page" title="Open as a full page">' + ic('expand') + '</button>') +
+  const full = route().name === 'task';
+  const ms = data.milestones.find(m => m.id === t.milestoneId);
+  const subs = E.subTasks(data, t.id); const subsDone = subs.filter(x => x.status === 'Done').length;
+  const parent = t.parentId && task(t.parentId);
+  const reporter = t.reporter || ((t.history || [])[0] || {}).by || p.owner;
+  const watchers = t.watchers || []; const iWatch = watchers.includes(data.me);
+  const created = (t.history || [])[0]; const updated = (t.history || []).slice(-1)[0];
+  const stBtn = '<button type="button" class="stbtn lz-' + (LZ[t.status] || 'todo') + '" data-menu="status" aria-haspopup="menu" aria-expanded="false" aria-label="Status: ' + esc(stLabel(t.status)) + '. Change">' + esc(stLabel(t.status)) + ic('down') + '</button>';
+  const linkRow = (verb, d) => '<li><span class="lk-v">' + verb + '</span>' + typeIcon(d) + '<span class="key">' + esc(d.key) + '</span><button type="button" class="bl-title" data-act="open" data-id="' + esc(d.id) + '">' + esc(d.title) + '</button>' + lozenge(d.status) + '</li>';
+  const rail = '<section class="pn-rail" aria-label="Details"><section class="rbox"><h2 class="rbox-h">Details</h2><dl class="pn-grid">' +
+      '<dt>Assignee</dt><dd><div class="who">' + avatar(t.owner, 'xs') + '<select data-field="owner" aria-label="Assignee">' + opts(people(), t.owner) + '</select></div>' + (t.owner !== data.me ? '<button type="button" class="lnk small" data-act="assign-me">Assign to me</button>' : '') + '</dd>' +
+      '<dt>Reporter</dt><dd><div class="who plain">' + avatar(reporter, 'xs') + '<span>' + esc(reporter) + '</span></div></dd>' +
+      '<dt>Priority</dt><dd class="pr-dd">' + prioIcon(t.priority) + '<select data-field="priority" aria-label="Priority">' + opts(E.PRIORITIES, t.priority) + '</select></dd>' +
+      '<dt>Due date</dt><dd><input type="date" data-field="due" value="' + esc(t.due) + '" aria-label="Due date"' + (isPast(t) ? ' class="late"' : '') + '>' + (isPast(t) ? '<button type="button" class="lnk small" data-act="new-date" data-id="' + esc(t.id) + '">Give it a new date</button>' : '') + '</dd>' +
+      '<dt>Estimate</dt><dd><label class="est-in"><input type="number" min="1" max="60" step="1" data-field="estimate" value="' + t.estimate + '" aria-label="Estimate in days of work"><span>days</span></label></dd>' +
+      '<dt>Milestone</dt><dd><select data-field="milestoneId" aria-label="Milestone">' + opts(data.milestones.filter(m => m.projectId === t.projectId).map(m => [m.id, m.name]), t.milestoneId, 'None') + '</select></dd>' +
+      '<dt>Labels</dt><dd><div class="lbls">' + (t.labels || []).map(l => '<span class="lbl">' + esc(l) + '<button type="button" data-act="rm-label" data-l="' + esc(l) + '" aria-label="Remove label ' + esc(l) + '">×</button></span>').join('') + '<input list="labelList" class="lbl-in" placeholder="Add label" aria-label="Add a label" maxlength="20" data-act="add-label"></div><datalist id="labelList">' + E.allLabels(data).map(l => '<option value="' + esc(l) + '">').join('') + '</datalist></dd>' +
+      '<dt>Watchers</dt><dd><div class="who plain">' + (watchers.length ? '<span class="avstack" title="' + esc(watchers.join(', ')) + '">' + watchers.slice(0, 4).map(n => avatar(n, 'xs')).join('') + '</span><span>' + watchers.length + '</span>' : '<span class="muted">Nobody yet</span>') + '</div><button type="button" class="lnk small" data-act="watch" aria-pressed="' + iWatch + '">' + (iWatch ? 'Stop watching' : 'Watch') + '</button></dd>' +
+    '</dl></section>' +
+    '<section class="rbox"><h2 class="rbox-h">Attachments</h2><p class="muted small">Files are coming later.</p></section>' +
+    '<p class="pn-stamp">' + (created ? 'Created ' + esc(fmtStamp(created.at)) + ' by ' + esc(firstName(created.by)) : '') + (updated && updated !== created ? ' · Updated ' + esc(fmtStamp(updated.at)) : '') + '</p></section>';
+  const tabs = [['all', 'All'], ['comments', 'Comments ' + ((t.comments || []).length || '')], ['activity', 'History']];
+  if (!tabs.some(x => x[0] === ui.panelTab)) ui.panelTab = 'all';
+  const feed = [...(t.history || []).map(h => ({ at: h.at, h })), ...(t.comments || []).map(c => ({ at: c.at, c }))].filter(x => ui.panelTab === 'all' || (ui.panelTab === 'comments' ? x.c : x.h)).sort((x, y) => String(y.at).localeCompare(String(x.at)));
+  const entry = x => x.c ? '<li class="ev-c">' + avatar(x.c.by, 'sm') + '<div><p class="ev-h"><b>' + esc(x.c.by) + '</b> <small>' + esc(fmtStamp(x.c.at)) + '</small></p><p class="ev-t">' + esc(x.c.text) + '</p></div></li>' : '<li>' + avatar(x.h.by, 'sm') + '<p><b>' + esc(firstName(x.h.by)) + '</b> ' + activityLine(x.h) + ' <small>' + esc(fmtStamp(x.h.at)) + '</small></p></li>';
+  const top = '<div class="pn-top">' +
+    '<label class="sr" for="pnTitle">Title</label><textarea id="pnTitle" class="pn-title" rows="1" maxlength="100" data-field="title">' + esc(t.title) + '</textarea>' +
+    '<div class="pn-acts">' + stBtn + (!paused && t.status !== 'Done' ? '<button type="button" class="btn2" data-act="ask-hold" data-id="' + esc(t.id) + '">' + ic('pause') + 'Pause</button>' : '') +
+      (!t.parentId ? '<button type="button" class="btn2" data-act="sub-focus">' + ic('plus') + 'Sub-task</button>' : '') + '<button type="button" class="btn2" data-act="edit-deps">' + ic('link') + 'Link work</button>' +
+      (isPast(t) ? pastChip(t) : '') + (t.archivedAt ? '<span class="chip2 c-n">Archived ' + esc(fmtDate(t.archivedAt, true)) + '</span><button type="button" class="lnk" data-act="restore-task">Restore</button>' : t.status === 'Done' ? '<button type="button" class="lnk" data-act="archive-task">Archive</button>' : '') + '</div>' +
+    (paused ? '<div class="why"><b>Why it\'s paused</b><p>' + esc(t.holdReason) + (since ? ' <small>Since ' + esc(fmtDate(since, true)) + '</small>' : '') + '</p><div class="acts"><button type="button" class="btn" data-act="resume" data-id="' + esc(t.id) + '">Resume</button><button type="button" class="btn ghost" data-act="remind" data-id="' + esc(t.id) + '" aria-pressed="' + !!remindSet + '">' + ic('bell') + (remindSet ? 'Reminder on ' + esc(weekday(t.remindOn)) : 'Remind me ' + esc(weekday(nextRemind()))) + '</button></div></div>' : '') + '</div>';
+  const main = '<div class="pn-main">' +
+    '<section class="pn-sec"><h2 class="pn-h" id="descH">Description</h2><textarea id="pnDesc" class="pn-desc" data-field="description" rows="3" maxlength="4000" aria-labelledby="descH" placeholder="Add a description…">' + esc(t.description || '') + '</textarea></section>' +
+    (t.parentId ? '' : '<section class="pn-sec"><div class="pn-hrow"><h2 class="pn-h">Sub-tasks</h2>' + (subs.length ? '<span class="muted small">' + subsDone + ' of ' + subs.length + ' done</span>' : '') + '</div>' +
+      (subs.length ? '<div class="chk-bar" aria-hidden="true"><i style="width:' + Math.round(subsDone / subs.length * 100) + '%"></i></div><ul class="subs">' + subs.map(x => '<li><input type="checkbox" data-act="sub-done" data-id="' + esc(x.id) + '"' + (x.status === 'Done' ? ' checked' : '') + ' aria-label="' + esc(x.key) + ' done"' + (x.status === 'On hold' ? ' disabled' : '') + '>' + typeIcon(x) + '<span class="key">' + esc(x.key) + '</span><button type="button" class="bl-title' + (x.status === 'Done' ? ' done' : '') + '" data-act="open" data-id="' + esc(x.id) + '">' + esc(x.title) + '</button>' + lozenge(x.status) + avatar(x.owner, 'xs') + '</li>').join('') + '</ul>' : '') +
+      '<form class="sub-add" data-form="sub-add"><label class="sr" for="subNew">Add a sub-task</label><input id="subNew" name="title" maxlength="100" placeholder="+ Add sub-task" autocomplete="off"></form></section>') +
+    checklistBox(t) +
+    '<section class="pn-sec"><div class="pn-hrow"><h2 class="pn-h">Linked work</h2></div>' + (waitsFor.length || blocks.length || parent ? '<ul class="links">' + (parent ? linkRow('sub-task of', parent) : '') + waitsFor.map(d => linkRow('waits for', d)).join('') + blocks.map(d => linkRow('blocks', d)).join('') + '</ul>' : '<p class="muted small">Nothing linked. It can start any time.</p>') + '</section>' +
+    '<section class="pn-sec"><h2 class="pn-h">Activity</h2><div class="atabs" role="tablist" aria-label="Activity">' + tabs.map(([k, l]) => '<button type="button" role="tab" data-act="ptab" data-k="' + k + '" aria-selected="' + (ui.panelTab === k) + '">' + l + '</button>').join('') + '</div>' +
+      '<form class="composer top" data-form="comment"><label class="sr" for="cText">Write a note for the team</label><textarea id="cText" name="text" rows="1" maxlength="1000" placeholder="Write a note for the team…"></textarea><button type="submit" class="icon send" aria-label="Post the note" title="Post · Ctrl+Enter">' + ic('send') + '</button><small class="err" hidden></small></form>' +
+      (feed.length ? '<ol class="history">' + feed.map(entry).join('') + '</ol>' : '<p class="muted small pad">No comments yet. Write the first note above.</p>') + '</section>' +
+    '</div>';
+  el.innerHTML = '<div class="pn-head"><nav class="crumb" aria-label="Where this task is"' + pcs(t.projectId) + '><a href="#/projects">Projects</a><span aria-hidden="true">›</span><a href="#/project/' + esc(p.id) + '">' + esc(p.name) + '</a>' + (ms ? '<span aria-hidden="true">›</span><span>' + esc(ms.name) + '</span>' : '') + (parent ? '<span aria-hidden="true">›</span><a href="#/task/' + esc(parent.id) + '">' + esc(parent.key) + '</a>' : '') + '<span aria-hidden="true">›</span><span class="crumb-k">' + typeIcon(t) + esc(t.key) + '</span></nav><span class="grow"></span>' +
+      (full ? '' : '<button type="button" class="icon" data-act="full-page" aria-label="Open as a full page" title="Open as a full page">' + ic('expand') + '</button>') +
       '<button type="button" class="icon" data-act="copy-link" aria-label="Copy a link to this task" title="Copy link">' + ic('link') + '</button>' +
       '<button type="button" class="icon" data-act="del-task" data-id="' + esc(t.id) + '" aria-label="Delete task" title="Delete">' + ic('trash') + '</button>' +
       '<button type="button" class="icon" data-act="close-panel" aria-label="Close" title="Close (Esc)">' + ic('x') + '</button></div>' +
-    '<div class="pn-body">' +
-    '<label class="sr" for="pnTitle">Title</label><textarea id="pnTitle" class="pn-title" rows="1" maxlength="100" data-field="title">' + esc(t.title) + '</textarea>' +
-    '<div class="pn-chips">' + statusChip + (isPast(t) ? pastChip(t) : '') + (t.archivedAt ? '<span class="chip2 c-n">Archived ' + esc(fmtDate(t.archivedAt, true)) + '</span><button type="button" class="lnk" data-act="restore-task">Restore</button>' : t.status === 'Done' ? '<button type="button" class="lnk" data-act="archive-task">Archive</button>' : '') + '</div>' +
-    (paused ? '<div class="why"><b>Why it\'s paused</b><p>' + esc(t.holdReason) + '</p><div class="acts"><button type="button" class="btn" data-act="resume" data-id="' + esc(t.id) + '">Resume</button><button type="button" class="btn ghost" data-act="remind" data-id="' + esc(t.id) + '" aria-pressed="' + !!remindSet + '">' + ic('bell') + (remindSet ? 'Reminder on ' + esc(weekday(t.remindOn)) : 'Remind me ' + esc(weekday(nextRemind()))) + '</button></div></div>' : '') +
-    '<div class="flow" role="group" aria-label="Status">' + flow.map(s => '<button type="button" class="fl fl-' + slug(s) + '" data-act="set-status" data-s="' + esc(s) + '" aria-pressed="' + (t.status === s) + '">' + esc(s) + '</button>').join('') + (!paused ? '<button type="button" class="fl fl-on-hold" data-act="ask-hold" data-id="' + esc(t.id) + '">' + ic('pause') + 'Pause…</button>' : '') + '</div>' +
-    '<dl class="pn-grid">' +
-      '<dt>' + ic('user') + 'Assignee</dt><dd><div class="who">' + avatar(t.owner, 'sm') + '<select data-field="owner" aria-label="Assignee">' + opts(people(), t.owner) + '</select></div>' + (t.owner !== data.me ? '<button type="button" class="lnk" data-act="assign-me">Assign to me</button>' : '') + '</dd>' +
-      '<dt>' + ic('cal') + 'Due</dt><dd><input type="date" data-field="due" value="' + esc(t.due) + '" aria-label="Due date"' + (isPast(t) ? ' class="late"' : '') + '>' + (isPast(t) ? '<button type="button" class="lnk" data-act="new-date" data-id="' + esc(t.id) + '">Give it a new date</button>' : '') + '</dd>' +
-      '<dt>' + ic('flag') + 'Priority</dt><dd>' + prioIcon(t.priority) + '<select data-field="priority" aria-label="Priority">' + opts(E.PRIORITIES, t.priority) + '</select></dd>' +
-      '<dt>' + ic('clock') + 'Estimate</dt><dd><input type="number" min="1" max="60" step="1" data-field="estimate" value="' + t.estimate + '" aria-label="Days of work"> days</dd>' +
-      '<dt>' + ic('folder') + 'Milestone</dt><dd><select data-field="milestoneId" aria-label="Milestone">' + opts(data.milestones.filter(m => m.projectId === t.projectId).map(m => [m.id, m.name]), t.milestoneId, 'None') + '</select></dd>' +
-      '<dt>' + ic('tag') + 'Labels</dt><dd><div class="lbls">' + (t.labels || []).map(l => '<span class="lbl">' + esc(l) + '<button type="button" data-act="rm-label" data-l="' + esc(l) + '" aria-label="Remove label ' + esc(l) + '">×</button></span>').join('') + '<input list="labelList" class="lbl-in" placeholder="Add label" aria-label="Add a label" maxlength="20" data-act="add-label"></div><datalist id="labelList">' + E.allLabels(data).map(l => '<option value="' + esc(l) + '">').join('') + '</datalist></dd>' +
-      '<dt>' + ic('graph') + 'Waits for</dt><dd class="col-dd">' + (waitsFor.length ? depList(waitsFor) : '<span class="muted">Nothing, it can start any time.</span>') + '<button type="button" class="lnk" data-act="edit-deps">Change</button></dd>' +
-      (blocks.length ? '<dt>' + ic('link') + 'Blocks</dt><dd class="col-dd">' + depList(blocks) + '</dd>' : '') +
-    '</dl>' +
-    checklistBox(t) +
-    '<div class="ptabs" role="tablist"><button type="button" role="tab" data-act="ptab" data-k="activity" aria-selected="' + (ui.panelTab === 'activity') + '">Activity ' + ((t.history || []).length || '') + '</button><button type="button" role="tab" data-act="ptab" data-k="comments" aria-selected="' + (ui.panelTab === 'comments') + '">Comments ' + ((t.comments || []).length || '') + '</button></div>' +
-    (ui.panelTab === 'comments'
-      ? ((t.comments || []).length ? '<ul class="comments">' + t.comments.map(c => '<li>' + avatar(c.by, 'sm') + '<div><p class="c-meta"><b>' + esc(c.by) + '</b> · ' + esc(fmtStamp(c.at)) + '</p><p>' + esc(c.text) + '</p></div></li>').join('') + '</ul>' : '<p class="muted small pad">No comments yet. Write the first note below.</p>')
-      : '<ol class="history">' + [...(t.history || [])].reverse().map(h => '<li>' + avatar(h.by, 'sm') + '<p><b>' + esc(firstName(h.by)) + '</b> ' + activityLine(h) + '<small>' + esc(fmtStamp(h.at)) + '</small></p></li>').join('') + '</ol>') +
-    '</div>' +
-    '<form class="composer" data-form="comment"><label class="sr" for="cText">Write a note for the team</label><textarea id="cText" name="text" rows="1" maxlength="1000" placeholder="Write a note for the team…"></textarea><button type="submit" class="icon send" aria-label="Post the note" title="Post">' + ic('send') + '</button><small class="err" hidden></small></form>';
+    '<div class="pn-body' + (full ? ' two-col' : '') + '">' + top + rail + main + '</div>';
   if (draft) $('#cText').value = draft;
   fitText($('#pnTitle'));
   if (scrollTop) el.querySelector('.pn-body').scrollTop = scrollTop;
@@ -708,6 +735,7 @@ const select = (name, list, val, blank) => '<select id="f-' + name + '" name="' 
 const peopleList = () => '<datalist id="peopleList">' + people().map(o => '<option value="' + esc(o) + '">').join('') + '</datalist>';
 function openForm(title, body, onSubmit, extraBtn = '', submitLabel = 'Save') {
   dlg.innerHTML = '<form method="dialog" novalidate class="form"><header><h2 id="dlgTitle">' + esc(title) + '</h2><button type="button" class="icon-btn" data-close aria-label="Close">' + ic('x') + '</button></header><div class="form-body">' + body + '</div><footer>' + extraBtn + '<span class="grow"></span><button type="button" class="btn ghost" data-close>Cancel</button><button type="submit" class="btn">' + esc(submitLabel) + '</button></footer></form>';
+  enhance(dlg);
   const form = dlg.querySelector('form');
   form.addEventListener('submit', e => {
     e.preventDefault();
@@ -725,9 +753,9 @@ function openForm(title, body, onSubmit, extraBtn = '', submitLabel = 'Save') {
     if (errors === false) return; // keep the dialog open, the handler has replaced it
     if (errors && Object.keys(errors).length) {
       let first = null;
-      for (const [k, msg] of Object.entries(errors)) { const el = form.querySelector('#e-' + k); const ctl = form.querySelector('[name="' + k + '"]'); if (el) { el.textContent = msg; el.hidden = false; } if (ctl) { ctl.setAttribute('aria-invalid', 'true'); ctl.setAttribute('aria-describedby', 'e-' + k); first = first || ctl; } }
+      for (const [k, msg] of Object.entries(errors)) { const el = form.querySelector('#e-' + k); const ctl0 = form.querySelector('[name="' + k + '"]'); const ctl = ctl0 && ctl0.type === 'hidden' ? ctl0.nextElementSibling : ctl0; if (el) { el.textContent = msg; el.hidden = false; } if (ctl) { ctl.setAttribute('aria-invalid', 'true'); ctl.setAttribute('aria-describedby', 'e-' + k); first = first || ctl; } }
       if (!first) toast(Object.values(errors)[0], 'error');
-      (first || form.querySelector('input,select,textarea')).focus();
+      (first || form.querySelector('input:not([type=hidden]),.osel,.odate,textarea')).focus();
       form.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'translateX(0)' }], { duration: 240 });
       return;
     }
@@ -735,7 +763,7 @@ function openForm(title, body, onSubmit, extraBtn = '', submitLabel = 'Save') {
   }
   dlg.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => dlg.close()));
   if (!dlg.open) dlg.showModal();
-  const f = form.querySelector('input:not([type=hidden]),select,textarea'); if (f) f.focus();
+  const f = form.querySelector('input:not([type=hidden]),.osel,.odate,textarea'); if (f) f.focus();
 }
 function confirmBox(title, text, okLabel, onOk) {
   dlg.innerHTML = '<form method="dialog" class="form confirm"><header><h2 id="dlgTitle">' + esc(title) + '</h2></header><div class="form-body"><p>' + esc(text) + '</p></div><footer><span class="grow"></span><button type="button" class="btn ghost" data-close>Cancel</button><button type="submit" class="btn danger">' + esc(okLabel) + '</button></footer></form>';
@@ -790,7 +818,7 @@ function taskForm(projectId, status) {
     fd => {
       const projectId = fd.get('projectId');
       const col = data.tasks.filter(t => t.status === fd.get('status'));
-      const next = { id: E.uid('t'), key: E.nextKey(data, projectId), projectId, type: fd.get('type') || 'Task', title: fd.get('title').trim(), owner: fd.get('owner').trim(), priority: fd.get('priority'), status: fd.get('status'), estimate: Number(fd.get('estimate')), due: fd.get('due'), labels: [...new Set(String(fd.get('labels') || '').split(',').map(x => x.trim().toLowerCase()).filter(Boolean))], deps: [], milestoneId: '', holdReason: '', heldFrom: '', rank: (col.length ? Math.min(...col.map(t => t.rank)) : 1) - 1, comments: [], history: [{ at: stamp(), by: data.me, field: 'Created', from: '', to: '' }] };
+      const next = { id: E.uid('t'), key: E.nextKey(data, projectId), projectId, type: fd.get('type') || 'Task', reporter: data.me, watchers: [data.me], title: fd.get('title').trim(), owner: fd.get('owner').trim(), priority: fd.get('priority'), status: fd.get('status'), estimate: Number(fd.get('estimate')), due: fd.get('due'), labels: [...new Set(String(fd.get('labels') || '').split(',').map(x => x.trim().toLowerCase()).filter(Boolean))], deps: [], milestoneId: '', holdReason: '', heldFrom: '', rank: (col.length ? Math.min(...col.map(t => t.rank)) : 1) - 1, comments: [], history: [{ at: stamp(), by: data.me, field: 'Created', from: '', to: '' }] };
       next.history[0].to = next.key;
       const errors = E.validateTask(next, data); if (Object.keys(errors).length) return errors;
       commit({ ...data, tasks: [...data.tasks, next] }, next.key + ' created.', { undo: true });
@@ -1053,6 +1081,9 @@ document.addEventListener('click', e => {
     case 'qa-me': { const t = task(id); if (t.owner === data.me) { toast('It is already yours.'); break; } const r = E.updateTask(data, id, { owner: data.me }, data.me, stamp()); if (Object.keys(r.errors).length) toast(Object.values(r.errors)[0], 'error'); else commit(r.data, t.key + ' assigned to you.', { undo: true }); break; }
     case 'qa-date': case 'new-date': dateForm(id); break;
     case 'remind': { const t = task(id); const on = t.remindOn && t.remindOn >= TODAY; const r = E.updateTask(data, id, { remindOn: on ? '' : nextRemind() }, data.me, stamp()); if (Object.keys(r.errors).length) toast(Object.values(r.errors)[0], 'error'); else commit(r.data, on ? 'Reminder removed.' : 'It will be in your Today list on ' + weekday(nextRemind()) + '.', { undo: true }); break; }
+    case 'watch': { const t = task(ui.panel); const w = t.watchers || []; panelUpdate({ watchers: w.includes(data.me) ? w.filter(x => x !== data.me) : [...w, data.me] }, w.includes(data.me) ? 'You stopped watching ' + t.key + '.' : 'You are watching ' + t.key + '.'); break; }
+    case 'sub-focus': { const i = $('#subNew'); if (i) i.focus(); break; }
+    case 'sub-done': { const x = task(id); const r = E.updateTask(data, id, { status: el.checked ? 'Done' : 'To do' }, data.me, stamp()); if (Object.keys(r.errors).length) { el.checked = !el.checked; toast(Object.values(r.errors)[0], 'error'); } else commit(r.data, x.key + (el.checked ? ' done.' : ' reopened.'), { undo: true }); break; }
     case 'copy-link': { const url = location.origin + location.pathname + '#/task/' + encodeURIComponent(ui.panel); (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(() => toast('Link copied. It opens this task for anyone in this workspace.'), () => toast('Copy is not allowed here.', 'error')); break; }
     case 'cal-move': { const [y, m] = (ui.calMonth || TODAY.slice(0, 7)).split('-').map(Number); const d = new Date(Date.UTC(y, m - 1 + Number(el.dataset.n), 1)); ui.calMonth = d.toISOString().slice(0, 7); ui.calDay = ''; render(); break; }
     case 'cal-today': ui.calMonth = TODAY.slice(0, 7); ui.calDay = TODAY; render(); break;
@@ -1066,12 +1097,12 @@ document.addEventListener('change', e => {
   const el = e.target;
   if (el.closest('#panel') && el.dataset.field && el.dataset.field !== 'title') {
     const f = el.dataset.field; const v = f === 'estimate' ? Number(el.value) : el.value;
-    panelUpdate({ [f]: v }, { owner: 'Assigned to ' + v + '.', priority: 'Priority set to ' + v + '.', due: 'Due date changed.', estimate: 'Estimate changed.', milestoneId: 'Milestone changed.' }[f]);
+    panelUpdate({ [f]: v }, { owner: 'Assigned to ' + v + '.', priority: 'Priority set to ' + v + '.', due: 'Due date changed.', estimate: 'Estimate changed.', milestoneId: 'Milestone changed.', description: 'Description saved.' }[f]);
     return;
   }
   const act = el.dataset.act;
   if (el.dataset.q) { const k = el.dataset.q; ui.q[k] = k === 'priority' ? (el.value ? [el.value] : []) : el.value; flipRender(); return; }
-  if (act === 'list-group') { ui.list.group = el.value; render(); $('[data-act="list-group"]').focus(); return; }
+  if (act === 'list-group') { ui.list.group = el.value; render(); const lg = $('[data-act="list-group"]'); if (lg && lg.nextElementSibling) lg.nextElementSibling.focus(); return; }
   if (act === 'load-filter') { const f = (data.filters || []).find(x => x.id === el.value); if (f) { if (route().name === 'lists') { applyList(f.id); return; } const { view, ...fq } = f.query || {}; ui.q = { text: '', assignee: '', status: [], priority: [], label: '', project: '', overdue: false, onHold: false, ...fq }; flipRender(); toast('Filter "' + f.name + '" applied.'); } return; }
   if (act === 'bulk') {
     const field = el.dataset.field; const v = el.value; if (!v) return;
@@ -1101,6 +1132,7 @@ document.addEventListener('keydown', e => {
   const el = e.target;
   if (el.matches && el.matches('.lbl-in') && e.key === 'Enter') { e.preventDefault(); const l = el.value.trim().toLowerCase(); if (l) panelUpdate({ labels: [...(task(ui.panel).labels || []), l] }, 'Label "' + l + '" added.'); return; }
   if (el.id === 'pnTitle' && e.key === 'Enter') { e.preventDefault(); el.blur(); return; }
+  if (el.id === 'cText' && e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); el.form.requestSubmit(); return; }
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); pal.hidden ? openPalette() : closePalette(); return; }
   if (e.key === 'Escape') { if (!pal.hidden) { closePalette(); return; } if (dlg.open) return; if (ui.panel) { closePanel(); return; } if (!$('#moreSheet').hidden) { $('#moreSheet').hidden = true; return; } }
   const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) || el.isContentEditable || dlg.open || !pal.hidden;
@@ -1151,6 +1183,10 @@ document.addEventListener('submit', async e => {
     admin.data.settings = r.body.settings; signupMode = r.body.settings.signup; admin.log = null; loadAdmin(); toast('Settings saved.');
     return;
   }
+  if (f.dataset.form === 'sub-add') { e.preventDefault(); const title = f.title.value.trim(); if (!title) return; const par = task(ui.panel); const col = data.tasks.filter(t => t.status === 'To do');
+    const next = { id: E.uid('t'), key: E.nextKey(data, par.projectId), projectId: par.projectId, parentId: par.id, type: 'Task', reporter: data.me, watchers: [data.me], title: title.slice(0, 100), owner: par.owner, priority: par.priority, status: 'To do', estimate: 1, due: par.due, labels: [], deps: [], milestoneId: par.milestoneId || '', holdReason: '', heldFrom: '', rank: (col.length ? Math.min(...col.map(t => t.rank)) : 1) - 1, comments: [], history: [{ at: stamp(), by: data.me, field: 'Created', from: '', to: '' }] };
+    next.history[0].to = next.key; const errors = E.validateTask(next, data); if (Object.keys(errors).length) { toast(Object.values(errors)[0], 'error'); return; }
+    commit({ ...data, tasks: [...data.tasks, next] }, next.key + ' added as a sub-task.', { undo: true }); const i = $('#subNew'); if (i) i.focus(); return; }
   if (f.dataset.form === 'chk-add') { e.preventDefault(); const text = f.text.value.trim(); if (!text) return; const cl = [...(task(ui.panel).checklist || []), { id: E.uid('c'), text: text.slice(0, 120), done: false }]; if (panelUpdate({ checklist: cl })) setTimeout(() => { const i = $('#chkNew'); if (i) i.focus(); }, 30); return; }
   if (f.dataset.form !== 'comment') return; e.preventDefault();
   const r = E.addComment(data, ui.panel, f.text.value, data.me, stamp());

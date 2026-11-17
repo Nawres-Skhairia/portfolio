@@ -65,6 +65,8 @@ export function seed(today) {
     T('t-x6', 'p-fjord', 'Send the dated action plan to the auditor', 'Lina Haddad', 'Critical', 'To do', -1, 1, []),
     T('t-x7', 'p-cobalt', 'Write the switch-over notice', 'Lina Haddad', 'Medium', 'To do', 3, 2, []),
     T('t-x8', 'p-beacon', 'Approve the new colour palette', 'Lina Haddad', 'Low', 'Done', 0, 1, []),
+    T('t-a3a', 'p-atlas', 'PDF download of one invoice', 'Priya Nair', 'High', 'Done', -9, 2, [], 'm-a2'),
+    T('t-a3b', 'p-atlas', 'Download all invoices of a month as CSV', 'Priya Nair', 'Medium', 'To do', 4, 2, [], 'm-a2'),
   ];
   // keys, labels, board order, on-hold reasons, comments and history (all made up)
   const LABELS = { 't-a3': ['frontend', 'invoices'], 't-a4': ['frontend'], 't-a6': ['performance'], 't-a7': ['release'], 't-b3': ['accessibility'], 't-b4': ['accessibility', 'mobile'], 't-b5': ['accessibility', 'release'], 't-c2': ['data', 'access'], 't-c3': ['data', 'reports'], 't-c4': ['data', 'reports'], 't-c5': ['data'], 't-f2': ['security'], 't-f3': ['security'], 't-f4': ['security', 'audit'], 't-e1': ['experiment'], 't-x1': ['data', 'docs'], 't-a8': ['docs'] };
@@ -80,7 +82,10 @@ export function seed(today) {
   });
   const tk = id => tasks.find(t => t.id === id);
   const TYPES = { 't-f2': 'Bug', 't-b2': 'Bug', 't-a3': 'Story', 't-a4': 'Story', 't-b3': 'Story', 't-c4': 'Story', 't-e1': 'Story' };
-  tasks.forEach(t => { t.type = TYPES[t.id] || 'Task'; });
+  tasks.forEach(t => { t.type = TYPES[t.id] || 'Task'; const own = projects.find(p => p.id === t.projectId).owner; t.reporter = own; t.watchers = [...new Set([own, t.owner])]; t.description = ''; });
+  Object.assign(tk('t-a3a'), { parentId: 't-a3' }); Object.assign(tk('t-a3b'), { parentId: 't-a3' });
+  tk('t-a3').description = 'Clients see their invoices of the last 24 months and can download each one.\nThe list loads in under 2 seconds for a client with 500 invoices.';
+  tk('t-c2').description = 'Read access to the finance feed, so the new reports show the same totals as the old ones.';
   Object.assign(tk('t-c2'), { holdReason: 'Waiting for finance to grant read access to the feed.', heldFrom: 'In progress' });
   tk('t-c2').history.push({ at: d(-9) + 'T14:20', by: 'Priya Nair', field: 'Status', from: 'In progress', to: 'On hold' });
   tk('t-c2').comments.push({ id: 'c-1', by: 'Priya Nair', at: d(-9) + 'T14:22', text: 'Access request sent to the finance team. No answer yet.' }, { id: 'c-2', by: 'Lina Haddad', at: d(-3) + 'T10:05', text: 'I will raise it at Thursday\'s steering meeting.' });

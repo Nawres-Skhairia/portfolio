@@ -75,6 +75,13 @@ export function validateTask(t, data) {
     }
   }
   if (t.status === 'On hold' && !String(t.holdReason || '').trim()) e.holdReason = 'Say why the task is paused.';
+  if (t.description !== undefined && (typeof t.description !== 'string' || t.description.length > 4000)) e.description = 'The description can be up to 4,000 characters.';
+  if (t.reporter !== undefined && (typeof t.reporter !== 'string' || t.reporter.length > 40)) e.reporter = 'The reporter is not valid.';
+  if (t.watchers !== undefined && (!Array.isArray(t.watchers) || t.watchers.length > 20 || t.watchers.some(w => typeof w !== 'string' || !w || w.length > 40))) e.watchers = 'Up to 20 watchers.';
+  if (t.parentId) {
+    if (t.parentId === t.id) e.parentId = 'A task cannot be its own sub-task.';
+    else if (data) { const par = data.tasks.find(x => x.id === t.parentId); if (!par) e.parentId = 'The parent task no longer exists.'; else if (par.parentId) e.parentId = 'A sub-task cannot have its own sub-tasks.'; else if (par.projectId !== t.projectId) e.parentId = 'A sub-task stays in the project of its parent.'; else if (data.tasks.some(x => x.parentId === t.id)) e.parentId = 'This task has sub-tasks, so it cannot become one.'; }
+  }
   if (t.remindOn !== undefined && t.remindOn !== '' && !isIso(t.remindOn)) e.remindOn = 'The reminder date is not valid.';
   maxLen(e, 'holdReason', t.holdReason, 200, 'Reason');
   if (t.checklist !== undefined) {
@@ -325,8 +332,10 @@ export function deleteProject(data, id) {
     risks: data.risks.filter(r => r.projectId !== id) };
 }
 export function deleteTask(data, id) {
-  return { ...data, tasks: data.tasks.filter(t => t.id !== id).map(t => (t.deps || []).includes(id) ? { ...t, deps: t.deps.filter(d => d !== id) } : t) };
+  // sub-tasks of a deleted task become normal tasks of the same project
+  return { ...data, tasks: data.tasks.filter(t => t.id !== id).map(t => { let n = t; if ((t.deps || []).includes(id)) n = { ...n, deps: t.deps.filter(d => d !== id) }; if (t.parentId === id) n = { ...n, parentId: '' }; return n; }) };
 }
+export const subTasks = (data, id) => data.tasks.filter(t => t.parentId === id);
 export function deleteMilestone(data, id) {
   return { ...data, milestones: data.milestones.filter(m => m.id !== id), tasks: data.tasks.map(t => t.milestoneId === id ? { ...t, milestoneId: '' } : t) };
 }
@@ -347,7 +356,7 @@ export function nextKey(data, projectId) {
   return p.code + '-' + ((nums.length ? Math.max(...nums) : 0) + 1);
 }
 
-const TRACKED = { title: 'Title', owner: 'Assignee', priority: 'Priority', status: 'Status', due: 'Due date', estimate: 'Estimate', labels: 'Labels', milestoneId: 'Milestone', deps: 'Waits for', holdReason: 'Hold reason', checklist: 'Checklist', archivedAt: 'Archived', type: 'Type' };
+const TRACKED = { title: 'Title', owner: 'Assignee', priority: 'Priority', status: 'Status', due: 'Due date', estimate: 'Estimate', labels: 'Labels', milestoneId: 'Milestone', deps: 'Waits for', holdReason: 'Hold reason', checklist: 'Checklist', archivedAt: 'Archived', type: 'Type', description: 'Description', watchers: 'Watchers' };
 const same = (a, b) => JSON.stringify(a ?? '') === JSON.stringify(b ?? '');
 
 // One change to one task, validated, with its history. Returns { data, errors }.
@@ -372,6 +381,8 @@ function fmtVal(k, v, data) {
   if (k === 'checklist') return checklistText(v);
   if (k === 'labels') return (v || []).join(', ') || 'none';
   if (k === 'deps') return (v || []).map(d => (data.tasks.find(x => x.id === d) || {}).key || '?').join(', ') || 'none';
+  if (k === 'description') return v ? (String(v).length > 60 ? String(v).slice(0, 60) + '…' : String(v)) : 'none';
+  if (k === 'watchers') return (v || []).join(', ') || 'none';
   if (k === 'milestoneId') return (data.milestones.find(m => m.id === v) || {}).name || 'none';
   return v === '' || v === undefined || v === null ? 'none' : String(v);
 }
