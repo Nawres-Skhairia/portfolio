@@ -3,7 +3,7 @@
 name: Payment XML Lab check
 on:
   pull_request:
-    paths: ['projects/payment-xml-lab/**', 'tests/payment-xml-lab.test.mjs', 'tests/mt-to-mx.test.mjs', '.github/workflows/payment-xml-lab.yml']
+    paths: ['projects/payment-xml-lab/**', 'tests/payment-xml-lab.test.mjs', 'tests/mt-to-mx.test.mjs', 'tests/reconcile.test.mjs', '.github/workflows/payment-xml-lab.yml']
 permissions:
   contents: read
 jobs:
@@ -26,3 +26,5 @@ jobs:
         run: node tests/payment-xml-lab.test.mjs
       - name: MT to MX Migration Lab acceptance tests
         run: node tests/mt-to-mx.test.mjs
+      - name: Reconciliation Workbench acceptance tests
+        run: node tests/reconcile.test.mjs
