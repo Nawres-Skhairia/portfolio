@@ -505,7 +505,6 @@ body { transition: background-color .4s, color .4s; }
   .xp { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); align-items: start; }
   .xp-head { position: sticky; top: 112px; }
 }
-.xp-num { font-family: var(--mono); color: var(--accent); }
 .xp-head h2 { margin-bottom: 18px; }
 .xp-head h2:focus { outline: none; }
 .xp-head h2:focus-visible { outline: 2px solid var(--accent); outline-offset: 6px; }
