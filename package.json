@@ -1,0 +1,10 @@
+{
+  "name": "nawres-portfolio",
+  "private": true,
+  "type": "module",
+  "description": "Static portfolio site. The only server code is Command Center's /api/cc functions.",
+  "engines": { "node": "22.x" },
+  "dependencies": {
+    "postgres": "3.4.7"
+  }
+}

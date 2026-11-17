@@ -1,0 +1,42 @@
+# Command Center accounts (portfolio): server rules, sign-in, attempt limits and isolation between
+# accounts, run against a throwaway Postgres in GitHub. No secrets, no deploy.
+name: Command Center check
+on:
+  push:
+    branches: ['claude/**']
+    paths: ['api/**', 'projects/command-center/**', 'tests/cc-api.test.mjs', 'tests/command-center.test.mjs', 'package.json', 'package-lock.json', '.github/workflows/command-center.yml']
+  pull_request:
+    paths: ['api/**', 'projects/command-center/**', 'tests/cc-api.test.mjs', 'tests/command-center.test.mjs', 'package.json', 'package-lock.json', '.github/workflows/command-center.yml']
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: cc_owner
+          POSTGRES_PASSWORD: cc_test_only
+          POSTGRES_DB: cc_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U cc_owner" --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - run: npm ci --ignore-scripts
+      - name: The app's database user is not a superuser (row-level security must apply)
+        run: PGPASSWORD=cc_test_only psql -h localhost -U cc_owner -d cc_test -c "create role cc_runner login password 'cc_runner_only' createrole; grant all on database cc_test to cc_runner; grant all on schema public to cc_runner;"
+      - name: Engine rules
+        run: node --test tests/command-center.test.mjs
+      - name: Server, sign-in and isolation tests
+        env:
+          CC_DATABASE_URL: postgres://cc_runner:cc_runner_only@localhost:5432/cc_test
+          CC_DATABASE_SSL: 'off'
+        run: node --test tests/cc-api.test.mjs

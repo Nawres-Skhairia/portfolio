@@ -1,6 +1,7 @@
 // Command Center: screens and interactions. Every figure comes from engine.js; this file shows it and saves changes.
 import * as E from './engine.js';
 import { seed } from './seed.js';
+import { api, diff } from './cloud.js';
 
 const KEY = 'command-center-v2';
 const OLD_KEYS = ['command-center-v1'];
@@ -25,7 +26,10 @@ function load() {
 }
 let data = load();
 let undoStack = null;
+// Accounts: acct is null while working in this browser only; otherwise the signed-in person and the open workspace.
+let acct = null; let serverOn = false; let synced = null; let syncing = Promise.resolve(); let offeredCopy = false;
 function save() {
+  if (acct) { queueSync(); return; }
   try { localStorage.setItem(KEY, JSON.stringify(data)); }
   catch (e) { toast('This browser did not allow saving. Your changes last until you close the tab.', 'error'); }
 }
@@ -92,7 +96,7 @@ function route() {
   const parts = path.split('/');
   return { name: parts[0] || '', id: decodeURIComponent(parts[1] || ''), params: new URLSearchParams(query || '') };
 }
-const VIEWS = { overview, board, backlog, projects, project: projectView, dependencies, risks, insights: insightsView, reports };
+const VIEWS = { overview, board, backlog, projects, project: projectView, dependencies, risks, insights: insightsView, reports, verify: verifyView, mailbox: mailboxView };
 const NAV_OF = { project: 'projects' };
 let lastHash = null;
 
@@ -110,6 +114,7 @@ function render() {
   const high = E.insights(data, TODAY).filter(i => i.level === 'high').length;
   $$('.ins-count').forEach(c => { c.hidden = !high; c.textContent = high; });
   $('#meSel').innerHTML = opts(people(), data.me);
+  renderBand();
   renderPanel();
   animateIn(main);
   if (r.name === 'board') setupBoardDnD();
@@ -419,7 +424,16 @@ function openForm(title, body, onSubmit, extraBtn = '', submitLabel = 'Save') {
     e.preventDefault();
     form.querySelectorAll('.err').forEach(x => { x.hidden = true; x.textContent = ''; });
     form.querySelectorAll('[aria-invalid]').forEach(x => x.removeAttribute('aria-invalid'));
-    const errors = onSubmit(new FormData(form), form);
+    const result = onSubmit(new FormData(form), form);
+    if (result && typeof result.then === 'function') {
+      const btn = form.querySelector('[type=submit]'); btn.disabled = true; btn.setAttribute('aria-busy', 'true');
+      result.then(errs => { btn.disabled = false; btn.removeAttribute('aria-busy'); showErrors(errs); });
+      return;
+    }
+    showErrors(result);
+  });
+  function showErrors(errors) {
+    if (errors === false) return; // keep the dialog open, the handler has replaced it
     if (errors && Object.keys(errors).length) {
       let first = null;
       for (const [k, msg] of Object.entries(errors)) { const el = form.querySelector('#e-' + k); const ctl = form.querySelector('[name="' + k + '"]'); if (el) { el.textContent = msg; el.hidden = false; } if (ctl) { ctl.setAttribute('aria-invalid', 'true'); ctl.setAttribute('aria-describedby', 'e-' + k); first = first || ctl; } }
@@ -428,17 +442,17 @@ function openForm(title, body, onSubmit, extraBtn = '', submitLabel = 'Save') {
       form.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'translateX(0)' }], { duration: 240 });
       return;
     }
-    dlg.close();
-  });
+    if (dlg.querySelector('form') === form) dlg.close();
+  }
   dlg.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => dlg.close()));
-  dlg.showModal();
+  if (!dlg.open) dlg.showModal();
   const f = form.querySelector('input:not([type=hidden]),select,textarea'); if (f) f.focus();
 }
 function confirmBox(title, text, okLabel, onOk) {
   dlg.innerHTML = '<form method="dialog" class="form confirm"><header><h2 id="dlgTitle">' + esc(title) + '</h2></header><div class="form-body"><p>' + esc(text) + '</p></div><footer><span class="grow"></span><button type="button" class="btn ghost" data-close>Cancel</button><button type="submit" class="btn danger">' + esc(okLabel) + '</button></footer></form>';
   dlg.querySelector('form').addEventListener('submit', e => { e.preventDefault(); dlg.close(); onOk(); });
   dlg.querySelector('[data-close]').addEventListener('click', () => dlg.close());
-  dlg.showModal(); dlg.querySelector('[data-close]').focus();
+  if (!dlg.open) dlg.showModal(); dlg.querySelector('[data-close]').focus();
 }
 function askHold(id, onDone, onCancel) {
   const t = task(id);
@@ -683,6 +697,12 @@ document.addEventListener('click', e => {
     case 'csv': downloadCsv(); break;
     case 'copy-summary': { const txt = $('#sumText').textContent; (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast('Status summary copied.'), () => toast('Copy is not allowed here. Select the text instead.', 'error')); break; }
     case 'reset': resetDemo(); break;
+    case 'start-empty': startEmpty(); break;
+    case 'signin': signInForm(); break;
+    case 'signup': signUpForm(); break;
+    case 'signout': signOut(); break;
+    case 'resend': resend(el.dataset.email); break;
+    case 'check-mail': { const v = ($('#mbEmail') || {}).value || ''; location.hash = '#/mailbox?email=' + encodeURIComponent(v.trim()); break; }
     case 'palette': openPalette(); break;
     case 'shortcuts': shortcutsHelp(); break;
     case 'more': $('#moreSheet').hidden = !$('#moreSheet').hidden; break;
@@ -713,6 +733,7 @@ document.addEventListener('change', e => {
   if (act === 'risk-status') { ui.risks.status = el.value; ui.risks.cell = null; render(); return; }
   if (act === 'dep-project') { ui.deps.project = el.value; render(); return; }
   if (act === 'rep-project') { ui.reports.project = el.value; render(); return; }
+  if (act === 'ws-switch') { openWorkspace(el.value); return; }
   if (el.id === 'meSel') { commit({ ...data, me: el.value }, 'You are now viewing as ' + el.value + '.'); return; }
 });
 function field2(name) { return field(name, 'Why are they on hold?', '<textarea id="f-' + name + '" name="' + name + '" rows="3" maxlength="200"></textarea>'); }
@@ -750,14 +771,178 @@ document.addEventListener('submit', e => {
   commit(r.data, 'Comment added.'); setTimeout(() => { const list = $('#panel .comments'); if (list && list.lastElementChild) list.lastElementChild.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }, 30);
 });
 
-function resetDemo() { confirmBox('Reset the demo?', 'Everything saved in this browser for Command Center is removed and the original sample data comes back.', 'Reset demo', () => { clearSaved(); data = seed(TODAY); ui.sel.clear(); ui.panel = null; toast('Sample data restored.'); if (route().name === 'project') location.hash = '#/overview'; else render(); }); }
-$('#resetDemo').addEventListener('click', resetDemo);
-$('#startEmpty').addEventListener('click', () => confirmBox('Start with an empty workspace?', 'Everything saved in this browser for Command Center is removed. Reset demo brings the sample data back.', 'Empty the workspace', () => { clearSaved(); data = { version: 2, me: data.me, projects: [], milestones: [], tasks: [], risks: [], filters: [] }; ui.sel.clear(); ui.panel = null; location.hash = '#/overview'; render(); toast('The workspace is empty.'); }));
+function resetDemo() {
+  if (acct) { confirmBox('Load the sample data?', 'Everything in "' + acct.wsName + '" is replaced by the sample company, Orbis Studio. You can undo it right after.', 'Load sample data', () => { ui.sel.clear(); ui.panel = null; commit({ ...seed(TODAY), me: data.me }, 'Sample data loaded.', { undo: true, flip: false }); }); return; }
+  confirmBox('Reset the demo?', 'Everything saved in this browser for Command Center is removed and the original sample data comes back.', 'Reset demo', () => { clearSaved(); data = seed(TODAY); ui.sel.clear(); ui.panel = null; toast('Sample data restored.'); if (route().name === 'project') location.hash = '#/overview'; else render(); });
+}
+function startEmpty() {
+  const empty = { version: 2, me: data.me, projects: [], milestones: [], tasks: [], risks: [], filters: [] };
+  if (acct) { confirmBox('Empty this workspace?', 'Every project, task and risk in "' + acct.wsName + '" is removed. You can undo it right after.', 'Empty the workspace', () => { ui.sel.clear(); ui.panel = null; location.hash = '#/overview'; commit(empty, 'The workspace is empty.', { undo: true, flip: false }); }); return; }
+  confirmBox('Start with an empty workspace?', 'Everything saved in this browser for Command Center is removed. Reset demo brings the sample data back.', 'Empty the workspace', () => { clearSaved(); data = empty; ui.sel.clear(); ui.panel = null; location.hash = '#/overview'; render(); toast('The workspace is empty.'); });
+}
 $('#enterDemo').addEventListener('click', e => { e.preventDefault(); $('#app').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
 window.addEventListener('hashchange', () => { $('#moreSheet').hidden = true; navigate(); });
-window.addEventListener('storage', e => { if (e.key === KEY) { data = load(); render(); } });
+window.addEventListener('storage', e => { if (e.key === KEY && !acct) { data = load(); render(); } });
+
+// ---------- accounts: sign up, sign in, saved on the server ----------
+const BAND_LOCAL = '<span><b>Demo workspace.</b> Made-up sample data for a fictional company, saved only in this browser. Please use made-up names: real ones would stay saved in this browser.</span>';
+function renderBand() {
+  const band = $('#band'); if (!band) return;
+  $('.me').hidden = !!acct;
+  if (!acct) {
+    band.classList.remove('acct');
+    band.innerHTML = BAND_LOCAL + '<span class="band-actions"><button type="button" class="lnk" data-act="reset">Reset demo</button><button type="button" class="lnk" data-act="start-empty">Start empty</button>' +
+      (serverOn ? '<span class="band-sep" aria-hidden="true"></span><button type="button" class="lnk" data-act="signin">Sign in</button><button type="button" class="btn sm" data-act="signup">Keep my work: create an account</button>' : '') + '</span>';
+    return;
+  }
+  band.classList.add('acct');
+  const many = acct.workspaces.length > 1;
+  band.innerHTML = '<span class="acct-who">' + avatar(acct.user.displayName, 'sm') + '<span><b>' + esc(acct.user.displayName) + '</b> · ' + (many ? '<label class="ws-pick"><span class="sr">Workspace</span><select data-act="ws-switch">' + opts(acct.workspaces.map(w => [w.id, w.name]), acct.wsId) + '</select></label>' : esc(acct.wsName)) + ' · <span class="save-state" aria-live="polite">' + esc(acct.saveState || 'Saved to your account') + '</span></span></span>' +
+    '<span class="band-actions"><button type="button" class="lnk" data-act="reset">Load sample data</button><button type="button" class="lnk" data-act="start-empty">Empty workspace</button><button type="button" class="lnk" data-act="signout">Sign out</button></span>';
+}
+function setSaveState(t) { if (!acct) return; acct.saveState = t; const el = $('#band .save-state'); if (el) el.textContent = t || 'Saved to your account'; }
+const busyTyping = () => { const a = document.activeElement; return a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.closest('#panel, #main'); };
+
+function queueSync() {
+  syncing = syncing.then(async () => {
+    if (!acct || !synced) return;
+    const ops = diff(synced, data); if (!ops.length) return;
+    const sent = data;
+    setSaveState('Saving…');
+    const r = await api('POST', 'workspaces/' + acct.wsId + '/sync', { version: acct.version, ops });
+    if (r.status === 200) { useServer(r.body, sent === data); setSaveState('Saved to your account'); return; }
+    if (r.status === 409 && r.body.workspace) { useServer(r.body.workspace, true); toast(r.body.error, 'error'); return; }
+    if (r.status === 401) { toast('You were signed out, so the last change was not saved. Sign in again.', 'error'); leaveAccount(); return; }
+    data = { ...synced, version: 2, me: acct.user.displayName }; setSaveState('Saved to your account'); render();
+    toast((r.body.error || 'The change was not saved.') + ' The change was undone.', 'error');
+  });
+}
+function useServer(ws, replace) {
+  acct.version = ws.version; acct.wsName = ws.name; synced = ws.data;
+  if (!replace) return;
+  data = { version: 2, ...ws.data, me: acct.user.displayName };
+  if (!busyTyping() && !dlg.open) render();
+}
+async function openWorkspace(id, quiet) {
+  const r = await api('GET', 'workspaces/' + encodeURIComponent(id));
+  if (r.status !== 200) { toast(r.body.error || 'This workspace could not be opened.', 'error'); return false; }
+  acct.wsId = r.body.id; acct.saveState = '';
+  ui.sel.clear(); ui.panel = null; ui.q = { text: '', assignee: '', status: [], priority: [], label: '', project: '', overdue: false, onHold: false };
+  useServer(r.body, true); render();
+  if (!quiet) toast('Opened "' + r.body.name + '".');
+  return true;
+}
+async function enterAccount(me, preferId) {
+  acct = { user: me.user, workspaces: me.workspaces, wsId: null, version: 0, wsName: '' };
+  const first = me.workspaces.find(w => w.id === preferId) || me.workspaces[0];
+  if (first) await openWorkspace(first.id, true);
+  renderBand();
+  offerCopy();
+}
+function leaveAccount() { acct = null; synced = null; data = load(); ui.panel = null; render(); }
+async function refreshMe(preferId) {
+  const me = await api('GET', 'me');
+  if (me.status !== 200 || !me.body.user) return false;
+  await enterAccount(me.body, preferId);
+  return true;
+}
+async function signOut() {
+  await syncing;
+  await api('POST', 'auth/signout', {});
+  leaveAccount(); toast('Signed out. You are back in the demo saved in this browser.');
+}
+
+function signInForm(email = '') {
+  openForm('Sign in', field('email', 'Email', input('email', email, 'email', 'autocomplete="email" required maxlength="254"')) + field('password', 'Password', input('password', '', 'password', 'autocomplete="current-password" required maxlength="200"')) +
+    '<p class="muted small">No account yet? <button type="button" class="lnk" data-act="signup">Create one</button></p>',
+  async fd => {
+    const em = String(fd.get('email') || '').trim();
+    const r = await api('POST', 'auth/signin', { email: em, password: String(fd.get('password') || '') });
+    if (r.status === 200) { dlg.close(); await refreshMe(); toast('Signed in. Your work is now saved to your account.'); return {}; }
+    if (r.body.unverified) { checkMailbox(em, 'Confirm your email first'); return false; }
+    return { password: r.body.error || 'Sign-in did not work.' };
+  }, '', 'Sign in');
+}
+
+// Victoria's step (accounts plan 1.6): an informed acknowledgement, not a consent. Words to be approved by Nawres before live.
+const PRIVACY_STEP = '<div class="privacy-step"><p><b>Before you create an account</b></p><ul>' +
+  '<li><b>What is kept:</b> your email, the name you choose, and what you put in your workspaces, including names of people you type.</li>' +
+  '<li><b>Why:</b> to run your account and keep your work, on any device.</li>' +
+  '<li><b>Where:</b> a database in the EU (Frankfurt), on Vercel and Neon.</li>' +
+  '<li><b>How long:</b> until you delete your account. Sign-ups that are never confirmed are removed after 7 days.</li>' +
+  '<li><b>Your rights:</b> you can ask to see, download, correct or delete your data at any time, as the <a href="/privacy/" target="_blank" rel="noopener">privacy page</a> explains.</li>' +
+  '<li><b>This is a preview:</b> please use made-up details only.</li></ul></div>';
+function signUpForm() {
+  openForm('Create an account', '<p class="muted">Your projects and tasks are saved to your account and are there on any device. Without an account, they stay only in this browser.</p>' +
+    field('displayName', 'Your name', input('displayName', '', 'text', 'autocomplete="name" required maxlength="40"'), 'Shown on your tasks and comments.') +
+    field('email', 'Email', input('email', '', 'email', 'autocomplete="email" required maxlength="254"'), 'We send one link to confirm it.') +
+    field('password', 'Password', input('password', '', 'password', 'autocomplete="new-password" required minlength="10" maxlength="200"'), 'At least 10 characters.') +
+    PRIVACY_STEP +
+    '<div class="fld check" data-field="privacyAck"><label><input type="checkbox" name="privacyAck" id="f-privacyAck"> I have read how my data is used, above, and the privacy page</label><small class="err" id="e-privacyAck" hidden></small></div>',
+  async fd => {
+    const email = String(fd.get('email') || '').trim();
+    const r = await api('POST', 'auth/signup', { displayName: String(fd.get('displayName') || '').trim(), email, password: String(fd.get('password') || ''), privacyAck: fd.get('privacyAck') === 'on' });
+    if (r.status === 200) { checkMailbox(email, 'Check your email'); return false; }
+    if (r.body.errors) return r.body.errors;
+    return { email: r.body.error || 'The account could not be created.' };
+  }, '', 'Create account');
+}
+function checkMailbox(email, title) {
+  dlg.innerHTML = '<form method="dialog" class="form confirm"><header><h2 id="dlgTitle">' + esc(title) + '</h2></header><div class="form-body"><p>We sent a link to <b>' + esc(email) + '</b>. Open it to confirm your address and sign in. It works once, for 24 hours.</p>' +
+    '<p class="muted small">On this preview no real email is sent: the link waits in the <a href="#/mailbox?email=' + encodeURIComponent(email) + '" data-close>test mailbox</a>.</p></div>' +
+    '<footer><button type="button" class="lnk" data-act="resend" data-email="' + esc(email) + '">Send the link again</button><span class="grow"></span><button type="submit" class="btn">OK</button></footer></form>';
+  dlg.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => dlg.close()));
+  if (!dlg.open) dlg.showModal();
+}
+async function resend(email) { const r = await api('POST', 'auth/resend', { email }); toast(r.status === 200 ? 'If this address has an account waiting, a new link is on its way.' : (r.body.error || 'Not sent.'), r.status === 200 ? 'ok' : 'error'); }
+
+// Copy the workspace saved in this browser into the account (checked by the server; the browser copy is kept).
+function localWorkspace() { try { const raw = localStorage.getItem(KEY); const d = raw && JSON.parse(raw); return d && E.isValidData(d) && d.projects.length ? d : null; } catch (e) { return null; } }
+function offerCopy() {
+  if (offeredCopy || !acct) return;
+  const local = localWorkspace(); if (!local) return;
+  offeredCopy = true;
+  openForm('Copy your browser workspace?', '<p>This browser holds a Command Center workspace with ' + local.projects.length + ' projects and ' + local.tasks.length + ' tasks. Copy it into your account as a new workspace?</p><p class="muted small">The copy in this browser is kept. You can remove it afterwards.</p>',
+  async () => {
+    const isSample = local.projects.some(p => p.id === 'p-atlas');
+    const r = await api('POST', 'workspaces/import', { name: isSample ? 'Orbis Studio (sample)' : 'Copied from this browser', data: local, isSample });
+    if (r.status !== 200) return { _: 'Nothing was copied: ' + (r.body.error || 'the workspace could not be checked.') };
+    dlg.close();
+    await refreshMe(r.body.id);
+    confirmBox('Copied. Remove the browser copy?', 'Your workspace is now in your account. The copy saved in this browser can stay, or you can remove it now.', 'Remove the browser copy', () => { clearSaved(); toast('The browser copy was removed.'); });
+    return {};
+  }, '', 'Copy into my account');
+}
+
+// #/verify/<token>: the link from the confirmation email.
+function verifyView(r) {
+  const token = r.id;
+  setTimeout(async () => {
+    const res = await api('POST', 'auth/verify', { token });
+    if (res.status === 200) { history.replaceState(null, '', '#/overview'); await refreshMe(); toast('Email confirmed. Welcome to your workspace.'); }
+    else { const el = $('#verifyMsg'); if (el) el.textContent = res.body.error || 'This link did not work.'; }
+  }, 0);
+  return '<div class="vh"><div><h2>Confirming your email</h2><p class="lede" id="verifyMsg" aria-live="polite">One moment…</p></div></div><p><button type="button" class="btn ghost" data-act="signin">Sign in</button></p>';
+}
+// #/mailbox: preview-only test mailbox (no real email is sent from the preview).
+function mailboxView(r) {
+  const email = r.params.get('email') || '';
+  setTimeout(async () => {
+    const out = $('#mbList'); if (!out || !email) return;
+    const res = await api('GET', 'dev/mailbox?email=' + encodeURIComponent(email));
+    if (res.status !== 200) { out.innerHTML = '<p class="muted">The test mailbox exists only on the preview.</p>'; return; }
+    out.innerHTML = res.body.mails.length ? res.body.mails.map(m => '<article class="panel mail"><p class="muted small">' + esc(new Date(m.created_at).toLocaleString('en-GB')) + '</p><h3>' + esc(m.subject) + '</h3><p>' + esc(m.body).replace(/(https?:\/\/[^\s<]+)/g, u => '<a href="' + u + '">Confirm my email</a>') + '</p></article>').join('') : '<p class="muted">No email for this address yet.</p>';
+  }, 0);
+  return '<div class="vh"><div><p class="eyebrow">Preview only</p><h2>Test mailbox</h2><p class="lede">On the preview, emails are not sent. They wait here so the sign-up can be tried with made-up addresses.</p></div></div>' +
+    '<div class="row"><label class="fsearch"><span class="sr">Email address</span><input id="mbEmail" type="email" value="' + esc(email) + '" placeholder="the address you signed up with"></label><button type="button" class="btn ghost" data-act="check-mail">Show emails</button></div><div id="mbList" class="mb-list"></div>';
+}
 
 if (!location.hash) history.replaceState(null, '', '#/overview');
 render();
 lastHash = location.hash;
 if (startNotice) toast(startNotice, 'error');
+(async () => {
+  const me = await api('GET', 'me');
+  serverOn = me.status === 200;
+  if (serverOn && me.body.user) await enterAccount(me.body); else renderBand();
+})();
