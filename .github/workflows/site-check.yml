@@ -19,3 +19,5 @@ jobs:
           node-version: 22
       - name: Check the site
         run: node .github/scripts/site-check.mjs
+      - name: CV speed and accessibility budget
+        run: node .github/scripts/cv-budget.mjs

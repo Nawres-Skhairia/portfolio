@@ -4,7 +4,7 @@
 (function () {
   'use strict';
   var root = document.documentElement;
-  var calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var calm = root.classList.contains('cv-motion-off') || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 
   function ready(fn) { if (document.readyState !== 'loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
