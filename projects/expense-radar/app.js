@@ -11,16 +11,20 @@ const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-// ---------- storage: one key, the demo workspace only; Reset and Start empty remove it ----------
-let notice = '';
+// ---------- storage: everything stays on this device (one key). Your own money or the sample, never both. ----------
+let notice = ''; let firstVisit = false;
 function load() {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) { const d = JSON.parse(raw); if (E.isValidData(d)) return d; notice = 'The saved data could not be read, so the sample was restored.'; }
-  } catch (e) { /* storage blocked: work in memory */ }
+    if (raw) { const d = JSON.parse(raw); if (E.isValidData(d)) return d; notice = 'The saved data could not be read. Restore a backup, or start again.'; }
+    else firstVisit = true;
+  } catch (e) { firstVisit = true; /* storage blocked: work in memory */ }
   return seed(TODAY);
 }
 let data = load();
+// Ask the browser to keep this data even when space runs low (no prompt in most browsers).
+function keepSafe() { try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().then(ok => { ui.persisted = ok; renderBand(); }); } catch (e) { /* not supported */ } }
+if (data.own) { try { if (navigator.storage && navigator.storage.persisted) navigator.storage.persisted().then(ok => { ui.persisted = ok; if (!ok) keepSafe(); else renderBand(); }); } catch (e) { /* not supported */ } }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) { toast('This browser did not allow saving. Your changes last until you close the tab.'); } }
 function commit(next, message, undoable = true) {
   const prev = data; data = next; save(); render();
@@ -33,12 +37,14 @@ const mnum = (c, o) => '<span class="money">' + esc(money(c, o)) + '</span>';
 const dshort = d => Number(d.slice(8, 10)) + ' ' + new Date(d + 'T00:00:00Z').toLocaleDateString('en-GB', { month: 'short', timeZone: 'UTC' });
 const dlong = d => new Date(d + 'T00:00:00Z').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 const firstMonth = () => data.transactions.reduce((m, t) => t.date < m ? t.date : m, TODAY).slice(0, 7);
+const curSym = () => (E.CURRENCIES[data.currency] || '€').trim();
 const SPEND = E.CATEGORIES.filter(c => !E.INCOME_CATEGORIES.includes(c));
 
 // ---------- routing ----------
 function route() { const h = location.hash.replace(/^#\/?/, ''); const [p, q] = h.split('?'); return { name: p || 'overview', params: new URLSearchParams(q || '') }; }
 const VIEWS = { overview, transactions, budgets, recurring, analysis, import: importView, reports };
 function render() {
+  if (firstVisit) { $('#main').innerHTML = welcome(); $('#band').innerHTML = ''; document.title = 'Welcome · Expense Radar'; return; }
   const r = route(); const v = VIEWS[r.name] ? r.name : 'overview';
   if (v === 'transactions' && r.params.has('q')) { ui.q = r.params.get('q'); ui.tmonth = ''; history.replaceState(null, '', '#/transactions'); }
   $$('#tabs a').forEach(a => { if (a.dataset.nav === v) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
@@ -50,7 +56,36 @@ let lastView = '';
 window.addEventListener('hashchange', () => { const v = route().name; render(); if (v !== lastView) { $('#main').focus({ preventScroll: true }); scrollTo(0, 0); } lastView = v; });
 
 function renderBand() {
-  $('#band').innerHTML = '<div class="band-in"><span><b>Demo.</b> Made-up money of a fictional person, saved only in this browser. Please use made-up figures: real ones would stay saved in this browser.</span><span class="grow"></span><button type="button" class="lnk" data-act="reset">Reset demo</button><button type="button" class="lnk" data-act="empty">Start empty</button></div>';
+  if (firstVisit) { $('#band').innerHTML = ''; return; }
+  if (!data.own) { $('#band').innerHTML = '<div class="band-in"><span><b>Sample.</b> The made-up money of a fictional person, to look around.</span><span class="grow"></span><button type="button" class="lnk" data-act="reset">Reset the sample</button><button type="button" class="btn sm" data-act="start-own">Start with my own money</button></div>'; return; }
+  const last = data.backupAt ? 'Last backup ' + dshort(data.backupAt.slice(0, 10)) + '.' : (data.transactions.length ? 'No backup yet.' : '');
+  $('#band').innerHTML = '<div class="band-in own"><span><b>Saved on this device only.</b> ' + (ui.persisted ? 'Your browser keeps it safe. ' : '') + esc(last) + '</span><span class="grow"></span><button type="button" class="lnk" data-act="backup">Download a backup</button><button type="button" class="lnk" data-act="restore">Restore</button><button type="button" class="lnk" data-act="install">Install on your phone</button><input type="file" id="restoreFile" accept="application/json,.json" hidden></div>';
+}
+function welcome() {
+  return '<section class="welcome"><p class="eyebrow">Expense Radar</p><h1>See where your money goes.</h1><p class="lede">Enter or import what you spend and earn. Budgets warn you before you go over, regular payments are found for you, and every figure is worked out by plain rules you can read.</p>' +
+    '<div class="choices"><form class="choice main" data-form="start-own"><h2>Start with my own money</h2><p>An empty space for your own figures. It stays on this device, and you can download a backup at any time.</p><label for="cur">Currency</label><select id="cur" name="currency">' + Object.keys(E.CURRENCIES).map(c => '<option value="' + c + '">' + c + '</option>').join('') + '</select><button type="submit" class="btn">Start</button></form>' +
+    '<div class="choice"><h2>Look around first</h2><p>Six months of made-up money of a fictional person. You can switch to your own at any time.</p><button type="button" class="btn ghost" data-act="start-sample">Show the sample</button></div></div>' +
+    '<p class="small muted">Nothing is sent anywhere: no account, no bank connection, no tracking. Please don\'t write health, religion or politics details, or other people\'s names, in notes.</p></section>';
+}
+function startOwn(currency) {
+  data = { ...E.emptyData(E.CURRENCIES[currency] ? currency : 'EUR'), own: true }; firstVisit = false; ui.sel.clear(); ui.imp = { step: 1 }; ui.month = THIS_MONTH;
+  save(); keepSafe(); location.hash = '#/overview'; render(); toast('Your own space is ready. Add a transaction or import a CSV file.');
+}
+function backup() {
+  const at = new Date().toISOString(); data = { ...data, backupAt: at }; save();
+  download('expense-radar-backup-' + TODAY + '.json', JSON.stringify({ app: 'expense-radar', version: 1, exportedAt: at, data }, null, 1), 'application/json');
+  renderBand(); toast('Backup downloaded. Keep the file somewhere safe.');
+}
+function restoreFrom(text) {
+  let d; try { const j = JSON.parse(text); d = j && j.app === 'expense-radar' ? j.data : j; } catch (e) { toast('This file is not an Expense Radar backup.'); return; }
+  if (!E.isValidData(d) || d.transactions.length > 50000) { toast('This backup could not be read. Nothing was changed.'); return; }
+  confirmBox('Restore this backup?', 'It has ' + d.transactions.length + ' transactions. What is on this device now is replaced. You can undo it right after.', 'Restore', () => { commit({ ...d, own: true }, 'Backup restored.'); keepSafe(); });
+}
+let installEvent = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvent = e; });
+function installHelp() {
+  if (installEvent) { installEvent.prompt(); installEvent = null; return; }
+  openForm('Install on your phone', '<p>Expense Radar works like an app: an icon on your home screen, full screen, and it opens without a connection.</p><h3>iPhone (Safari)</h3><ol><li>Open this page in Safari.</li><li>Tap the Share button.</li><li>Tap <b>Add to Home Screen</b>, then <b>Add</b>.</li></ol><h3>Android (Chrome)</h3><ol><li>Open this page in Chrome.</li><li>Tap the menu (three dots).</li><li>Tap <b>Install app</b> or <b>Add to Home screen</b>.</li></ol><p class="small muted">On an iPhone, Safari can clear a website\'s saved data after 7 days without a visit. Added to the home screen, it is kept. A backup is still a good idea.</p>', () => null, 'Done');
 }
 
 function monthPicker() {
@@ -103,6 +138,41 @@ function insightList(list, limit = 99) {
 }
 
 // ---------- Overview ----------
+// ---------- today: the reason to open the app (log in two taps, one useful number, a kind count) ----------
+function quickCats() {
+  const from = E.addDays(TODAY, -60); const n = {};
+  for (const t of data.transactions) if (t.amount < 0 && t.date >= from && !['Housing', 'Utilities', 'Subscriptions'].includes(t.category)) n[t.category] = (n[t.category] || 0) + 1;
+  const top = Object.keys(n).sort((a, b) => n[b] - n[a]);
+  return [...new Set([...top, 'Groceries', 'Eating out', 'Transport', 'Shopping', 'Leisure', 'Other'])].slice(0, 6);
+}
+function todayBox() {
+  const now = E.spentNow(data, TODAY); const pd = E.perDayLeft(data, TODAY); const lg = E.loggedDays(data, TODAY, 7); const due = E.dueNow(data, TODAY);
+  const dow = new Date(TODAY + 'T00:00:00Z').getUTCDay(); const recap = [1, 2, 3].includes(dow) ? E.weekRecap(data, TODAY) : null;
+  const big = pd ? '<p class="k">Left to spend today</p><p class="big money">' + esc(money(pd.perDay, { round: true })) + '</p><p class="small muted">From your budgets: ' + esc(money(pd.left, { round: true })) + ' left for ' + pd.daysLeft + (pd.daysLeft === 1 ? ' day.' : ' days.') + '</p>'
+    : '<p class="k">Spent today</p><p class="big money">' + esc(money(now.today)) + '</p><p class="small muted">' + esc(money(now.week, { round: true })) + ' this week. <a href="#/budgets">Set a budget</a> to see what is left each day.</p>';
+  const streak = lg.count ? 'You logged on ' + lg.count + ' of the last 7 days.' : 'A fresh start: log one thing today.';
+  return '<section class="today" aria-labelledby="todayH"><h2 id="todayH" class="sr">Today</h2><div class="t-left">' + big + '</div>' +
+    '<form class="quick" data-form="quick" novalidate><label for="qAmt">Log a spend</label><div class="q-row"><span class="q-cur" aria-hidden="true">' + esc(curSym()) + '</span><input id="qAmt" name="amount" inputmode="decimal" autocomplete="off" placeholder="0.00" aria-describedby="qHint"></div>' +
+      '<p id="qHint" class="small muted">Type the amount, then tap what it was for.</p><div class="q-cats" role="group" aria-label="What it was for">' + quickCats().map(c => '<button type="submit" name="cat" value="' + esc(c) + '" class="chipbtn">' + esc(c) + '</button>').join('') + '</div><p class="err" id="qErr" role="alert" hidden></p></form>' +
+    '<div class="t-foot"><p>' + esc(streak) + (lg.today ? '' : ' <button type="button" class="lnk" data-act="checkin">Nothing spent today</button>') + '</p><button type="button" class="lnk" data-act="reminder">Daily reminder</button></div>' +
+    (due.length ? '<ul class="due">' + due.slice(0, 3).map(d => '<li><span><b>' + esc(d.payee) + '</b> ' + esc(money(d.amount)) + ' is usually paid around ' + esc(dshort(d.next)) + '.</span><span class="grow"></span><button type="button" class="btn sm" data-act="due-log" data-id="' + esc(d.id) + '">Log it</button><button type="button" class="lnk" data-act="dismiss" data-id="' + esc(d.id) + '">Not this time</button></li>').join('') + '</ul>' : '') +
+    (recap ? '<p class="recap"><b>Last week</b> you spent ' + esc(money(recap.spent, { round: true })) + (recap.before ? ' (' + esc(money(Math.abs(recap.spent - recap.before), { round: true })) + (recap.spent <= recap.before ? ' less' : ' more') + ' than the week before)' : '') + '. Most went to ' + esc(recap.top.toLowerCase()) + '.</p>' : '') +
+    '</section>';
+}
+function quickLog(form, cat) {
+  const cents = E.toCents(form.amount.value); const err = $('#qErr');
+  if (cents === null || cents <= 0) { err.textContent = 'Type the amount first, for example 12.50.'; err.hidden = false; form.amount.setAttribute('aria-invalid', 'true'); form.amount.focus(); return; }
+  const tx = { id: 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), date: TODAY, payee: cat, amount: -cents, category: cat, note: '' };
+  const r = E.upsertTx(data, tx); if (r.errors && Object.keys(r.errors).length) { err.textContent = Object.values(r.errors)[0]; err.hidden = false; return; }
+  commit(r.data, 'Logged: ' + money(cents) + ' for ' + cat.toLowerCase() + '.'); const a = $('#qAmt'); if (a) a.focus();
+}
+function reminderForm() {
+  openForm('A daily reminder', '<p>Pick a time. Your phone\'s calendar then reminds you every day to log what you spent. Nothing is sent anywhere, and you can delete the event at any time.</p>' + field('time', 'Time', '<input id="f-time" name="time" type="time" value="20:30" required>'), fd => {
+    const url = location.href.split('#')[0] + '#/overview';
+    download('expense-radar-reminder.ics', E.reminderIcs(String(fd.get('time') || '20:30'), url, TODAY, 'r' + Date.now().toString(36)), 'text/calendar');
+    toast('Open the downloaded file to add the reminder to your calendar.'); return null;
+  }, 'Add to my calendar');
+}
 function overview() {
   const m = ui.month; const prev = E.addMonths(m, -1);
   const t = E.totals(E.inMonth(data.transactions, m)); const p = E.totals(E.inMonth(data.transactions, prev));
@@ -118,7 +188,7 @@ function overview() {
     : t.income === 0 && isNow ? 'So far ' + money(t.spent, { round: true }) + ' went out this month. Your income usually arrives later in the month.'
     : t.balance >= 0 ? 'You kept ' + money(t.balance, { round: true }) + ' of ' + money(t.income, { round: true }) + (isNow ? ' so far this month.' : '.')
     : 'You spent ' + money(-t.balance, { round: true }) + ' more than came in' + (isNow ? ' so far this month.' : '.');
-  return head(isNow ? 'This month' : 'Overview', esc(E.monthName(m)), esc(say), monthPicker()) +
+  return (isNow ? todayBox() : '') + head(isNow ? 'This month' : 'Overview', esc(E.monthName(m)), esc(say), monthPicker()) +
     '<section class="figs" aria-label="This month in figures">' +
       '<div class="fig"><div class="k">Money in</div><div class="v' + (t.income > 0 ? ' pos' : '') + '">' + esc(money(t.income)) + '</div><div class="d">' + delta(t.income, p.income) + '</div></div>' +
       '<div class="fig"><div class="k">Money out</div><div class="v">' + esc(money(t.spent)) + '</div><div class="d">' + delta(t.spent, p.spent) + '</div></div>' +
@@ -293,7 +363,7 @@ function txForm(t) {
   const catOpts = list => list.map(c => '<option' + (t.category === c ? ' selected' : '') + '>' + esc(c) + '</option>').join('');
   openForm(isNew ? 'Add a transaction' : 'Change a transaction',
     '<fieldset class="kind" style="border:0;padding:0;margin:0 0 14px"><legend class="sr">Kind</legend><label><input type="radio" name="kind" value="out"' + (out ? ' checked' : '') + '>Money out</label><label><input type="radio" name="kind" value="in"' + (!out ? ' checked' : '') + '>Money in</label></fieldset>' +
-    '<div class="two">' + field('amount', 'Amount (€)', '<input id="f-amount" name="amount" inputmode="decimal" autocomplete="off" value="' + esc(amt) + '" placeholder="0.00" autofocus>') + field('date', 'Date', '<input id="f-date" name="date" type="date" value="' + esc(t.date) + '" max="' + E.addDays(TODAY, 366) + '">') + '</div>' +
+    '<div class="two">' + field('amount', 'Amount (' + curSym() + ')', '<input id="f-amount" name="amount" inputmode="decimal" autocomplete="off" value="' + esc(amt) + '" placeholder="0.00" autofocus>') + field('date', 'Date', '<input id="f-date" name="date" type="date" value="' + esc(t.date) + '" max="' + E.addDays(TODAY, 366) + '">') + '</div>' +
     field('payee', 'Payee', '<input id="f-payee" name="payee" list="payees" maxlength="80" value="' + esc(t.payee) + '" autocomplete="off">', 'Who you paid, or who paid you.') + '<datalist id="payees">' + payees.map(p => '<option value="' + esc(p) + '">').join('') + '</datalist>' +
     field('category', 'Category', '<select id="f-category" name="category"><optgroup label="Spending">' + catOpts(SPEND) + '</optgroup><optgroup label="Income">' + catOpts(E.INCOME_CATEGORIES) + '</optgroup></select>') +
     field('note', 'Note', '<input id="f-note" name="note" maxlength="200" value="' + esc(t.note) + '">', 'Optional.'),
@@ -343,7 +413,7 @@ document.addEventListener('click', e => {
     case 'budget': { const c = el.dataset.cat; const cur = data.budgets[c] || 0; const f = E.forecast(data.transactions, THIS_MONTH); const est = f.ready ? (f.perCategory.find(x => x.category === c) || {}).estimate : 0;
       openForm('Budget for ' + c, field('limit', 'Each month (€)', '<input id="f-limit" name="limit" inputmode="decimal" value="' + (cur ? (cur / 100).toFixed(2) : est ? (Math.ceil(est / 1000) * 10).toFixed(2) : '') + '" autofocus>', est ? 'Your average for the last three months is ' + money(est) + ' (an estimate). Enter 0 to remove the budget.' : 'Enter 0 to remove the budget.'),
         fd => { const v = E.toCents(String(fd.get('limit') || '0')); if (v === null || v < 0) return { limit: 'Enter an amount, like 150.' }; const r = E.setBudget(data, c, v); if (r.error) return { limit: r.error }; commit(r.data, v ? 'Budget for ' + c + ': ' + money(v) + ' a month.' : 'The budget for ' + c + ' was removed.'); return null; }); break; }
-    case 'sub-add': openForm('Add a subscription', field('name', 'Name', '<input id="f-name" name="name" maxlength="60" autofocus>') + '<div class="two">' + field('amount', 'Amount (€)', '<input id="f-amount" name="amount" inputmode="decimal">') + field('cadence', 'How often', '<select id="f-cadence" name="cadence"><option>Monthly</option><option>Yearly</option><option>Weekly</option></select>') + '</div>' + field('next', 'Next payment', '<input id="f-next" name="next" type="date" value="' + E.addDays(TODAY, 30) + '">'),
+    case 'sub-add': openForm('Add a subscription', field('name', 'Name', '<input id="f-name" name="name" maxlength="60" autofocus>') + '<div class="two">' + field('amount', 'Amount (' + curSym() + ')', '<input id="f-amount" name="amount" inputmode="decimal">') + field('cadence', 'How often', '<select id="f-cadence" name="cadence"><option>Monthly</option><option>Yearly</option><option>Weekly</option></select>') + '</div>' + field('next', 'Next payment', '<input id="f-next" name="next" type="date" value="' + E.addDays(TODAY, 30) + '">'),
       fd => { const name = String(fd.get('name') || '').trim(); const amount = E.toCents(fd.get('amount')); const next = String(fd.get('next')); const errs = {}; if (!name) errs.name = 'Give it a name.'; if (!amount || amount <= 0) errs.amount = 'Enter an amount, like 9.99.'; if (!E.isDate(next)) errs.next = 'Enter a date.'; if (Object.keys(errs).length) return errs;
         commit({ ...data, subscriptions: [...data.subscriptions, { id: 'm' + Date.now().toString(36), name, amount, cadence: String(fd.get('cadence')), category: 'Subscriptions', next }] }, 'Added: ' + name + '.'); return null; }, 'Add'); break;
     case 'sub-del': commit({ ...data, subscriptions: data.subscriptions.filter(s => s.id !== id) }, 'Removed.'); break;
@@ -363,7 +433,15 @@ document.addEventListener('click', e => {
     case 'period': ui.period = el.dataset.k; render(); break;
     case 'report-csv': { const [from, to] = period(); download('expense-radar-report-' + from + '-to-' + to + '.csv', E.toCsv(data.transactions.filter(t => t.date >= from && t.date <= to).sort((a, b) => a.date.localeCompare(b.date))), 'text/csv'); toast('The CSV file was downloaded.'); break; }
     case 'print': print(); break;
-    case 'reset': confirmBox('Reset the demo?', 'Your changes are removed and the sample of a fictional person comes back.', 'Reset', () => { try { localStorage.removeItem(KEY); } catch (err) { /* nothing saved */ } data = seed(TODAY); ui.sel.clear(); ui.imp = { step: 1 }; render(); toast('The demo was reset.'); }); break;
+    case 'checkin': commit({ ...data, checkins: [...new Set([...(data.checkins || []), TODAY])].slice(-400) }, 'Noted: nothing spent today.'); break;
+    case 'reminder': reminderForm(); break;
+    case 'due-log': { const d = E.dueNow(data, TODAY).find(x => x.id === id); if (!d) break; const r = E.upsertTx(data, { id: 't' + Date.now().toString(36), date: TODAY, payee: d.payee, amount: -d.amount, category: d.category, note: '' }); commit({ ...r.data, dismissed: [...(r.data.dismissed || []), d.id] }, 'Logged: ' + d.payee + '.'); break; }
+    case 'start-sample': firstVisit = false; data = seed(TODAY); save(); location.hash = '#/overview'; render(); break;
+    case 'start-own': confirmBox('Start with your own money?', 'The sample is removed and you get an empty space for your own figures, saved on this device.', 'Start', () => startOwn(data.currency || 'EUR')); break;
+    case 'backup': backup(); break;
+    case 'restore': $('#restoreFile').click(); break;
+    case 'install': installHelp(); break;
+    case 'reset': confirmBox('Reset the sample?', 'Your changes to the sample are removed and the original made-up figures come back.', 'Reset', () => { try { localStorage.removeItem(KEY); } catch (err) { /* nothing saved */ } data = seed(TODAY); ui.sel.clear(); ui.imp = { step: 1 }; render(); toast('The demo was reset.'); }); break;
     case 'empty': confirmBox('Start empty?', 'Every transaction, budget and subscription in this browser is removed, so you can try it with your own made-up figures.', 'Start empty', () => { try { localStorage.removeItem(KEY); } catch (err) { /* nothing saved */ } data = E.emptyData(); ui.sel.clear(); save(); render(); toast('Empty. Add a transaction or import a file.'); }); break;
   }
 });
@@ -379,6 +457,7 @@ document.addEventListener('change', e => {
   if (el.matches('[data-opt]')) ui.imp.opts[el.dataset.opt] = el.type === 'checkbox' ? el.checked : el.value;
   if (el.matches('[data-opt="hasHeader"]')) render();
   if (el.matches('[data-r]')) { ui[el.dataset.r] = el.value; render(); }
+  if (el.id === 'restoreFile' && el.files[0]) { const f = el.files[0]; el.value = ''; if (f.size > 20_000_000) { toast('This file is larger than 20 MB.'); return; } f.text().then(restoreFrom); return; }
   if (el.id === 'file' && el.files[0]) { const f = el.files[0]; if (f.size > 2_000_000) { toast('This file is larger than 2 MB.'); return; } f.text().then(readImport); }
 });
 document.addEventListener('dragover', e => { const d = e.target.closest && e.target.closest('#drop'); if (d) { e.preventDefault(); d.classList.add('on'); } });
@@ -386,6 +465,11 @@ document.addEventListener('dragleave', e => { const d = e.target.closest && e.ta
 document.addEventListener('drop', e => { const d = e.target.closest && e.target.closest('#drop'); if (!d) return; e.preventDefault(); const f = e.dataTransfer.files[0]; if (!f) return; if (f.size > 2_000_000) { toast('This file is larger than 2 MB.'); return; } f.text().then(readImport); });
 document.addEventListener('keydown', e => { if (e.key === 'n' && !e.ctrlKey && !e.metaKey && !dlg.open && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) { e.preventDefault(); txForm(); } });
 
+document.addEventListener('submit', e => {
+  if (e.target.matches('[data-form="start-own"]')) { e.preventDefault(); startOwn(e.target.currency.value); }
+  if (e.target.matches('[data-form="quick"]')) { e.preventDefault(); const c = e.submitter && e.submitter.value; if (c) quickLog(e.target, c); else { const a = $('#qAmt'); if (a) { $('#qErr').textContent = 'Now tap what it was for.'; $('#qErr').hidden = false; } } }
+});
+if ('serviceWorker' in navigator) window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js', { scope: './' }).catch(() => { /* offline use is optional */ }); });
 if (!location.hash) history.replaceState(null, '', '#/overview');
 lastView = route().name;
 render();

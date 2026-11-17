@@ -306,3 +306,48 @@ export function setBudget(data, category, cents) {
   const budgets = { ...data.budgets }; if (cents === 0) delete budgets[category]; else budgets[category] = cents;
   return { data: { ...data, budgets } };
 }
+
+// ---------- the daily habit: small numbers worth opening the app for ----------
+// Monday of the week that holds `date`.
+export function weekStart(date) { const d = new Date(date + 'T00:00:00Z'); const dow = (d.getUTCDay() + 6) % 7; return addDays(date, -dow); }
+const spentIn = (txs, from, to) => -sum(txs.filter(t => t.amount < 0 && t.date >= from && t.date <= to).map(t => t.amount));
+// Spent today and this week (Monday to today).
+export function spentNow(data, today) { return { today: spentIn(data.transactions, today, today), week: spentIn(data.transactions, weekStart(today), today) }; }
+// What is left per day this month, from the budgets. null when there are no budgets.
+export function perDayLeft(data, today) {
+  const month = monthOf(today); const list = budgetStatus(data, month, today);
+  if (!list.length) return null;
+  const left = list.reduce((s, b) => s + Math.max(0, b.left), 0);
+  const daysLeft = daysInMonth(month) - Number(today.slice(8, 10)) + 1;
+  return { left, daysLeft, perDay: Math.floor(left / daysLeft), over: list.filter(b => b.left < 0).map(b => b.category) };
+}
+// Days in the last n (today included) with at least one entry or a "nothing spent" check. Forgiving: a missed day just isn't counted.
+export function loggedDays(data, today, n = 7) {
+  const from = addDays(today, -(n - 1));
+  const days = new Set([...data.transactions.map(t => t.date), ...(data.checkins || [])].filter(d => d >= from && d <= today));
+  return { count: days.size, of: n, today: days.has(today) };
+}
+// Last full week (Monday to Sunday) against the week before.
+export function weekRecap(data, today) {
+  const start = addDays(weekStart(today), -7); const end = addDays(start, 6);
+  const txs = data.transactions.filter(t => t.amount < 0 && t.date >= start && t.date <= end);
+  if (!txs.length) return null;
+  const spent = spentIn(data.transactions, start, end); const before = spentIn(data.transactions, addDays(start, -7), addDays(start, -1));
+  const top = byCategory(txs)[0];
+  return { start, end, spent, before, top: top ? top.category : '', topSpent: top ? top.spent : 0, count: txs.length };
+}
+// Regular payments that are usually paid around now and are not logged yet: confirm with one tap.
+export function dueNow(data, today) {
+  const hidden = new Set(data.dismissed || []);
+  return detectRecurring(data.transactions, today).filter(r => !r.stopped && r.next <= addDays(today, 1) && r.next >= addDays(today, -6) && !hidden.has('due-' + r.key + '-' + r.next))
+    .map(r => ({ id: 'due-' + r.key + '-' + r.next, payee: r.payee, amount: r.amount, category: r.category, next: r.next }));
+}
+// A daily calendar reminder (iCalendar file). Local time, nothing is sent anywhere.
+export function reminderIcs(time, url, today, uid) {
+  const [h, m] = String(time).split(':').map(Number);
+  const hh = String(Math.min(23, Math.max(0, h || 0))).padStart(2, '0'); const mm = String(Math.min(59, Math.max(0, m || 0))).padStart(2, '0');
+  const day = today.replace(/-/g, ''); const stamp = new Date().toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z';
+  return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Expense Radar//EN', 'CALSCALE:GREGORIAN', 'BEGIN:VEVENT', 'UID:' + uid + '@expense-radar', 'DTSTAMP:' + stamp,
+    'DTSTART:' + day + 'T' + hh + mm + '00', 'DURATION:PT5M', 'RRULE:FREQ=DAILY', 'SUMMARY:Log today\'s spending', 'DESCRIPTION:Two taps in Expense Radar: ' + url, 'URL:' + url,
+    'BEGIN:VALARM', 'ACTION:DISPLAY', 'TRIGGER:PT0M', 'DESCRIPTION:Log today\'s spending', 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n') + '\r\n';
+}

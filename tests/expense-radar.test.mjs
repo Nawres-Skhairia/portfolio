@@ -127,3 +127,27 @@ test('the sample data is valid and tells a story: an overspend, an unusual purch
   assert.deepEqual(seed('2026-11-17'), d, 'same day, same sample');
   assert.ok(E.isValidData(seed('2027-03-01')));
 });
+
+test('daily habit: spent now, per day left, logged days, recap, due now, reminder file', () => {
+  const d = { ...E.emptyData(), transactions: [
+    { id: 'a', date: '2026-11-17', payee: 'Bakery', amount: -450, category: 'Groceries', note: '' },
+    { id: 'b', date: '2026-11-16', payee: 'Bus', amount: -200, category: 'Transport', note: '' },
+    { id: 'c', date: '2026-11-10', payee: 'Shop', amount: -3000, category: 'Shopping', note: '' },
+    { id: 'd', date: '2026-11-04', payee: 'Shop', amount: -1000, category: 'Shopping', note: '' },
+  ], checkins: ['2026-11-15'] };
+  assert.equal(E.weekStart('2026-11-17'), '2026-11-16'); // a Tuesday; the week starts on Monday
+  assert.deepEqual(E.spentNow(d, '2026-11-17'), { today: 450, week: 650 });
+  assert.equal(E.perDayLeft(d, '2026-11-17'), null);
+  const b = { ...d, budgets: { Groceries: 20000, Shopping: 3000 } };
+  const p = E.perDayLeft(b, '2026-11-17');
+  assert.equal(p.daysLeft, 14); assert.equal(p.left, 19550); assert.equal(p.perDay, 1396); assert.deepEqual(p.over, ['Shopping']);
+  assert.deepEqual(E.loggedDays(d, '2026-11-17', 7), { count: 3, of: 7, today: true });
+  const r = E.weekRecap(d, '2026-11-17');
+  assert.equal(r.spent, 3000); assert.equal(r.before, 1000); assert.equal(r.top, 'Shopping');
+  const ics = E.reminderIcs('20:30', 'https://example.test/x/#/overview', '2026-11-17', 'u1');
+  assert.match(ics, /DTSTART:20261117T203000/); assert.match(ics, /RRULE:FREQ=DAILY/); assert.ok(ics.endsWith('END:VCALENDAR\r\n'));
+  const monthly = ['2026-08-03', '2026-09-03', '2026-10-03'].map((date, i) => ({ id: 'm' + i, date, payee: 'Streamly', amount: -1299, category: 'Subscriptions', note: '' }));
+  const due = E.dueNow({ ...E.emptyData(), transactions: monthly }, '2026-11-04');
+  assert.equal(due.length, 1); assert.equal(due[0].amount, 1299);
+  assert.equal(E.dueNow({ ...E.emptyData(), transactions: monthly, dismissed: [due[0].id] }, '2026-11-04').length, 0);
+});

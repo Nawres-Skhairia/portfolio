@@ -233,3 +233,40 @@ dialog::backdrop { background: rgba(15, 19, 28, .45); }
   body { background: #fff; color: #000; } .card, .figs { box-shadow: none; border-color: #ccc; break-inside: avoid; }
   .main { padding: 0; max-width: none; }
 }
+
+/* First visit: your own money or the sample */
+.welcome { max-width: 860px; margin: 48px auto; padding: 0 24px; }
+.welcome h1 { font-size: 34px; letter-spacing: -.02em; margin: 6px 0 10px; }
+.welcome .lede { color: var(--ink2); max-width: 640px; margin: 0 0 28px; }
+.choices { display: grid; grid-template-columns: 1.2fr 1fr; gap: 16px; margin-bottom: 20px; }
+.choice { background: var(--card); border: 1px solid var(--rule); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.choice.main { border-color: var(--ink); }
+.choice h2 { font-size: 17px; margin: 0; }
+.choice p { margin: 0; color: var(--ink2); font-size: 14px; }
+.choice label { font-size: 13px; color: var(--ink2); }
+.choice select { min-width: 140px; }
+.band-in.own { border-style: solid; }
+@media (max-width: 700px) { .choices { grid-template-columns: 1fr; } .welcome { margin: 24px auto; } .welcome h1 { font-size: 27px; } }
+
+/* Today: log in two taps, one useful number */
+.today { display: grid; grid-template-columns: minmax(200px, 1fr) 2fr; gap: 8px 28px; background: var(--card); border: 1px solid var(--rule); border-radius: 14px; padding: 20px 22px; margin: 22px 0 6px; }
+.today .k { margin: 0; font-size: 13px; color: var(--ink2); }
+.today .big { margin: 2px 0 4px; font: 600 34px/1.1 var(--mono); letter-spacing: -.02em; }
+.today .small { margin: 0; }
+.quick label { display: block; font-size: 13px; color: var(--ink2); margin-bottom: 6px; }
+.q-row { display: flex; align-items: center; border: 1px solid var(--rule2); border-radius: 10px; background: var(--paper); padding: 0 12px; max-width: 260px; }
+.q-row:focus-within { border-color: var(--ink); }
+.q-cur { color: var(--ink3); font: 500 20px var(--mono); }
+.q-row input { border: 0; background: transparent; font: 500 24px var(--mono); padding: 8px 8px; width: 100%; min-width: 0; color: var(--ink); outline: none; }
+.quick .small { margin: 6px 0 8px; }
+.q-cats { display: flex; flex-wrap: wrap; gap: 8px; }
+.chipbtn { border: 1px solid var(--rule2); background: var(--paper); color: var(--ink); border-radius: 999px; padding: 9px 14px; font: 500 14px var(--sans); cursor: pointer; min-height: 40px; }
+.chipbtn:hover { background: var(--sunk); }
+.chipbtn:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.quick .err { color: var(--over); font-size: 13px; margin: 8px 0 0; }
+.t-foot { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; border-top: 1px solid var(--rule); padding-top: 12px; margin-top: 6px; font-size: 13.5px; color: var(--ink2); }
+.t-foot p { margin: 0; }
+.today .due { grid-column: 1 / -1; list-style: none; margin: 0; padding: 0; }
+.today .due li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 0; border-top: 1px solid var(--rule); font-size: 14px; }
+.today .recap { grid-column: 1 / -1; margin: 0; font-size: 14px; color: var(--ink2); }
+@media (max-width: 700px) { .today { grid-template-columns: 1fr; padding: 16px; } .q-row { max-width: none; } .today .big { font-size: 30px; } }
