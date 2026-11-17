@@ -79,10 +79,13 @@ table, .num, output { font-variant-numeric: tabular-nums; }
 }
 @media (max-width: 380px) { .top .tag { display: none; } }
 
-/* smooth page change between the home page and the tools (browsers that support it) */
-@view-transition { navigation: auto; }
-::view-transition-old(root) { animation: vt-out .28s var(--ease) both; }
-::view-transition-new(root) { animation: vt-in .42s var(--ease) both; }
-@keyframes vt-out { to { opacity: 0; transform: translateY(-8px); } }
-@keyframes vt-in { from { opacity: 0; transform: translateY(12px); } }
-@media (prefers-reduced-motion: reduce) { @view-transition { navigation: none; } }
+/* page change: the tool opens from under the dark panel that covered the home page, and its content rises in.
+   Leaving with the Back button drops the panel again (page-fx.js). Nothing for reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  html::after { content: ""; position: fixed; inset: 0; z-index: 200; pointer-events: none; background: var(--ink); animation: pt-away .85s .05s cubic-bezier(.7, 0, .2, 1) forwards; }
+  main { animation: pt-rise 1.1s .25s var(--ease) both; }
+  html.pt-leave::after { animation: pt-drop .6s cubic-bezier(.7, 0, .2, 1) forwards; transform: translateY(-100%); }
+}
+@keyframes pt-away { to { transform: translateY(-100%); border-radius: 0 0 50% 50% / 0 0 12vh 12vh; } }
+@keyframes pt-drop { from { transform: translateY(-100%); border-radius: 0 0 50% 50% / 0 0 12vh 12vh; } to { transform: none; border-radius: 0; } }
+@keyframes pt-rise { from { opacity: 0; transform: translateY(60px); } }

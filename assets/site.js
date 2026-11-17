@@ -23,6 +23,39 @@
 
   if (calm) return;
 
+  // page change to a tool: a dark panel sweeps up and the tool's picture grows to fill the screen, then the tool opens
+  document.querySelectorAll('a.row').forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || a.target) return;
+      e.preventDefault();
+      var href = a.href, img = a.querySelector('.media img');
+      var panel = document.createElement('div'); panel.className = 'pt-panel';
+      document.body.appendChild(panel);
+      if (img && img.animate) {
+        var r = img.getBoundingClientRect(), pic = document.createElement('img');
+        pic.src = img.currentSrc || img.src; pic.alt = ''; pic.className = 'pt-pic';
+        pic.style.left = r.left + 'px'; pic.style.top = r.top + 'px'; pic.style.width = r.width + 'px'; pic.style.height = r.height + 'px';
+        document.body.appendChild(pic);
+        img.style.visibility = 'hidden';
+        var vw = window.innerWidth, vh = window.innerHeight;
+        var k = Math.min(vw * 0.86 / r.width, vh * 0.7 / r.height);
+        var dx = vw / 2 - (r.left + r.width / 2), dy = vh / 2 - (r.top + r.height / 2);
+        pic.animate([
+          { transform: 'none' },
+          { transform: 'translate(' + dx + 'px,' + dy + 'px) scale(' + k + ')', opacity: 1, offset: 0.7 },
+          { transform: 'translate(' + dx + 'px,' + (dy - 20) + 'px) scale(' + (k * 1.03) + ')', opacity: 1 }
+        ], { duration: 1000, easing: 'cubic-bezier(.7,0,.2,1)', fill: 'forwards' });
+      }
+      requestAnimationFrame(function () { panel.classList.add('go'); });
+      setTimeout(function () { location.href = href; }, 950);
+    });
+  });
+  window.addEventListener('pageshow', function (e) {
+    if (!e.persisted) return;
+    document.querySelectorAll('.pt-panel, .pt-pic').forEach(function (n) { n.remove(); });
+    document.querySelectorAll('.media img').forEach(function (i) { i.style.visibility = ''; });
+  });
+
   // proof panel: the test counts run up with the lines (the final number is already in the page)
   document.querySelectorAll('.proof .count').forEach(function (el, i) {
     var to = parseInt(el.textContent, 10), start = 0, delay = i ? 1900 : 600, dur = 700;
@@ -40,29 +73,6 @@
   });
 
   if (!fine) return;
-
-  var root = document.documentElement;
-  root.classList.add('has-cursor');
-  var ring = document.querySelector('.cursor');
-  var tx = -100, ty = -100, cx = -100, cy = -100, raf = 0;
-
-  function loop() {
-    cx += (tx - cx) * 0.22;
-    cy += (ty - cy) * 0.22;
-    if (ring) { ring.style.setProperty('--cx', cx + 'px'); ring.style.setProperty('--cy', cy + 'px'); }
-    raf = (Math.abs(tx - cx) + Math.abs(ty - cy) > 0.3) ? requestAnimationFrame(loop) : 0;
-  }
-  document.addEventListener('pointermove', function (e) {
-    if (e.pointerType !== 'mouse') return;
-    tx = e.clientX; ty = e.clientY;
-    root.classList.add('cursor-on');
-    root.classList.toggle('cursor-link', !!e.target.closest('a, button'));
-    root.classList.toggle('cursor-row', !!e.target.closest('.row'));
-    if (!raf) raf = requestAnimationFrame(loop);
-  }, { passive: true });
-  document.addEventListener('pointerleave', function () { root.classList.remove('cursor-on', 'cursor-row'); });
-  document.addEventListener('pointerdown', function () { root.classList.add('cursor-down'); });
-  document.addEventListener('pointerup', function () { root.classList.remove('cursor-down'); });
 
   // light that follows the pointer, and a slow drift of the screenshot
   function track(sel, fn) {

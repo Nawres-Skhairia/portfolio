@@ -25,3 +25,32 @@
   });
   window.addEventListener('pageshow', top);
 })();
+
+// Entrances on scroll and the page change from a tool. Runs in the head so nothing flashes before it starts.
+// Only when the visitor allows motion; the page reads the same without it. Nothing is stored.
+(function () {
+  'use strict';
+  var root = document.documentElement;
+  if (!('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  root.classList.add('fx');
+  try {
+    var ref = document.referrer && new URL(document.referrer);
+    if (ref && ref.origin === location.origin && ref.pathname.indexOf('/projects/') === 0) root.classList.add('from-tool');
+  } catch (e) {}
+  var showAll = function () { document.querySelectorAll('.section-head, .rows li, .about, .contact-box').forEach(function (el) { el.classList.add('in'); }); };
+  document.addEventListener('DOMContentLoaded', function () {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) { if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); } });
+    }, { rootMargin: '0px 0px -12% 0px', threshold: 0.05 });
+    document.querySelectorAll('.section-head, .rows li, .about, .contact-box').forEach(function (el) { io.observe(el); });
+    // printing or jumping straight to a section shows everything
+    window.addEventListener('beforeprint', showAll);
+    if (location.hash) setTimeout(showAll, 50);
+  });
+  // Back/forward from the browser cache: no panel left over
+  window.addEventListener('pageshow', function (e) {
+    if (!e.persisted) return;
+    root.classList.remove('from-tool');
+    document.querySelectorAll('.pt-panel, .pt-pic').forEach(function (n) { n.remove(); });
+  });
+})();
