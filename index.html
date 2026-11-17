@@ -17,93 +17,145 @@
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="Nawres Skhairia: I create tools that make work feel lighter. Screenshots of some of the tools.">
   <meta name="twitter:card" content="summary_large_image">
-  <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/assets/fonts/fonts.css">
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="/assets/fonts/instrument-serif-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/assets/fonts/site-fonts.css">
   <link rel="stylesheet" href="styles.css">
   <script src="/assets/top.js"></script>
+  <script src="/assets/site.js" defer></script>
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
 
-  <header class="wrap nav">
-    <a class="logo" href="#top">N. Skhairia</a>
-    <nav aria-label="Main">
-      <a href="#work">Work</a>
-      <a href="#about">About</a>
-      <a class="nav-cta" href="#contact">Contact</a>
-    </nav>
+  <header class="site-head">
+    <div class="wrap nav">
+      <a class="logo" href="#top"><span class="logo-mark" aria-hidden="true">N</span><span class="logo-text">N. Skhairia</span></a>
+      <nav aria-label="Main">
+        <a href="#work">Work</a>
+        <a href="#about">About</a>
+        <span class="cv-pill"><span class="sr">CV, in progress</span><span aria-hidden="true">CV</span> <span class="badge" aria-hidden="true">In progress</span></span>
+        <a class="nav-cta" href="#contact">Contact</a>
+      </nav>
+    </div>
+    <span class="progress" aria-hidden="true"></span>
   </header>
 
   <main id="main">
     <section id="top" class="wrap hero">
       <div class="hero-text">
-        <p class="hand">hi, I'm Nawres</p>
-        <h1>I create tools that make work feel lighter.</h1>
+        <p class="eyebrow"><span class="dot" aria-hidden="true"></span>hi, I'm Nawres</p>
+        <h1>I create tools that make work feel <em>lighter.</em></h1>
         <p class="lead">Simulators, trackers and dashboards, each one designed to be clear, friendly and genuinely useful. Created through vibe coding, refined by hand.</p>
         <div class="actions">
-          <a class="btn btn-dark" href="#work">See my work</a>
-          <a class="btn btn-line" href="#contact">Get in touch</a>
+          <a class="btn btn-dark magnetic" href="#work">See my work <span class="arrow" aria-hidden="true">→</span></a>
+          <a class="btn btn-line magnetic" href="#contact">Get in touch</a>
         </div>
       </div>
-      <div class="sticker" aria-hidden="true">Curious mind, tester's eye.</div>
+
+      <!-- NEW for Nawres's first look (Olivia's proof panel): real report lines from Test Pilot, bug 1. Remove if Nawres says no. -->
+      <a class="proof" href="/projects/test-pilot/" aria-label="Test Pilot: a real run with bug 1, not ready to ship, 1 of 19 tests failed">
+        <span class="proof-bar" aria-hidden="true"><i></i><i></i><i></i><span>test-pilot · bug 1</span></span>
+        <span class="proof-body" aria-hidden="true">
+          <span class="ln ok"><b>✓</b> Read<em>AC1 – AC6</em></span>
+          <span class="ln ok"><b>✓</b> Plan<em><span class="count">19</span> tests</em></span>
+          <span class="ln ok"><b>✓</b> Check (fixed rules)</span>
+          <span class="ln ok"><b>✓</b> Run (robot)</span>
+          <span class="ln bad"><b>✗</b> T5 failed · AC1 · Boundary values</span>
+          <span class="ln verdict"><strong>Not ready to ship</strong><em>1 of <span class="count">19</span> tests failed.</em></span>
+        </span>
+      </a>
+      <a class="cue" href="#work" aria-label="See my work"><span></span></a>
     </section>
 
-    <section id="work" class="band">
+    <section id="work" class="section work">
       <div class="wrap">
         <div class="section-head">
-          <h2>Thoughtful tools for everyday work</h2>
-          <p class="hand light">more on the way!</p>
+          <div>
+            <p class="kicker">Work</p>
+            <h2>Thoughtful tools for everyday work</h2>
+          </div>
+          <p class="note">more on the way!</p>
         </div>
-        <div class="cards">
-          <a class="card card-link" href="/projects/test-pilot/">
-            <img class="shot-img" src="/assets/thumbs/test-pilot.jpg" alt="" width="840" height="546" loading="lazy">
-            <span class="for">Testing · For product teams &amp; testers</span>
-            <h3>Test Pilot</h3>
-            <p>Can a robot find the bug before your customers do? Pick one of six real-life bugs, press Test it, and watch a test plan run on a small booking form, step by step, until it says ready to ship or not.</p>
-            <span class="card-cta">Try it →</span>
-          </a>
-          <a class="card card-link" href="/projects/loan-simulator/">
-            <img class="shot-img" src="/assets/thumbs/loan-simulator.jpg" alt="" width="807" height="450" loading="lazy">
-            <span class="for">Finance · For banks, brokers &amp; borrowers</span>
-            <h3>Loan simulator</h3>
-            <p>The lowest rate isn't always the cheapest loan. Compare two bank offers with their fees, see the real total cost, check it fits the budget, and share the result in one link.</p>
-            <span class="card-cta">Try it →</span>
-          </a>
-          <a class="card card-link" href="/projects/hiring-desk/">
-            <img class="shot-img" src="/assets/thumbs/hiring-desk.jpg" alt="" width="840" height="546" loading="lazy">
-            <span class="for">HR · For recruiters &amp; hiring managers</span>
-            <h3>Hiring Desk</h3>
-            <p>For teams who recruit from a spreadsheet and an inbox. Open roles, a drag-and-drop pipeline, follow-up reminders and an alert when a candidate has waited too long. Past applicants stay searchable by skill.</p>
-            <span class="card-cta">Try it →</span>
-          </a>
-          <a class="card card-link" href="/projects/spreadsheet-xray/">
-            <img class="shot-img" src="/assets/thumbs/spreadsheet-xray.jpg" alt="" width="840" height="546" loading="lazy">
-            <span class="for">Spreadsheets · For anyone who inherits one</span>
-            <h3>Spreadsheet X-ray</h3>
-            <p>Explains the Excel file only one person understands: how the numbers are calculated, the rules hidden in its formulas, and what could quietly go wrong. You can even ask it questions, in French or English.</p>
-            <span class="card-cta">Try it →</span>
-          </a>
+
+        <ol class="rows">
+          <li>
+            <a class="row" href="/projects/test-pilot/">
+              <span class="row-text">
+                <span class="row-meta"><span class="num" aria-hidden="true">01</span><span class="for">Testing · For product teams &amp; testers</span></span>
+                <h3>Test Pilot</h3>
+                <span class="row-p">Can a robot find the bug before your customers do? Pick one of six real-life bugs, press Test it, and watch a test plan run on a small booking form, step by step, until it says ready to ship or not.</span>
+                <!-- NEW for Nawres's first look: proof facts. Remove if Nawres says no. -->
+                <span class="facts"><span>6 planted bugs</span><span>19 tests</span><span>runs in your browser</span></span>
+                <span class="card-cta">Try it <span class="arrow" aria-hidden="true">→</span></span>
+              </span>
+              <span class="media"><picture><source media="(max-width: 600px)" srcset="/assets/work/test-pilot-m.webp" type="image/webp" width="860" height="609"><source media="(max-width: 600px)" srcset="/assets/work/test-pilot-m.jpg" width="860" height="609"><source srcset="/assets/work/test-pilot.webp" type="image/webp"><img src="/assets/work/test-pilot.jpg" alt="" width="1600" height="613" loading="lazy" decoding="async"></picture></span>
+            </a>
+          </li>
+          <li>
+            <a class="row" href="/projects/loan-simulator/">
+              <span class="row-text">
+                <span class="row-meta"><span class="num" aria-hidden="true">02</span><span class="for">Finance · For banks, brokers &amp; borrowers</span></span>
+                <h3>Loan simulator</h3>
+                <span class="row-p">The lowest rate isn't always the cheapest loan. Compare two bank offers with their fees, see the real total cost, check it fits the budget, and share the result in one link.</span>
+                <span class="facts"><span>2 offers side by side</span><span>real total cost</span><span>share in one link</span></span>
+                <span class="card-cta">Try it <span class="arrow" aria-hidden="true">→</span></span>
+              </span>
+              <span class="media"><picture><source media="(max-width: 600px)" srcset="/assets/work/loan-simulator-m.webp" type="image/webp" width="860" height="616"><source media="(max-width: 600px)" srcset="/assets/work/loan-simulator-m.jpg" width="860" height="616"><source srcset="/assets/work/loan-simulator.webp" type="image/webp"><img src="/assets/work/loan-simulator.jpg" alt="" width="1600" height="969" loading="lazy" decoding="async"></picture></span>
+            </a>
+          </li>
+          <li>
+            <a class="row" href="/projects/hiring-desk/">
+              <span class="row-text">
+                <span class="row-meta"><span class="num" aria-hidden="true">03</span><span class="for">HR · For recruiters &amp; hiring managers</span></span>
+                <h3>Hiring Desk</h3>
+                <span class="row-p">For teams who recruit from a spreadsheet and an inbox. Open roles, a drag-and-drop pipeline, follow-up reminders and an alert when a candidate has waited too long. Past applicants stay searchable by skill.</span>
+                <span class="facts"><span>drag-and-drop pipeline</span><span>follow-up reminders</span><span>search by skill</span></span>
+                <span class="card-cta">Try it <span class="arrow" aria-hidden="true">→</span></span>
+              </span>
+              <span class="media"><picture><source media="(max-width: 600px)" srcset="/assets/work/hiring-desk-m.webp" type="image/webp" width="860" height="633"><source media="(max-width: 600px)" srcset="/assets/work/hiring-desk-m.jpg" width="860" height="633"><source srcset="/assets/work/hiring-desk.webp" type="image/webp"><img src="/assets/work/hiring-desk.jpg" alt="" width="1600" height="875" loading="lazy" decoding="async"></picture></span>
+            </a>
+          </li>
+          <li>
+            <a class="row" href="/projects/spreadsheet-xray/">
+              <span class="row-text">
+                <span class="row-meta"><span class="num" aria-hidden="true">04</span><span class="for">Spreadsheets · For anyone who inherits one</span></span>
+                <h3>Spreadsheet X-ray</h3>
+                <span class="row-p">Explains the Excel file only one person understands: how the numbers are calculated, the rules hidden in its formulas, and what could quietly go wrong. You can even ask it questions, in French or English.</span>
+                <span class="facts"><span>formulas explained</span><span>French &amp; English</span><span>runs in your browser</span></span>
+                <span class="card-cta">Try it <span class="arrow" aria-hidden="true">→</span></span>
+              </span>
+              <span class="media"><picture><source media="(max-width: 600px)" srcset="/assets/work/spreadsheet-xray-m.webp" type="image/webp" width="860" height="642"><source media="(max-width: 600px)" srcset="/assets/work/spreadsheet-xray-m.jpg" width="860" height="642"><source srcset="/assets/work/spreadsheet-xray.webp" type="image/webp"><img src="/assets/work/spreadsheet-xray.jpg" alt="" width="1600" height="416" loading="lazy" decoding="async"></picture></span>
+            </a>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section id="about" class="section">
+      <div class="wrap about">
+        <figure class="portrait">
+          <img src="/assets/nawres.jpg" width="400" height="400" alt="Portrait of Nawres Skhairia" loading="lazy" decoding="async">
+        </figure>
+        <div class="about-text">
+          <p class="kicker">Curious mind, tester's eye.</p>
+          <h2>Behind the tools</h2>
+          <p>Hi, I'm Nawres. Alongside my work, I create web tools through vibe coding. I shape the idea, guide the build, then test and refine every detail until the tool feels effortless to use.</p>
+          <p>I love the moment an idea becomes something real that people can open and use. Every tool here is made with curiosity, care and a healthy dose of perfectionism.</p>
+          <p>Take a look around and try them out. I'd genuinely love to hear what you think.</p>
         </div>
       </div>
     </section>
 
-    <section id="about" class="wrap about">
-      <img class="avatar" src="/assets/nawres.jpg" width="400" height="400" alt="Portrait of Nawres Skhairia" loading="lazy">
-      <div class="about-text">
-        <h2>Behind the tools</h2>
-        <p>Hi, I'm Nawres. Alongside my work, I create web tools through vibe coding. I shape the idea, guide the build, then test and refine every detail until the tool feels effortless to use.</p>
-        <p>I love the moment an idea becomes something real that people can open and use. Every tool here is made with curiosity, care and a healthy dose of perfectionism.</p>
-        <p>Take a look around and try them out. I'd genuinely love to hear what you think.</p>
-      </div>
-    </section>
-
-    <section id="contact" class="wrap">
+    <section id="contact" class="wrap contact-wrap">
       <div class="contact-box">
-        <h2>Let's talk.</h2>
+        <p class="kicker">Contact</p>
+        <h2>Let's <em>talk.</em></h2>
         <p>Feedback, ideas, or just curious about how something was made: I'd love to hear from you.</p>
         <div class="actions">
-          <a class="btn btn-dark" href="mailto:skhairiyanawres@gmail.com">skhairiyanawres@gmail.com</a>
-          <a class="btn btn-line" href="https://www.linkedin.com/in/nawres-skhairia-440a59143" target="_blank" rel="noopener">LinkedIn</a>
+          <a class="btn btn-dark magnetic" href="mailto:skhairiyanawres@gmail.com">skhairiyanawres@gmail.com</a>
+          <a class="btn btn-line magnetic" href="https://www.linkedin.com/in/nawres-skhairia-440a59143" target="_blank" rel="noopener">LinkedIn <span class="arrow" aria-hidden="true">↗</span></a>
+          <span class="cv-pill cv-pill-lg"><span class="sr">CV, in progress</span><span aria-hidden="true">CV</span> <span class="badge" aria-hidden="true">In progress</span></span>
         </div>
       </div>
     </section>
@@ -111,8 +163,7 @@
 
   <footer class="wrap footer">
     <p>© <span id="year">2026</span> Nawres Skhairia · <a href="/privacy/">Privacy</a> · No cookies, no tracking</p>
+    <a class="to-top" href="#top">↑ <span class="sr">Back to top</span></a>
   </footer>
-
-  <script src="/assets/site.js"></script>
 </body>
 </html>
