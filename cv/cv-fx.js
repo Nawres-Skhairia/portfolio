@@ -175,7 +175,43 @@
       track();
     }
 
+    /* 8. Dates roll up like a counter when each role comes into view (the real dates stay for screen readers and print). */
+    var whens = [];
+    document.querySelectorAll('.cv-job .cv-when').forEach(function (el) {
+      var txt = el.textContent;
+      if (!/\d{4}/.test(txt)) return;
+      el.setAttribute('aria-label', txt);
+      var real = document.createElement('span'); real.className = 'cv-sr'; real.textContent = txt;
+      var roll = document.createElement('span'); roll.className = 'cv-roll'; roll.setAttribute('aria-hidden', 'true'); roll.textContent = txt;
+      el.textContent = ''; el.appendChild(real); el.appendChild(roll);
+      whens.push({ el: roll, txt: txt, done: false });
+    });
+    var finish = function () { whens.forEach(function (w) { w.done = true; w.el.textContent = w.txt; }); };
+    addEventListener('beforeprint', finish);
+    var rollIt = function (w) {
+      if (w.done) return; w.done = true;
+      var t1 = performance.now(), d = 1100;
+      (function step(now) {
+        var p = clamp((now - t1) / d, 0, 1), e = 1 - Math.pow(1 - p, 3);
+        w.el.textContent = w.txt.replace(/\d{4}/g, function (y) { return String(Math.round(2000 + (Number(y) - 2000) * e)); });
+        if (p < 1) requestAnimationFrame(step); else w.el.textContent = w.txt;
+      })(t1);
+    };
+    var io2 = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { whens.forEach(function (w) { if (w.el.parentNode === e.target) rollIt(w); }); io2.unobserve(e.target); } }); }, { threshold: 0.6 });
+    whens.forEach(function (w) { io2.observe(w.el.parentNode); });
+
     if (!fine) return;
+
+    /* 9. A wide soft glow follows the pointer across the whole page background. */
+    var glow = document.createElement('div'); glow.className = 'cv-glow'; glow.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(glow);
+    var gx = innerWidth / 2, gy = innerHeight / 3, tx = gx, ty = gy, gr = 0;
+    addEventListener('pointermove', function (e) { tx = e.clientX; ty = e.clientY; if (!gr) gr = requestAnimationFrame(ease); }, { passive: true });
+    function ease() {
+      gr = 0; gx += (tx - gx) * 0.12; gy += (ty - gy) * 0.12;
+      glow.style.translate = (gx - 300).toFixed(0) + 'px ' + (gy - 300).toFixed(0) + 'px';
+      if (Math.abs(tx - gx) + Math.abs(ty - gy) > 0.5) gr = requestAnimationFrame(ease);
+    }
 
     /* 6. Current role card: tilts in 3D toward the pointer, with the light that follows it. */
     var card = document.querySelector('.cv-job.is-now');
@@ -183,7 +219,7 @@
       card.addEventListener('pointermove', function (e) {
         var r = card.getBoundingClientRect();
         var nx = (e.clientX - r.left) / r.width - 0.5, ny = (e.clientY - r.top) / r.height - 0.5;
-        var deg = Math.min(3.2, Math.sqrt(nx * nx + ny * ny) * 6);
+        var deg = Math.min(2.4, Math.sqrt(nx * nx + ny * ny) * 5);
         card.style.rotate = (-ny).toFixed(3) + ' ' + nx.toFixed(3) + ' 0 ' + deg.toFixed(2) + 'deg';
       });
       card.addEventListener('pointerleave', function () { card.style.rotate = ''; });
