@@ -117,7 +117,7 @@ test('insights cite real records and never invent', () => {
 test('status summary uses the real figures', () => {
   const d = data(); const p = d.projects.find(x => x.id === 'p-atlas');
   const s = E.statusSummary(d, p, TODAY);
-  assert.match(s, /^Atlas is /); assert.match(s, /of 7 tasks/);
+  assert.match(s, /^Atlas is /); assert.match(s, /of 8 tasks/);
 });
 
 test('deletion rules', () => {
@@ -140,4 +140,100 @@ test('CSV export escapes and blocks formulas', () => {
 test('stored data shape check', () => {
   assert.ok(!E.isValidData(null)); assert.ok(!E.isValidData({ projects: [] }));
   assert.ok(!E.isValidData({ projects: [{ id: 'x', name: 'y', start: 'bad', deadline: '2026-01-01' }], milestones: [], tasks: [], risks: [] }));
+});
+
+// ---------- work management ----------
+const AT = '2026-11-17T10:00';
+test('task keys follow the project key', () => {
+  const d = data();
+  assert.equal(E.nextKey(d, 'p-atlas'), 'ATL-9');
+  assert.equal(E.nextKey(d, 'p-delta'), 'DLT-3');
+  assert.ok(new Set(d.tasks.map(t => t.key)).size === d.tasks.length, 'keys are unique');
+});
+
+test('project key is required, 2 to 5 capitals, unique', () => {
+  const d = data(); const p = d.projects[0];
+  assert.match(E.validateProject({ ...p, code: 'at' }, d.projects).code, /capital/);
+  assert.match(E.validateProject({ ...p, id: 'x', name: 'Other', code: 'BCN' }, d.projects).code, /already/);
+});
+
+test('on hold needs a reason, resume goes back to the previous status', () => {
+  const d = data();
+  assert.match(E.hold(d, 't-a4', '  ', 'Lina Haddad', AT).errors.holdReason, /why/);
+  const r = E.updateTask(d, 't-b3', { status: 'In progress' }, 'Lina Haddad', AT); // already in progress: no change
+  assert.equal(r.changes.length, 0);
+  const h = E.hold(d, 't-b3', 'Waiting for the vendor', 'Lina Haddad', AT);
+  const t = h.data.tasks.find(x => x.id === 't-b3');
+  assert.equal(t.status, 'On hold'); assert.equal(t.heldFrom, 'In progress'); assert.equal(t.holdReason, 'Waiting for the vendor');
+  assert.deepEqual(t.history.slice(-2).map(x => x.field), ['Status', 'Hold reason']);
+  const back = E.resume(h.data, 't-b3', 'Lina Haddad', AT).data.tasks.find(x => x.id === 't-b3');
+  assert.equal(back.status, 'In progress'); assert.equal(back.holdReason, '');
+  assert.match(E.resume(d, 't-a4', 'x', AT).errors.status, /not on hold/);
+});
+
+test('on hold counts against project health', () => {
+  const d = data(); const p = d.projects.find(x => x.id === 'p-beacon');
+  const before = E.health(d, p, TODAY);
+  const after = E.health(E.hold(d, 't-b3', 'Vendor', 'x', AT).data, p, TODAY);
+  assert.equal(after.blocked.length, before.blocked.length + 1);
+  assert.ok(after.score < before.score);
+});
+
+test('assignee change and labels are recorded in history and cleaned', () => {
+  const d = data();
+  const r = E.updateTask(d, 't-a4', { owner: 'Jonas Berg', labels: ['Frontend', 'ux', 'ux'] }, 'Lina Haddad', AT);
+  const t = r.data.tasks.find(x => x.id === 't-a4');
+  assert.equal(t.owner, 'Jonas Berg'); assert.deepEqual(t.labels, ['frontend', 'ux']);
+  const a = t.history.find(x => x.field === 'Assignee');
+  assert.equal(a.from, 'Lina Haddad'); assert.equal(a.to, 'Jonas Berg'); assert.equal(a.by, 'Lina Haddad');
+  assert.match(E.updateTask(d, 't-a4', { labels: ['has space'] }, 'x', AT).errors.labels, /small letters/);
+  assert.match(E.updateTask(d, 't-a4', { labels: ['a', 'b', 'c', 'd', 'e', 'f'] }, 'x', AT).errors.labels, /5/);
+});
+
+test('drag and drop: status, order, and refusal when dependencies are open', () => {
+  const d = data();
+  const r = E.placeTask(d, 't-a4', 'In progress', 't-b3', 'x', AT);
+  const col = r.data.tasks.filter(t => t.status === 'In progress').sort(E.byRank).map(t => t.id);
+  assert.ok(col.indexOf('t-a4') === col.indexOf('t-b3') - 1, 'placed just before');
+  const end = E.placeTask(d, 't-a4', 'In review', null, 'x', AT).data.tasks.filter(t => t.status === 'In review').sort(E.byRank);
+  assert.equal(end[end.length - 1].id, 't-a4');
+  assert.match(E.placeTask(d, 't-a5', 'Done', null, 'x', AT).errors.status, /not done/);
+  assert.ok(E.placeTask(d, 't-a4', 'On hold', null, 'x', AT).errors.holdReason, 'hold via drag needs a reason');
+  assert.equal(E.placeTask(d, 't-a4', 'On hold', null, 'x', AT, 'Design change').data.tasks.find(t => t.id === 't-a4').status, 'On hold');
+});
+
+test('comments: kept in order, empty and too long refused', () => {
+  const d = data();
+  assert.ok(E.addComment(d, 't-a4', '   ', 'x', AT).errors.comment);
+  assert.ok(E.addComment(d, 't-a4', 'a'.repeat(1001), 'x', AT).errors.comment);
+  const r = E.addComment(d, 't-c2', 'Escalated.', 'Lina Haddad', AT);
+  const c = r.data.tasks.find(t => t.id === 't-c2').comments;
+  assert.equal(c.length, 3); assert.equal(c[2].text, 'Escalated.');
+});
+
+test('bulk edit applies valid changes and reports the others', () => {
+  const d = data();
+  const r = E.bulkUpdate(d, ['t-a4', 't-a5', 't-b4'], { status: 'Done' }, 'x', AT);
+  assert.equal(r.done, 2); assert.equal(r.failed.length, 1); assert.equal(r.failed[0].key, 'ATL-5'); // ATL-5 waits for open tasks
+  assert.equal(r.data.tasks.find(t => t.id === 't-a4').status, 'Done');
+  const a = E.bulkUpdate(d, ['t-a4', 't-b4'], { owner: 'Sofia Klein' }, 'x', AT);
+  assert.equal(a.done, 2);
+});
+
+test('filters: me, assignee, status, label, overdue, on hold, text', () => {
+  const d = data(); const T = d.tasks;
+  assert.ok(E.applyFilter(T, { assignee: 'me' }, 'Lina Haddad', TODAY).every(t => t.owner === 'Lina Haddad'));
+  assert.ok(E.applyFilter(T, { status: ['On hold'] }, '', TODAY).every(t => t.status === 'On hold'));
+  assert.deepEqual(E.applyFilter(T, { label: 'security' }, '', TODAY).map(t => t.key), ['FJD-2', 'FJD-3', 'FJD-4']);
+  assert.ok(E.applyFilter(T, { overdue: true }, '', TODAY).every(t => E.isTaskOverdue(t, TODAY)));
+  assert.equal(E.applyFilter(T, { text: 'cbt-2' }, '', TODAY).length, 1);
+  assert.equal(E.applyFilter(T, {}, '', TODAY).length, T.length);
+  assert.ok(E.validateFilterName('Security work', d.filters));
+  assert.equal(E.validateFilterName('Mine', d.filters), '');
+});
+
+test('workload adds open work per person', () => {
+  const w = E.workload(data());
+  const total = data().tasks.filter(t => t.status !== 'Done').reduce((s, t) => s + t.estimate, 0);
+  assert.equal(w.reduce((s, x) => s + x.days, 0), total);
 });

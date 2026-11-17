@@ -2,7 +2,8 @@
 // Dates are ISO strings (YYYY-MM-DD). "today" is always passed in, so tests can fix it.
 
 export const PROJECT_STATUSES = ['Planned', 'Active', 'On hold', 'Completed'];
-export const TASK_STATUSES = ['To do', 'In progress', 'Blocked', 'Done'];
+export const TASK_STATUSES = ['Backlog', 'To do', 'In progress', 'In review', 'On hold', 'Done'];
+export const BOARD_COLUMNS = ['To do', 'In progress', 'In review', 'On hold', 'Done'];
 export const PRIORITIES = ['Low', 'Medium', 'High', 'Critical'];
 export const RISK_STATUSES = ['Open', 'Mitigating', 'Closed'];
 
@@ -33,6 +34,8 @@ export function validateProject(p, all = []) {
   else if (isIso(p.start) && p.deadline < p.start) e.deadline = 'Deadline must be on or after the start date.';
   if (!PROJECT_STATUSES.includes(p.status)) e.status = 'Choose a status.';
   if (!PRIORITIES.includes(p.priority)) e.priority = 'Choose a priority.';
+  if (!/^[A-Z]{2,5}$/.test(p.code || '')) e.code = 'Key must be 2 to 5 capital letters, for example ATL.';
+  else if (all.some(o => o.id !== p.id && o.code === p.code)) e.code = 'Another project already uses this key.';
   if (p.name && all.some(o => o.id !== p.id && o.name.trim().toLowerCase() === p.name.trim().toLowerCase())) e.name = 'Another project already has this name.';
   return e;
 }
@@ -69,6 +72,11 @@ export function validateTask(t, data) {
       if (loop) e.deps = 'This would create a loop: ' + loop.map(id => (data.tasks.find(x => x.id === id) || t).title).join(' → ') + '.';
     }
   }
+  if (t.status === 'On hold' && !String(t.holdReason || '').trim()) e.holdReason = 'Say why the task is on hold.';
+  maxLen(e, 'holdReason', t.holdReason, 200, 'Reason');
+  const labels = t.labels || [];
+  if (labels.length > 5) e.labels = 'Up to 5 labels.';
+  else if (labels.some(l => !/^[a-z0-9][a-z0-9-]{0,19}$/.test(l))) e.labels = 'Labels use small letters, digits and dashes, up to 20 characters.';
   if (t.status === 'Done' && data && deps.some(d => { const o = data.tasks.find(x => x.id === d); return o && o.status !== 'Done'; })) e.status = 'This task waits for a task that is not done yet.';
   return e;
 }
@@ -182,7 +190,7 @@ export function health(data, project, today) {
   const expected = project.status === 'Planned' ? 0 : expectedProgress(project, today);
   const lag = Math.max(0, expected - prog);
   const overdueMs = ms.filter(m => isMilestoneOverdue(m, today));
-  const blocked = tasks.filter(t => t.status !== 'Done' && (t.status === 'Blocked' || (isWaiting(t, tasks) && isTaskOverdue(t, today))));
+  const blocked = tasks.filter(t => t.status !== 'Done' && (t.status === 'On hold' || (isWaiting(t, tasks) && isTaskOverdue(t, today))));
   const highRisks = risks.filter(r => riskScore(r) >= 10);
   const midRisks = risks.filter(r => riskScore(r) >= 5 && riskScore(r) < 10);
   const pastDeadline = project.status !== 'Completed' && project.deadline < today;
@@ -247,9 +255,9 @@ export function insights(data, today) {
     for (const t of tasks) {
       if (t.status === 'Done') continue;
       const waiting = downstream(tasks, t.id);
-      if (waiting.length >= 2 && (isTaskOverdue(t, today) || t.status === 'Blocked')) out.push({ level: 'high', kind: 'blocker', project: p.id,
+      if (waiting.length >= 2 && (isTaskOverdue(t, today) || t.status === 'On hold')) out.push({ level: 'high', kind: 'blocker', project: p.id,
         title: 'Unblock "' + t.title + '" first',
-        text: waiting.length + ' tasks in ' + p.name + ' wait for it, and it is ' + (t.status === 'Blocked' ? 'marked Blocked' : 'overdue since ' + t.due) + '. Owner: ' + t.owner + '.',
+        text: waiting.length + ' tasks in ' + p.name + ' wait for it, and it is ' + (t.status === 'On hold' ? 'on hold (' + (t.holdReason || 'no reason given') + ')' : 'overdue since ' + t.due) + '. Owner: ' + t.owner + '.',
         action: 'Resolve what stops it, or split it so the waiting tasks can start.', evidence: [{ type: 'task', id: t.id }].concat(waiting.map(id => ({ type: 'task', id }))) });
     }
   }
@@ -287,7 +295,7 @@ export function statusSummary(data, project, today) {
   parts.push(Math.round(h.progress * 100) + '% of the work is done (' + tasks.filter(t => t.status === 'Done').length + ' of ' + tasks.length + ' tasks); ' + Math.round(h.expected * 100) + '% was expected by today.');
   if (next) parts.push('Next milestone: ' + next.name + ' on ' + next.target + (isMilestoneOverdue(next, today) ? ' (overdue).' : '.'));
   if (h.openRisks.length) parts.push(h.openRisks.length + ' open risk' + (h.openRisks.length > 1 ? 's' : '') + ', ' + h.highRisks.length + ' high or critical.');
-  if (h.blocked.length) parts.push(h.blocked.length + ' task' + (h.blocked.length > 1 ? 's are' : ' is') + ' blocked.');
+  if (h.blocked.length) parts.push(h.blocked.length + ' task' + (h.blocked.length > 1 ? 's are' : ' is') + ' on hold or stuck.');
   return parts.join(' ');
 }
 
@@ -317,9 +325,116 @@ export function deleteMilestone(data, id) {
 
 // Shape check for data read back from the browser.
 export function isValidData(d) {
-  return d && Array.isArray(d.projects) && Array.isArray(d.milestones) && Array.isArray(d.tasks) && Array.isArray(d.risks) &&
+  return d && Array.isArray(d.projects) && d.tasks && Array.isArray(d.tasks) && d.tasks.every(t => t && TASK_STATUSES.includes(t.status) && typeof t.key === 'string') && Array.isArray(d.projects) && Array.isArray(d.milestones) && Array.isArray(d.tasks) && Array.isArray(d.risks) &&
     d.projects.every(p => p && typeof p.id === 'string' && typeof p.name === 'string' && isIso(p.start) && isIso(p.deadline)) &&
     d.tasks.every(t => t && typeof t.id === 'string' && Array.isArray(t.deps) && isIso(t.due)) &&
     d.milestones.every(m => m && typeof m.id === 'string' && isIso(m.target)) &&
     d.risks.every(r => r && typeof r.id === 'string');
+}
+
+// ---------- work management: keys, workflow, history, comments, bulk edit, filters ----------
+export function nextKey(data, projectId) {
+  const p = data.projects.find(x => x.id === projectId); if (!p) return '';
+  const nums = data.tasks.filter(t => t.key && t.key.startsWith(p.code + '-')).map(t => Number(t.key.split('-').pop()) || 0);
+  return p.code + '-' + ((nums.length ? Math.max(...nums) : 0) + 1);
+}
+
+const TRACKED = { title: 'Title', owner: 'Assignee', priority: 'Priority', status: 'Status', due: 'Due date', estimate: 'Estimate', labels: 'Labels', milestoneId: 'Milestone', deps: 'Waits for', holdReason: 'Hold reason' };
+const same = (a, b) => JSON.stringify(a ?? '') === JSON.stringify(b ?? '');
+
+// One change to one task, validated, with its history. Returns { data, errors }.
+export function updateTask(data, id, patch, by, at) {
+  const t = data.tasks.find(x => x.id === id);
+  if (!t) return { data, errors: { id: 'This task no longer exists.' } };
+  const next = { ...t, ...patch };
+  if (patch.status && patch.status !== t.status) {
+    if (patch.status === 'On hold') next.heldFrom = t.status === 'On hold' ? t.heldFrom : t.status;
+    else { next.holdReason = ''; next.heldFrom = ''; }
+  }
+  if (next.labels) next.labels = [...new Set(next.labels.map(l => String(l).trim().toLowerCase()).filter(Boolean))];
+  const errors = validateTask(next, data);
+  if (Object.keys(errors).length) return { data, errors };
+  const changes = [];
+  for (const k of Object.keys(TRACKED)) if (k in patch && !same(t[k], next[k])) changes.push({ at, by, field: TRACKED[k], from: fmtVal(k, t[k], data), to: fmtVal(k, next[k], data) });
+  next.history = [...(t.history || []), ...changes];
+  return { data: { ...data, tasks: data.tasks.map(x => x.id === id ? next : x) }, errors: {}, changes };
+}
+function fmtVal(k, v, data) {
+  if (k === 'labels') return (v || []).join(', ') || 'none';
+  if (k === 'deps') return (v || []).map(d => (data.tasks.find(x => x.id === d) || {}).key || '?').join(', ') || 'none';
+  if (k === 'milestoneId') return (data.milestones.find(m => m.id === v) || {}).name || 'none';
+  return v === '' || v === undefined || v === null ? 'none' : String(v);
+}
+
+// Put a task on hold (a reason is required) or resume it to where it was.
+export function hold(data, id, reason, by, at) { return updateTask(data, id, { status: 'On hold', holdReason: String(reason || '').trim() }, by, at); }
+export function resume(data, id, by, at) {
+  const t = data.tasks.find(x => x.id === id);
+  if (!t || t.status !== 'On hold') return { data, errors: { status: 'This task is not on hold.' } };
+  return updateTask(data, id, { status: t.heldFrom && t.heldFrom !== 'On hold' ? t.heldFrom : 'To do' }, by, at);
+}
+
+// Drag and drop: new status and position in the column (placed before beforeId, or at the end).
+export function placeTask(data, id, status, beforeId, by, at, reason) {
+  const patch = { status };
+  if (status === 'On hold') patch.holdReason = String(reason || (data.tasks.find(x => x.id === id) || {}).holdReason || '').trim();
+  const r = updateTask(data, id, patch, by, at);
+  if (Object.keys(r.errors).length) return r;
+  const col = r.data.tasks.filter(t => t.status === status && t.id !== id).sort(byRank);
+  const i = beforeId ? col.findIndex(t => t.id === beforeId) : -1;
+  const prev = i === -1 ? col[col.length - 1] : col[i - 1];
+  const nxt = i === -1 ? null : col[i];
+  const rank = nxt ? ((prev ? prev.rank : nxt.rank - 2) + nxt.rank) / 2 : (prev ? prev.rank + 1 : 1);
+  return { ...r, data: { ...r.data, tasks: r.data.tasks.map(t => t.id === id ? { ...t, rank } : t) } };
+}
+export function byRank(a, b) { return (a.rank ?? 0) - (b.rank ?? 0) || a.due.localeCompare(b.due); }
+
+export function addComment(data, id, text, by, at) {
+  const body = String(text || '').trim();
+  if (!body) return { data, errors: { comment: 'Write something first.' } };
+  if (body.length > 1000) return { data, errors: { comment: 'Comments are limited to 1,000 characters.' } };
+  return { data: { ...data, tasks: data.tasks.map(t => t.id === id ? { ...t, comments: [...(t.comments || []), { id: uid('c'), by, at, text: body }] } : t) }, errors: {} };
+}
+
+// Same change on many tasks. Valid ones are applied; the others are reported, never half-applied.
+export function bulkUpdate(data, ids, patch, by, at) {
+  let d = data; const failed = [];
+  for (const id of ids) {
+    const r = patch.status === 'On hold' ? hold(d, id, patch.holdReason, by, at) : updateTask(d, id, patch, by, at);
+    if (Object.keys(r.errors).length) failed.push({ id, key: (d.tasks.find(t => t.id === id) || {}).key, error: Object.values(r.errors)[0] });
+    else d = r.data;
+  }
+  return { data: d, done: ids.length - failed.length, failed };
+}
+
+// Filters: { text, assignee ('me' or a name), status: [], priority: [], label, project, overdue, onHold, noAssignee }
+export function applyFilter(tasks, q, me, today) {
+  q = q || {};
+  const text = String(q.text || '').trim().toLowerCase();
+  return tasks.filter(t =>
+    (!text || (t.key + ' ' + t.title + ' ' + t.owner + ' ' + (t.labels || []).join(' ')).toLowerCase().includes(text)) &&
+    (!q.assignee || t.owner === (q.assignee === 'me' ? me : q.assignee)) &&
+    (!q.status || !q.status.length || q.status.includes(t.status)) &&
+    (!q.priority || !q.priority.length || q.priority.includes(t.priority)) &&
+    (!q.label || (t.labels || []).includes(q.label)) &&
+    (!q.project || t.projectId === q.project) &&
+    (!q.overdue || isTaskOverdue(t, today)) &&
+    (!q.onHold || t.status === 'On hold'));
+}
+
+export function validateFilterName(name, list) {
+  const n = String(name || '').trim();
+  if (!n) return 'Give the filter a name.';
+  if (n.length > 40) return 'Up to 40 characters.';
+  if ((list || []).some(f => f.name.toLowerCase() === n.toLowerCase())) return 'A saved filter already has this name.';
+  return '';
+}
+
+export function allLabels(data) { return [...new Set(data.tasks.flatMap(t => t.labels || []))].sort(); }
+
+// Workload per person: open tasks and days of open work.
+export function workload(data) {
+  const m = {};
+  for (const t of data.tasks) if (t.status !== 'Done') { const w = m[t.owner] = m[t.owner] || { owner: t.owner, tasks: 0, days: 0, onHold: 0 }; w.tasks++; w.days += Number(t.estimate || 0); if (t.status === 'On hold') w.onHold++; }
+  return Object.values(m).sort((a, b) => b.days - a.days);
 }

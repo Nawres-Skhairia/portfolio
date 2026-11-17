@@ -32,7 +32,7 @@ export function seed(today) {
   const tasks = [
     T('t-a1', 'p-atlas', 'Portal design system', 'Lina Haddad', 'High', 'Done', -48, 8, [], 'm-a1'),
     T('t-a2', 'p-atlas', 'Sign-in with existing accounts', 'Marc Olsen', 'Critical', 'Done', -30, 6, ['t-a1']),
-    T('t-a3', 'p-atlas', 'Invoice list and download', 'Priya Nair', 'High', 'In progress', -5, 7, ['t-a2'], 'm-a2'),
+    T('t-a3', 'p-atlas', 'Invoice list and download', 'Priya Nair', 'High', 'In review', -5, 7, ['t-a2'], 'm-a2'),
     T('t-a4', 'p-atlas', 'Request form with attachments', 'Lina Haddad', 'Medium', 'To do', 6, 5, ['t-a2']),
     T('t-a5', 'p-atlas', 'Pilot client invitations', 'Sofia Klein', 'Medium', 'To do', 12, 2, ['t-a3', 't-a4'], 'm-a3'),
     T('t-a6', 'p-atlas', 'Load test at 5,000 users', 'Jonas Berg', 'High', 'To do', 22, 4, ['t-a3']),
@@ -43,14 +43,16 @@ export function seed(today) {
     T('t-b4', 'p-beacon', 'Larger touch targets', 'Tomás Ruiz', 'Medium', 'To do', 9, 3, ['t-b1'], 'm-b2'),
     T('t-b5', 'p-beacon', 'Accessibility check in every release', 'Jonas Berg', 'Medium', 'To do', 40, 4, ['t-b3', 't-b4']),
     T('t-c1', 'p-cobalt', 'Connect sales feed', 'Priya Nair', 'High', 'Done', -18, 4, [], 'm-c1'),
-    T('t-c2', 'p-cobalt', 'Connect finance feed', 'Priya Nair', 'High', 'Blocked', -10, 5, []),
+    T('t-c2', 'p-cobalt', 'Connect finance feed', 'Priya Nair', 'High', 'On hold', -10, 5, []),
     T('t-c3', 'p-cobalt', 'Rebuild finance reports (6)', 'Tomás Ruiz', 'High', 'To do', 6, 6, ['t-c2'], 'm-c2'),
     T('t-c4', 'p-cobalt', 'Rebuild sales reports (6)', 'Sofia Klein', 'Medium', 'In progress', 5, 5, ['t-c1'], 'm-c2'),
     T('t-c5', 'p-cobalt', 'Reconcile old and new figures', 'Priya Nair', 'Critical', 'To do', 15, 4, ['t-c3', 't-c4']),
     T('t-c6', 'p-cobalt', 'Switch-over rehearsal', 'Jonas Berg', 'High', 'To do', 20, 2, ['t-c5'], 'm-c3'),
     T('t-d1', 'p-delta', 'Contract to account automation', 'Tomás Ruiz', 'High', 'Done', -40, 8, []),
     T('t-d2', 'p-delta', 'Welcome emails', 'Sofia Klein', 'Medium', 'Done', -30, 3, ['t-d1'], 'm-d1'),
-    T('t-e1', 'p-ember', 'Two pricing page variants', 'Sofia Klein', 'Medium', 'To do', 38, 5, [], 'm-e1'),
+    T('t-e1', 'p-ember', 'Two pricing page variants', 'Sofia Klein', 'Medium', 'Backlog', 38, 5, [], 'm-e1'),
+    T('t-e2', 'p-ember', 'Define the success measure', 'Sofia Klein', 'Low', 'Backlog', 30, 1, []),
+    T('t-a8', 'p-atlas', 'Help pages for the portal', 'Marc Olsen', 'Low', 'Backlog', 30, 3, []),
     T('t-f1', 'p-fjord', 'Rotate shared admin passwords', 'Jonas Berg', 'Critical', 'Done', -40, 2, []),
     T('t-f2', 'p-fjord', 'Patch outdated web server', 'Jonas Berg', 'Critical', 'In progress', -14, 3, [], 'm-f1'),
     T('t-f3', 'p-fjord', 'Turn on two-step login for staff', 'Marc Olsen', 'High', 'To do', -8, 3, ['t-f1'], 'm-f1'),
@@ -58,6 +60,27 @@ export function seed(today) {
     T('t-x1', 'p-cobalt', 'Data dictionary for new reports', 'Tomás Ruiz', 'Low', 'To do', 4, 2, []),
     T('t-x2', 'p-beacon', 'Update app store notes', 'Tomás Ruiz', 'Low', 'To do', 3, 1, []),
   ];
+  // keys, labels, board order, on-hold reasons, comments and history (all made up)
+  const LABELS = { 't-a3': ['frontend', 'invoices'], 't-a4': ['frontend'], 't-a6': ['performance'], 't-a7': ['release'], 't-b3': ['accessibility'], 't-b4': ['accessibility', 'mobile'], 't-b5': ['accessibility', 'release'], 't-c2': ['data', 'access'], 't-c3': ['data', 'reports'], 't-c4': ['data', 'reports'], 't-c5': ['data'], 't-f2': ['security'], 't-f3': ['security'], 't-f4': ['security', 'audit'], 't-e1': ['experiment'], 't-x1': ['data', 'docs'], 't-a8': ['docs'] };
+  const counters = {};
+  tasks.forEach((t, i) => {
+    const code = projects.find(p => p.id === t.projectId).code;
+    counters[code] = (counters[code] || 0) + 1;
+    t.key = code + '-' + counters[code];
+    t.labels = LABELS[t.id] || [];
+    t.rank = i + 1;
+    t.comments = []; t.history = [{ at: d(-30) + 'T09:00', by: projects.find(p => p.id === t.projectId).owner, field: 'Created', from: '', to: t.key }];
+    t.holdReason = ''; t.heldFrom = '';
+  });
+  const tk = id => tasks.find(t => t.id === id);
+  Object.assign(tk('t-c2'), { holdReason: 'Waiting for finance to grant read access to the feed.', heldFrom: 'In progress' });
+  tk('t-c2').history.push({ at: d(-9) + 'T14:20', by: 'Priya Nair', field: 'Status', from: 'In progress', to: 'On hold' });
+  tk('t-c2').comments.push({ id: 'c-1', by: 'Priya Nair', at: d(-9) + 'T14:22', text: 'Access request sent to the finance team. No answer yet.' }, { id: 'c-2', by: 'Lina Haddad', at: d(-3) + 'T10:05', text: 'I will raise it at Thursday\'s steering meeting.' });
+  tk('t-a3').history.push({ at: d(-2) + 'T16:40', by: 'Priya Nair', field: 'Status', from: 'In progress', to: 'In review' });
+  tk('t-a3').comments.push({ id: 'c-3', by: 'Priya Nair', at: d(-2) + 'T16:41', text: 'Ready for review. Download works for PDF; CSV export comes in a second step.' });
+  tk('t-f2').comments.push({ id: 'c-4', by: 'Jonas Berg', at: d(-5) + 'T11:30', text: 'The vendor patch needs a restart window. Planned for the weekend.' });
+  tk('t-f2').history.push({ at: d(-6) + 'T08:15', by: 'Jonas Berg', field: 'Assignee', from: 'Marc Olsen', to: 'Jonas Berg' });
+
   const risks = [
     { id: 'r-1', projectId: 'p-atlas', title: 'Invoice data from the old system is incomplete', impact: 4, probability: 4, owner: 'Priya Nair', mitigation: 'Run a data check on 500 sample invoices before the pilot.', status: 'Mitigating' },
     { id: 'r-2', projectId: 'p-atlas', title: 'Pilot clients not available before the holidays', impact: 3, probability: 3, owner: 'Sofia Klein', mitigation: 'Invite 30 clients to keep 20.', status: 'Open' },
@@ -68,5 +91,9 @@ export function seed(today) {
     { id: 'r-7', projectId: 'p-ember', title: 'Not enough traffic for a clear result', impact: 2, probability: 3, owner: 'Sofia Klein', mitigation: 'Run for four weeks instead of two.', status: 'Open' },
     { id: 'r-8', projectId: 'p-delta', title: 'Email provider limits', impact: 2, probability: 2, owner: 'Tomás Ruiz', mitigation: 'Raised the sending limit.', status: 'Closed' },
   ];
-  return { version: 1, projects, milestones, tasks, risks };
+  const filters = [
+    { id: 'f-1', name: 'Security work', query: { label: 'security' } },
+    { id: 'f-2', name: 'Critical and high', query: { priority: ['Critical', 'High'] } },
+  ];
+  return { version: 2, me: 'Lina Haddad', projects, milestones, tasks, risks, filters };
 }

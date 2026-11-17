@@ -2,12 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex">
-  <title>Command Center · Every project, risk and deadline on one screen · Nawres Skhairia</title>
-  <meta name="description" content="A project portfolio command center: health of every project, milestones, tasks and their dependencies, a risk register and ready-to-send reports. Runs in your browser with made-up sample data.">
+  <title>Command Center · Every project, task and risk on one screen · Nawres Skhairia</title>
+  <meta name="description" content="A project portfolio command center: a task board with drag and drop, on-hold reasons, comments and history, project health with its reasons, dependencies and the critical path, a risk register and reports. Runs in your browser with made-up sample data.">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="preload" href="/assets/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/instrument-serif-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/assets/fonts/site-fonts.css">
   <link rel="stylesheet" href="style.css">
   <script src="/assets/theme.js"></script>
@@ -22,42 +23,64 @@
   </header>
 
   <section class="hero" aria-labelledby="heroTitle">
+    <div class="hero-grid" aria-hidden="true"></div>
     <div class="hero-in">
-      <p class="brandline"><span class="mark" aria-hidden="true"><svg viewBox="0 0 32 32"><rect x="2" y="2" width="28" height="28" rx="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9 21l5-6 4 3 5-8" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Command Center</p>
-      <h1 id="heroTitle">Every project, risk and deadline on one screen.</h1>
-      <p class="lead">When a team runs many projects at once, the real picture is spread across plans, task boards and status emails. Command Center brings it together and tells you, with figures you can check, which project needs attention and why.</p>
-      <ul class="caps">
-        <li><b>Health score</b> for each project, with the reasons behind it</li>
-        <li><b>Dependencies</b> that show what blocks what, and the critical path</li>
-        <li><b>Risk register</b> with an impact and probability matrix</li>
-        <li><b>Reports</b> ready to print or export, from the live figures</li>
-      </ul>
-      <a class="enter" href="#/dashboard" id="enterDemo">Enter the demo</a>
+      <div class="hero-copy">
+        <p class="brandline"><span class="mark" aria-hidden="true"><svg viewBox="0 0 32 32"><rect x="2" y="2" width="28" height="28" rx="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9 21l5-6 4 3 5-8" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Command Center</p>
+        <h1 id="heroTitle"><span>Every project,</span> <span>task and risk</span> <span class="hl">on one screen.</span></h1>
+        <p class="lead">When a team runs many projects at once, the real picture hides in plans, boards and status emails. Command Center brings it together and tells you, with figures you can check, what needs attention and why.</p>
+        <div class="hero-cta"><a class="enter" href="#app" id="enterDemo">Enter the demo</a><span class="kbd-hint">or press <kbd>/</kbd> to search anything</span></div>
+        <ul class="caps">
+          <li><b>Task board</b>drag and drop, on hold with a reason, comments and history</li>
+          <li><b>Health score</b>for every project, with the reasons behind it</li>
+          <li><b>Critical path</b>what blocks what, and what decides the end date</li>
+          <li><b>Risks and reports</b>a risk matrix, and reports ready to print or export</li>
+        </ul>
+      </div>
+      <div class="hero-live" id="heroLive" aria-label="Live figures from the demo workspace"></div>
     </div>
   </section>
 
   <div class="app" id="app">
+    <div class="topbar">
+      <span class="ws"><span class="ws-mark">OS</span><span><b>Orbis Studio</b><small>Demo workspace</small></span></span>
+      <button type="button" class="search" data-act="palette"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><span>Search or jump to…</span><kbd>/</kbd></button>
+      <label class="me"><span>Viewing as</span><select id="meSel" aria-label="Viewing as"></select></label>
+      <button type="button" class="btn" data-act="new-task"><span aria-hidden="true">+</span> Create</button>
+      <button type="button" class="icon kb" data-act="shortcuts" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h1M11 10h1M15 10h2M7 14h10"/></svg></button>
+    </div>
     <div class="demo-band" role="note">
       <span><b>Demo workspace.</b> Made-up sample data for a fictional company, saved only in this browser. Please use made-up names: real ones would stay saved in this browser.</span>
-      <span class="band-actions">
-        <button type="button" class="lnk" id="resetDemo">Reset demo</button>
-        <button type="button" class="lnk" id="startEmpty">Start empty</button>
-      </span>
+      <span class="band-actions"><button type="button" class="lnk" id="resetDemo">Reset demo</button><button type="button" class="lnk" id="startEmpty">Start empty</button></span>
     </div>
     <div class="shell">
-      <nav class="side" aria-label="Command Center">
-        <a href="#/dashboard" data-nav="dashboard"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h6V4H4zM14 20h6v-9h-6zM4 20h6v-3H4zM14 7h6V4h-6z"/></svg>Dashboard</a>
-        <a href="#/projects" data-nav="projects"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h7l2 2h9v10H3z"/></svg>Projects</a>
-        <a href="#/tasks" data-nav="tasks"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/></svg>Tasks</a>
-        <a href="#/dependencies" data-nav="dependencies"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="6" r="2.5"/><circle cx="19" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M7.5 6h9M6.5 8l4.5 8M17.5 8l-4.5 8"/></svg>Dependencies</a>
-        <a href="#/risks" data-nav="risks"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 16H3zM12 10v4M12 17v.5"/></svg>Risks</a>
-        <a href="#/insights" data-nav="insights"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.8.8 1 1.5 1 2.5h6c0-1 .2-1.7 1-2.5A6 6 0 0 0 12 3z"/></svg>Insights<span class="count" id="insCount" hidden></span></a>
-        <a href="#/reports" data-nav="reports"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h7"/></svg>Reports</a>
+      <nav class="rail" aria-label="Command Center">
+        <a href="#/overview" data-nav="overview"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h6V4H4zM14 20h6v-9h-6zM4 20h6v-3H4zM14 7h6V4h-6z"/></svg><span>Overview</span></a>
+        <a href="#/board" data-nav="board"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="10" rx="1.5"/><rect x="17" y="4" width="4" height="13" rx="1.5"/></svg><span>Board</span></a>
+        <a href="#/backlog" data-nav="backlog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4 6h1M4 12h1M4 18h1"/></svg><span>Backlog</span></a>
+        <a href="#/projects" data-nav="projects"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h7l2 2h9v10H3z"/></svg><span>Projects</span></a>
+        <a href="#/dependencies" data-nav="dependencies"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="6" r="2.5"/><circle cx="19" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M7.5 6h9M6.5 8l4.5 8M17.5 8l-4.5 8"/></svg><span>Dependencies</span></a>
+        <a href="#/risks" data-nav="risks"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 16H3zM12 10v4M12 17v.5"/></svg><span>Risks</span></a>
+        <a href="#/insights" data-nav="insights"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.8.8 1 1.5 1 2.5h6c0-1 .2-1.7 1-2.5A6 6 0 0 0 12 3z"/></svg><span>Insights</span><i class="ins-count" hidden></i></a>
+        <a href="#/reports" data-nav="reports"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h7"/></svg><span>Reports</span></a>
       </nav>
-      <main id="main" class="main" tabindex="-1" aria-live="off"></main>
+      <main id="main" class="main" tabindex="-1"></main>
     </div>
   </div>
 
+  <nav class="tabbar" aria-label="Command Center, phone">
+    <a href="#/overview" data-nav="overview"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h6V4H4zM14 20h6v-9h-6zM4 20h6v-3H4zM14 7h6V4h-6z"/></svg><span>Overview</span></a>
+    <a href="#/board" data-nav="board"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="10" rx="1.5"/><rect x="17" y="4" width="4" height="13" rx="1.5"/></svg><span>Board</span></a>
+    <button type="button" class="tb-create" data-act="new-task" aria-label="Create task"><span>+</span></button>
+    <a href="#/backlog" data-nav="backlog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4 6h1M4 12h1M4 18h1"/></svg><span>Backlog</span></a>
+    <button type="button" data-act="more" aria-label="More pages"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>More</span><i class="ins-count" hidden></i></button>
+  </nav>
+  <div class="more-sheet" id="moreSheet" hidden>
+    <a href="#/projects" data-nav="projects">Projects</a><a href="#/dependencies" data-nav="dependencies">Dependencies</a><a href="#/risks" data-nav="risks">Risks</a><a href="#/insights" data-nav="insights">Insights</a><a href="#/reports" data-nav="reports">Reports</a><button type="button" data-act="palette">Search</button>
+  </div>
+
+  <aside class="panel-drawer" id="panel" hidden aria-label="Task details"></aside>
+  <div class="palette" id="palette" hidden></div>
   <dialog id="dlg" aria-labelledby="dlgTitle"></dialog>
   <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
   <noscript><p class="noscript">Command Center needs JavaScript to run.</p></noscript>
