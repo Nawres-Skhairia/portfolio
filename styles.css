@@ -339,3 +339,98 @@ h2 { font-size: var(--step-3); line-height: 1; letter-spacing: -.025em; max-widt
   .ln.verdict em { display: block; }
 }
 @media (prefers-color-scheme: dark) { .contact-box { background: #171612; border: 1px solid var(--line); } }
+
+/* ======================= round 2: more depth, more pull down the page ======================= */
+
+/* hero: the glow follows the pointer; the headline settles in on load (movement only, never hidden) */
+.hero::before { translate: var(--hx, 0px) var(--hy, 0px); transition: translate 1.2s var(--ease); }
+@media (prefers-reduced-motion: no-preference) {
+  h1 { animation: settle 1.1s var(--ease) both; }
+  .lead { animation: settle 1.1s .12s var(--ease) both; }
+  .hero .actions { animation: settle 1.1s .22s var(--ease) both; }
+  .proof { animation: float-in 1.2s .15s var(--ease) both; }
+}
+@keyframes settle { from { transform: translateY(22px); } }
+@keyframes float-in { from { translate: 0 30px; } }
+
+/* scroll cue: a small mouse shape that breathes */
+.cue { position: absolute; left: 50%; bottom: clamp(20px, 3vw, 40px); translate: -50% 0; display: none; width: 26px; height: 42px; border: 1.5px solid var(--line-strong); border-radius: 14px; transition: border-color .3s; }
+.cue span { position: absolute; left: 50%; top: 8px; width: 3px; height: 8px; margin-left: -1.5px; border-radius: 2px; background: var(--ink-3); animation: wheel 2s var(--ease) infinite; }
+.cue:hover { border-color: var(--ink); }
+@keyframes wheel { 0% { opacity: 0; transform: translateY(-4px); } 30% { opacity: 1; } 70% { opacity: 1; transform: translateY(10px); } 100% { opacity: 0; transform: translateY(12px); } }
+@media (min-width: 1000px) and (min-height: 760px) { .cue { display: block; } }
+
+/* marquee of the tools and their fields, between the hero and the work */
+.marquee { overflow: hidden; border-block: 1px solid var(--line); padding-block: clamp(18px, 1rem + 1vw, 30px); background: var(--bg); -webkit-mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent); mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent); }
+.marquee-track { display: flex; align-items: center; gap: clamp(20px, 1rem + 1.5vw, 40px); width: max-content; font-family: var(--serif); font-size: var(--step-2); line-height: 1; white-space: nowrap; color: var(--ink); }
+.marquee-track span:nth-of-type(even) { font-style: italic; color: var(--ink-3); }
+.marquee-track i { font-style: normal; font-size: .5em; color: var(--accent); }
+@media (prefers-reduced-motion: no-preference) {
+  .marquee-track { animation: slide 48s linear infinite; }
+  .marquee:hover .marquee-track { animation-play-state: paused; }
+}
+@keyframes slide { to { transform: translateX(-50%); } }
+.marquee + .section { border-top: 0; }
+
+/* tool rows: on large screens they stack like cards as you scroll, the one below sliding over */
+@media (min-width: 900px) and (min-height: 760px) {
+  .rows li { position: sticky; top: calc(96px + var(--i, 0) * 14px); }
+  .rows li:nth-child(1) { --i: 0; } .rows li:nth-child(2) { --i: 1; } .rows li:nth-child(3) { --i: 2; } .rows li:nth-child(4) { --i: 3; }
+  .rows { padding-bottom: 6vh; }
+  @supports (animation-timeline: view()) {
+    @media (prefers-reduced-motion: no-preference) {
+      .rows li { animation: none; }
+      .rows li .row { animation: sink linear both; animation-timeline: view(); animation-range: exit-crossing 0% exit-crossing 100%; }
+      .rows li:last-child .row { animation: none; }
+      @keyframes sink { to { scale: .94; filter: brightness(.94); } }
+    }
+  }
+}
+
+/* screenshots open like a curtain when they arrive */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .media { animation: curtain linear both; animation-timeline: view(); animation-range: entry 10% cover 35%; }
+    @keyframes curtain { from { clip-path: inset(12% 6% 12% 6% round 24px); } to { clip-path: inset(0 0 0 0 round 18px); } }
+  }
+}
+
+/* the facts light up one after the other on hover */
+.facts span { transition: background-color .35s, border-color .35s, color .35s, transform .45s var(--spring); }
+.row:hover .facts span { border-color: var(--line-strong); color: var(--ink); }
+.row:hover .facts span:nth-child(1) { transform: translateY(-2px); transition-delay: 0s; }
+.row:hover .facts span:nth-child(2) { transform: translateY(-2px); transition-delay: .06s; }
+.row:hover .facts span:nth-child(3) { transform: translateY(-2px); transition-delay: .12s; }
+.row h3 { transition: letter-spacing .6s var(--ease), color .4s; }
+.row:hover h3 { letter-spacing: -.035em; }
+.row:active { transform: scale(.99); }
+
+/* links in text: the underline draws in */
+.about-text a, .footer a { text-decoration: none; background: linear-gradient(currentColor, currentColor) 0 100% / 100% 1px no-repeat; transition: background-size .45s var(--ease); }
+.about-text a:hover, .footer a:hover { background-size: 0 1px; background-position: 100% 100%; }
+
+/* closing wordmark: the name, large, filled where the pointer passes */
+.wordmark { overflow: hidden; padding-inline: var(--gutter); border-top: 1px solid var(--line); }
+.wordmark span {
+  display: block; max-width: var(--max); margin: 0 auto; padding-block: clamp(24px, 1rem + 2vw, 48px) 0;
+  font-family: var(--serif); font-size: clamp(3.2rem, 1rem + 11.5vw, 13.5rem); line-height: .82; letter-spacing: -.04em; white-space: nowrap; text-align: center;
+  color: transparent; -webkit-text-stroke: 1px var(--line-strong);
+  background: radial-gradient(260px circle at var(--wx, -300px) var(--wy, 50%), var(--accent), transparent 70%) no-repeat;
+  -webkit-background-clip: text; background-clip: text;
+  translate: 0 18%;
+}
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .wordmark span { animation: lift linear both; animation-timeline: view(); animation-range: entry 0% entry 100%; }
+    @keyframes lift { from { translate: 0 60%; } }
+  }
+}
+.wordmark + .footer { border-top: 0; }
+
+/* dark mode polish */
+@media (prefers-color-scheme: dark) {
+  .media img, .portrait img { filter: brightness(.92) contrast(1.02); }
+  .row:hover .media img { filter: none; }
+  .proof { border-color: var(--line-strong); }
+  .eyebrow, .num, .facts span { background: var(--bg-sunk); }
+}

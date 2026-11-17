@@ -1,0 +1,71 @@
+/* Shared look for the tool pages: the same tokens, type and header as the home page.
+   Loaded after each tool's own style.css; it only re-points that file's variables and
+   refines shared pieces (header, panels, buttons, focus). Tools stay light for now. */
+
+:root {
+  color-scheme: light;
+  --paper: #f7f5f0;
+  --card: #ffffff;
+  --ink: #16130f;
+  --soft: #5a5348;
+  --line: #e3ded4;
+  --green: #1f4a3a;
+  --rust: #b3401e;
+  --sand: #e6e0d4;
+  --serif: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+  --sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --ease: cubic-bezier(.2, .7, .2, 1);
+  --shadow-1: 0 1px 2px rgba(22, 19, 15, .05), 0 2px 10px rgba(22, 19, 15, .04);
+  --shadow-2: 0 2px 6px rgba(22, 19, 15, .05), 0 24px 48px -20px rgba(22, 19, 15, .22);
+}
+
+body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; font-feature-settings: "cv11", "ss01", "ss03"; letter-spacing: -.005em; }
+h1, h2, h3 { letter-spacing: -.015em; text-wrap: balance; }
+h1 { letter-spacing: -.03em; line-height: .98; }
+::selection { background: var(--green); color: #f7f5f0; }
+:focus-visible { outline: 2px solid var(--green) !important; outline-offset: 3px; }
+
+/* header: sticky, blurred, the same as the home page */
+.top {
+  position: sticky; top: 0; z-index: 30;
+  max-width: none; margin: 0 0 clamp(16px, 1rem + 1vw, 32px);
+  padding-block: 12px;
+  padding-inline: max(24px, calc((100vw - 1180px) / 2 + 24px));
+  background: color-mix(in srgb, var(--paper) 78%, transparent);
+  -webkit-backdrop-filter: saturate(1.6) blur(16px);
+  backdrop-filter: saturate(1.6) blur(16px);
+  border-bottom: 1px solid var(--line);
+}
+.back {
+  display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 16px 0 6px !important;
+  border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--ink);
+  font-family: var(--serif); font-size: 1.15rem; font-weight: 400; box-shadow: var(--shadow-1);
+  transition: border-color .3s, box-shadow .3s, transform .4s var(--ease);
+}
+.back::before { content: "N"; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--ink); color: var(--paper); font-style: italic; font-size: 1rem; transition: transform .5s var(--ease), background-color .3s; }
+.back:hover { color: var(--ink); border-color: #cfc8bb; box-shadow: var(--shadow-2); transform: translateY(-1px); }
+.back:hover::before { transform: rotate(-12deg); background: var(--green); }
+.tag { font-family: var(--mono); font-size: .72rem !important; font-weight: 500; letter-spacing: .1em !important; color: var(--soft); padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); }
+
+/* surfaces */
+.panel { border-radius: 20px; border-color: var(--line); box-shadow: var(--shadow-1); }
+
+/* buttons: pill shape and calm motion; colours come from each tool */
+.btn, .mode, .go, button.primary { border-radius: 999px !important; transition: background-color .3s, color .3s, border-color .3s, box-shadow .3s, transform .2s var(--ease); }
+.btn:active, .go:active { transform: scale(.98); }
+.btn:hover { box-shadow: 0 12px 26px -14px rgba(22, 19, 15, .45); }
+
+/* inputs */
+input:not([type=checkbox]):not([type=radio]):not([type=range]), select, textarea { border-radius: 12px; transition: border-color .2s, box-shadow .2s; }
+input:not([type=checkbox]):not([type=radio]):not([type=range]):focus, select:focus, textarea:focus { border-color: var(--green); box-shadow: 0 0 0 4px rgba(31, 74, 58, .12); outline: none; }
+
+/* numbers line up */
+table, .num, output { font-variant-numeric: tabular-nums; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}
+
+/* one handwriting accent existed on Spreadsheet X-ray: same words, now in the site serif */
+.hand { font-family: var(--serif) !important; font-style: italic; }

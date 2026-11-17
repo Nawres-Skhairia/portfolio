@@ -61,6 +61,19 @@
     el.style.setProperty('--my', (yy * 100) + '%');
   });
 
+  track('.hero', function (el, x, yy) {
+    if (x === null) { el.style.setProperty('--hx', '0px'); el.style.setProperty('--hy', '0px'); return; }
+    el.style.setProperty('--hx', ((x - 0.7) * 160) + 'px');
+    el.style.setProperty('--hy', ((yy - 0.3) * 120) + 'px');
+  });
+  track('.wordmark', function (el, x, yy, e) {
+    var sp = el.firstElementChild; if (!sp) return;
+    if (x === null) { sp.style.setProperty('--wx', '-300px'); return; }
+    var r = sp.getBoundingClientRect();
+    sp.style.setProperty('--wx', (e.clientX - r.left) + 'px');
+    sp.style.setProperty('--wy', (e.clientY - r.top) + 'px');
+  });
+
   // buttons lean towards the pointer, and their fill starts where the pointer came in
   track('.magnetic', function (el, x, yy) {
     if (x === null) { el.style.setProperty('--tx', '0px'); el.style.setProperty('--ty', '0px'); return; }
