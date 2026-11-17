@@ -930,3 +930,24 @@ table.lt { width: 100%; border-collapse: collapse; font-size: 14px; }
   .tbl.adm .chip2 { justify-self: start; }
   body:has(.adm-body) .fab { display: none; }
 }
+
+/* Checklist inside a task, cross-project links, archive */
+.chk { margin: 4px 0 18px; }
+.chk-h { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; }
+.chk-h h2 { font-size: 13.5px; font-weight: 600; margin: 0; color: var(--t1); }
+.chk-bar { height: 4px; border-radius: 4px; background: var(--sunk); overflow: hidden; margin-bottom: 8px; }
+.chk-bar i { display: block; height: 100%; background: var(--acc); border-radius: inherit; transition: width .3s var(--ease); }
+.chk-list { list-style: none; margin: 0 0 8px; padding: 0; }
+.chk-list li { display: flex; align-items: center; gap: 6px; padding: 3px 0; border-bottom: 1px solid var(--line); }
+.chk-list label { flex: 1; display: flex; align-items: center; gap: 10px; font-size: 13.5px; color: var(--t1); min-width: 0; cursor: pointer; padding: 4px 0; }
+.chk-list label span { overflow-wrap: anywhere; }
+.chk-list li.done label span { color: var(--t3); text-decoration: line-through; }
+.chk-list input { width: 16px; height: 16px; accent-color: var(--acc); flex: none; }
+.chk-list .icon { opacity: .55; }
+.chk-list li:hover .icon, .chk-list .icon:focus-visible { opacity: 1; }
+.chk-add { display: flex; gap: 8px; }
+.chk-add input { flex: 1; min-width: 0; }
+.c-chk { display: inline-flex; gap: 4px; align-items: center; font-size: 12px; color: var(--t3); margin-top: 8px; font-variant-numeric: tabular-nums; }
+.c-chk svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+.xdeps { margin-top: 16px; }
+.xdeps li { flex-wrap: wrap; }

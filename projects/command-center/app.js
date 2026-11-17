@@ -217,13 +217,14 @@ function filterBar(where) {
 }
 
 function card(t) {
-  const all = E.projectTasks(data, t.projectId);
+  const all = data.tasks; const cl = t.checklist || [];
   const blocks = t.status !== 'Done' ? E.dependents(all, t.id).filter(x => x.status !== 'Done').length : 0;
   const waits = E.isWaiting(t, all); const past = isPast(t); const paused = t.status === 'On hold';
   return '<article class="card' + (t.status === 'Done' ? ' is-done' : '') + (paused ? ' is-hold' : '') + (ui.panel === t.id ? ' sel' : '') + '" data-task="' + esc(t.id) + '" data-flip="' + esc(t.id) + '"' + pcs(t.projectId) + ' tabindex="0" aria-label="' + esc(t.title + ', ' + stLabel(t.status) + ', ' + t.owner + ', ' + (past ? 'was due ' : 'due ') + fmtDate(t.due) + (waits ? ', waits for another task' : '') + (blocks ? ', ' + blocks + ' waiting for it' : '')) + '">' +
     '<div class="qa"><button type="button" data-act="qa-me" data-id="' + esc(t.id) + '" aria-label="Assign to me" title="Assign to me">' + ic('user') + '</button><button type="button" data-act="qa-date" data-id="' + esc(t.id) + '" aria-label="Change the date" title="Change the date">' + ic('cal') + '</button></div>' +
     '<p class="c-title">' + esc(t.title) + '</p>' +
     (paused ? '<p class="c-note">' + ic('pause') + '<span title="' + esc(t.holdReason) + '">' + esc(t.holdReason) + '</span></p>' : '') +
+    (cl.length ? '<p class="c-chk" title="Checklist">' + ic('check') + '<span>' + cl.filter(c => c.done).length + '/' + cl.length + '<span class="sr"> checklist items done</span></span></p>' : '') +
     (past ? '<p class="c-note">' + pastChip(t) + '</p>' : '') +
     '<div class="c-meta"><span class="pd"></span><span>' + esc(t.key) + (past ? '' : ' · ' + esc(fmtDate(t.due, true))) + '</span>' +
       avatar(t.owner, 'sm') + '</div>' +
@@ -244,7 +245,7 @@ function overview() {
   const hello = (hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening') + ', ' + esc(firstName(data.me));
   const top = '<p class="date">' + esc(dayLong(TODAY)) + '</p><h2 class="hello">' + hello + '</h2>';
   if (!data.projects.length) return top + '<p class="sub">This workspace is empty. Create a first project, or load the sample data to look around.</p><div class="row" style="margin-top:20px"><button class="btn" data-act="new-project">' + ic('plus') + 'New project</button><button class="btn ghost" data-act="reset">Load sample data</button></div>';
-  const mine = data.tasks.filter(t => t.owner === data.me);
+  const mine = data.tasks.filter(t => t.owner === data.me && !t.archivedAt);
   const doneToday = mine.filter(t => t.status === 'Done' && lastStatusAt(t, 'Done').slice(0, 10) === TODAY);
   const today = mine.filter(t => isOpen(t) && (t.due <= TODAY || t.status === 'In progress' || (t.remindOn && t.remindOn <= TODAY))).sort((a, b) => a.due.localeCompare(b.due));
   const paused = data.tasks.filter(t => t.status === 'On hold');
@@ -282,7 +283,7 @@ function overview() {
 
 // ---------- My tasks ----------
 function myTasks() {
-  const mine = data.tasks.filter(t => t.owner === data.me);
+  const mine = data.tasks.filter(t => t.owner === data.me && !t.archivedAt);
   const head = '<div class="vh"><div><h2>My tasks</h2><p class="lede">' + (mine.length ? 'Everything assigned to ' + esc(data.me) + ', by when it is due.' : 'Nothing is assigned to ' + esc(data.me) + ' yet.') + '</p></div><div class="row"><button class="btn" data-act="new-task">' + ic('plus') + 'Create task</button></div></div>';
   if (!mine.length) return head + calmEmpty('A clear list', 'When a task is assigned to you, it shows here.');
   const week = E.addDays(TODAY, 7);
@@ -306,7 +307,7 @@ function calendarView(r) {
   const first = ym + '-01'; const lead = (dowOf(first) + 6) % 7; const start = E.addDays(first, -lead);
   const len = new Date(Date.UTC(y, m, 0)).getUTCDate(); const weeks = Math.ceil((lead + len) / 7);
   const title = new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' });
-  const tasks = data.tasks.filter(t => t.status !== 'Backlog' && (!ui.calMine || t.owner === data.me));
+  const tasks = data.tasks.filter(t => !t.archivedAt && t.status !== 'Backlog' && (!ui.calMine || t.owner === data.me));
   const ms = ui.calMine ? [] : data.milestones;
   const ev = t => '<button type="button" class="ev' + (t.status === 'Done' ? ' dn' : '') + (t.status === 'On hold' ? ' ps' : '') + '"' + pcs(t.projectId) + ' data-act="open" data-id="' + esc(t.id) + '" title="' + esc(t.key + ' · ' + t.title + ' · ' + stLabel(t.status)) + '"><span class="pd"></span><span>' + esc(t.title) + '</span></button>';
   const mev = x => '<button type="button" class="ev ms"' + pcs(x.projectId) + ' data-act="edit-milestone" data-id="' + esc(x.id) + '" title="' + esc('Milestone · ' + x.name) + '">' + ic('flag') + '<span>' + esc(x.name) + '</span></button>';
@@ -398,10 +399,10 @@ function backlog() {
 
 function projects() {
   const prioRank = { Critical: 0, High: 1, Medium: 2, Low: 3 };
-  let list = data.projects.filter(p => !ui.projStatus || p.status === ui.projStatus);
+  let list = data.projects.filter(p => ui.projStatus === 'Archived' ? !!p.archivedAt : !p.archivedAt && (!ui.projStatus || p.status === ui.projStatus));
   const sorters = { deadline: (a, b) => a.deadline.localeCompare(b.deadline), name: (a, b) => a.name.localeCompare(b.name), health: (a, b) => E.health(data, a, TODAY).score - E.health(data, b, TODAY).score, priority: (a, b) => prioRank[a.priority] - prioRank[b.priority] };
   list = list.sort(sorters[ui.projSort]);
-  return '<div class="vh"><div><h2>Projects</h2><p class="lede">' + data.projects.length + ' projects, sorted ' + ({ health: 'by health, weakest first', deadline: 'by deadline', name: 'by name', priority: 'by priority' }[ui.projSort]) + '.</p></div><div class="row"><label class="fsel"><span class="sr">Status</span><select data-act="proj-status">' + opts(stOpts(E.PROJECT_STATUSES), ui.projStatus, 'All statuses') + '</select></label><label class="fsel"><span class="sr">Sort</span><select data-act="proj-sort">' + opts([['health', 'Health'], ['deadline', 'Deadline'], ['priority', 'Priority'], ['name', 'Name']], ui.projSort) + '</select></label><button class="btn" data-act="new-project">New project</button></div></div>' +
+  return '<div class="vh"><div><h2>Projects</h2><p class="lede">' + data.projects.length + ' projects, sorted ' + ({ health: 'by health, weakest first', deadline: 'by deadline', name: 'by name', priority: 'by priority' }[ui.projSort]) + '.</p></div><div class="row"><label class="fsel"><span class="sr">Status</span><select data-act="proj-status">' + opts(stOpts(E.PROJECT_STATUSES).concat([['Archived', 'Archived']]), ui.projStatus, 'All statuses') + '</select></label><label class="fsel"><span class="sr">Sort</span><select data-act="proj-sort">' + opts([['health', 'Health'], ['deadline', 'Deadline'], ['priority', 'Priority'], ['name', 'Name']], ui.projSort) + '</select></label><button class="btn" data-act="new-project">New project</button></div></div>' +
     (list.length ? '<div class="pgrid">' + list.map(p => { const h = E.health(data, p, TODAY); const tasks = E.projectTasks(data, p.id); const live = p.status === 'Active' || p.status === 'On hold';
       return '<a class="pcard" href="#/project/' + esc(p.id) + '" data-flip="' + esc(p.id) + '"><div class="pc-top"><span class="key">' + esc(p.code) + '</span><span class="st st-' + slug(p.status) + '">' + esc(stLabel(p.status)) + '</span></div><div class="pc-mid">' + ring(live ? h.score : (p.status === 'Completed' ? 100 : 0), live ? healthTone(h.label) : (p.status === 'Completed' ? 'done' : 'idle'), 64) + '<div><h3>' + esc(p.name) + '</h3><p>' + esc(p.objective) + '</p></div></div><div class="pc-bar"><span class="fill grow-in tone-' + healthTone(h.label) + '" style="--w:' + (h.progress * 100).toFixed(1) + '%"></span></div><div class="pc-foot">' + avatar(p.owner, 'sm') + '<span>' + esc(p.owner) + '</span><span class="grow"></span><span class="' + (h.pastDeadline ? 'late' : 'muted') + '">' + esc(fmtDate(p.deadline, true)) + '</span><span class="muted">' + tasks.length + ' tasks</span></div></a>'; }).join('') + '</div>' : emptyState('No project here', 'Change the filter or create one.', '<button class="btn" data-act="new-project">New project</button>'));
 }
@@ -418,7 +419,7 @@ function projectView(r) {
   const posOf = iso => Math.max(0, Math.min(100, E.daysBetween(p.start, iso) / span * 100));
   const counts = E.TASK_STATUSES.map(s => [s, tasks.filter(t => t.status === s).length]).filter(x => x[1]);
   return '<nav class="crumbs" aria-label="Breadcrumb"><a href="#/projects">Projects</a><span>/</span><span>' + esc(p.name) + '</span></nav>' +
-    '<div class="vh"><div><p class="eyebrow">' + esc(p.code) + ' · ' + esc(p.priority) + ' priority · ' + esc(stLabel(p.status)) + '</p><h2>' + esc(p.name) + '</h2><p class="lede">' + esc(p.objective) + '</p></div><div class="row"><button class="btn ghost" data-act="edit-project" data-id="' + esc(p.id) + '">Edit</button><a class="btn ghost" href="#/reports?type=project&p=' + esc(p.id) + '">Report</a><button class="btn ghost danger" data-act="del-project" data-id="' + esc(p.id) + '">Delete</button></div></div>' +
+    '<div class="vh"><div><p class="eyebrow">' + esc(p.code) + ' · ' + esc(p.priority) + ' priority · ' + esc(stLabel(p.status)) + '</p><h2>' + esc(p.name) + '</h2><p class="lede">' + esc(p.objective) + '</p></div><div class="row"><button class="btn ghost" data-act="edit-project" data-id="' + esc(p.id) + '">Edit</button>' + (p.archivedAt ? '<button class="btn ghost" data-act="restore-project" data-id="' + esc(p.id) + '">Restore</button>' : p.status === 'Completed' ? '<button class="btn ghost" data-act="archive-project" data-id="' + esc(p.id) + '">Archive</button>' : '') + '<a class="btn ghost" href="#/reports?type=project&p=' + esc(p.id) + '">Report</a><button class="btn ghost danger" data-act="del-project" data-id="' + esc(p.id) + '">Delete</button></div></div>' +
     '<div class="grid g21">' +
       '<section class="panel"><div class="ph"><h3>Timeline</h3><span class="muted small">' + esc(fmtDate(p.start)) + ' → ' + esc(fmtDate(p.deadline)) + '</span></div>' +
         '<div class="ptl"><div class="ptl-track"><span class="ptl-done grow-in" style="--w:' + (h.progress * 100).toFixed(1) + '%"></span>' + (TODAY >= p.start && TODAY <= p.deadline ? '<span class="ptl-today" style="left:' + posOf(TODAY) + '%"><i>Today</i></span>' : '') + ms.map(m => '<button type="button" class="ptl-ms' + (m.done ? ' done' : E.isMilestoneOverdue(m, TODAY) ? ' late' : '') + '" style="left:' + posOf(m.target) + '%" data-act="edit-milestone" data-id="' + esc(m.id) + '" title="' + esc(m.name + ' · ' + fmtDate(m.target)) + '"><span class="sr">' + esc(m.name) + '</span></button>').join('') + '</div></div>' +
@@ -480,7 +481,15 @@ function dependencies() {
   return head + '<div class="legend-row"><span><i class="lg n-ready"></i>Ready</span><span><i class="lg n-waiting"></i>Waiting</span><span><i class="lg n-late"></i>Past date</span><span><i class="lg n-hold"></i>Paused</span><span><i class="lg n-done"></i>Done</span><span><i class="lg n-crit"></i>Critical path</span></div>' +
     '<section class="panel graph-panel"><div class="graph-scroll"><svg class="graph" viewBox="0 0 ' + width + ' ' + height + '" width="' + width + '" height="' + height + '" role="group" aria-label="Dependency map of ' + esc(p.name) + '"><defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" class="ah"/></marker><marker id="arrC" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" class="ahc"/></marker></defs>' + edges + nodes + '</svg></div></section>' +
     '<div class="grid g11"><section class="panel"><h3>Critical path · ' + cp.days + ' days</h3>' + (cp.ids.length ? '<p class="small muted">The longest chain of unfinished work. A delay here delays the project.</p><ol class="cpath">' + cp.ids.map(id => { const t = task(id); return '<li><button type="button" class="bl-title" data-act="open" data-id="' + esc(id) + '"><span class="key">' + esc(t.key) + '</span> ' + esc(t.title) + '</button><small>' + esc(t.owner) + ' · ' + t.estimate + ' d · due ' + esc(fmtDate(t.due, true)) + '</small></li>'; }).join('') + '</ol>' : '<p class="muted">All tasks are done.</p>') + '</section>' +
-    '<section class="panel"><h3>What holds up the most</h3>' + (blockers.length ? '<ul class="rl">' + blockers.slice(0, 6).map(({ t, n }) => '<li><span class="score ' + (E.isTaskOverdue(t, TODAY) || t.status === 'On hold' ? 'rk-critical' : 'rk-low') + '">' + n + '</span><span><button type="button" class="bl-title" data-act="open" data-id="' + esc(t.id) + '">' + esc(t.key + ' ' + t.title) + '</button><small>' + n + ' task' + (n === 1 ? '' : 's') + ' wait · ' + esc(stLabel(t.status)) + (E.isTaskOverdue(t, TODAY) ? ' · date passed' : '') + '</small></span></li>').join('') + '</ul>' : '<p class="muted">No unfinished task holds up another.</p>') + '</section></div>';
+    '<section class="panel"><h3>What holds up the most</h3>' + (blockers.length ? '<ul class="rl">' + blockers.slice(0, 6).map(({ t, n }) => '<li><span class="score ' + (E.isTaskOverdue(t, TODAY) || t.status === 'On hold' ? 'rk-critical' : 'rk-low') + '">' + n + '</span><span><button type="button" class="bl-title" data-act="open" data-id="' + esc(t.id) + '">' + esc(t.key + ' ' + t.title) + '</button><small>' + n + ' task' + (n === 1 ? '' : 's') + ' wait · ' + esc(stLabel(t.status)) + (E.isTaskOverdue(t, TODAY) ? ' · date passed' : '') + '</small></span></li>').join('') + '</ul>' : '<p class="muted">No unfinished task holds up another.</p>') + '</section></div>' + crossDeps(p, tasks);
+}
+function crossDeps(p, tasks) {
+  const ids = new Set(E.projectTasks(data, p.id).map(t => t.id));
+  const waitsOut = tasks.flatMap(t => (t.deps || []).filter(d => !ids.has(d)).map(d => ({ t, o: task(d) }))).filter(x => x.o);
+  const waitedOn = data.tasks.filter(x => !ids.has(x.id)).flatMap(x => (x.deps || []).filter(d => ids.has(d)).map(d => ({ t: x, o: task(d) })));
+  if (!waitsOut.length && !waitedOn.length) return '';
+  const row = (a, b) => '<li><button type="button" class="bl-title" data-act="open" data-id="' + esc(a.id) + '"><span class="key">' + esc(a.key) + '</span> ' + esc(a.title) + '</button><span class="muted small"> waits for </span><button type="button" class="bl-title" data-act="open" data-id="' + esc(b.id) + '"><span class="key">' + esc(b.key) + '</span> ' + esc(b.title) + '</button><span class="st st-' + slug(b.status) + '">' + esc(stLabel(b.status)) + '</span></li>';
+  return '<section class="panel xdeps"><h3>Links with other projects</h3><p class="small muted">The map above shows this project only. These tasks wait for work in another project, or another project waits for them.</p><ul class="rl">' + waitsOut.map(x => row(x.t, x.o)).join('') + waitedOn.map(x => row(x.t, x.o)).join('') + '</ul></section>';
 }
 
 function evidenceLink(ev) {
@@ -542,13 +551,19 @@ function activityLine(h) {
   return 'changed ' + esc(h.field.toLowerCase()) + ' to <b>' + esc(v(h.to)) + '</b>';
 }
 function fitText(ta) { if (!ta) return; ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }
+function checklistBox(t) {
+  const cl = t.checklist || []; const done = cl.filter(c => c.done).length;
+  return '<section class="chk" aria-labelledby="chkH"><div class="chk-h"><h2 id="chkH">Checklist</h2>' + (cl.length ? '<span class="muted small">' + done + ' of ' + cl.length + ' done</span>' : '') + '</div>' +
+    (cl.length ? '<div class="chk-bar" aria-hidden="true"><i style="width:' + Math.round(done / cl.length * 100) + '%"></i></div><ul class="chk-list">' + cl.map(c => '<li' + (c.done ? ' class="done"' : '') + '><label><input type="checkbox" data-act="chk-toggle" data-c="' + esc(c.id) + '"' + (c.done ? ' checked' : '') + '><span>' + esc(c.text) + '</span></label><button type="button" class="icon" data-act="chk-del" data-c="' + esc(c.id) + '" aria-label="Remove ' + esc(c.text) + '" title="Remove">' + ic('x') + '</button></li>').join('') + '</ul>' : '') +
+    (cl.length < 30 ? '<form class="chk-add" data-form="chk-add"><label class="sr" for="chkNew">Add a checklist item</label><input id="chkNew" name="text" maxlength="120" placeholder="Add an item" autocomplete="off"><button type="submit" class="btn ghost">Add</button></form>' : '<p class="muted small">30 items is the most a task can hold.</p>') + '</section>';
+}
 function renderPanel(focus) {
   const el = $('#panel'); const t = ui.panel && task(ui.panel);
   document.body.classList.toggle('panel-open', !!t);
   if (t && route().name === 'task') el.setAttribute('role', 'main'); else el.setAttribute('role', 'complementary');
   if (!t) { el.hidden = true; el.innerHTML = ''; return; }
   const p = proj(t.projectId); const all = E.projectTasks(data, t.projectId);
-  const waitsFor = (t.deps || []).map(task).filter(Boolean); const blocks = E.dependents(all, t.id);
+  const waitsFor = (t.deps || []).map(task).filter(Boolean); const blocks = E.dependents(data.tasks, t.id);
   const paused = t.status === 'On hold'; const since = paused ? lastStatusAt(t, 'On hold') : '';
   const flow = E.TASK_STATUSES.filter(s => s !== 'On hold' && s !== 'Backlog');
   const remindSet = t.remindOn && t.remindOn >= TODAY;
@@ -564,7 +579,7 @@ function renderPanel(focus) {
       '<button type="button" class="icon" data-act="close-panel" aria-label="Close" title="Close (Esc)">' + ic('x') + '</button></div>' +
     '<div class="pn-body">' +
     '<label class="sr" for="pnTitle">Title</label><textarea id="pnTitle" class="pn-title" rows="1" maxlength="100" data-field="title">' + esc(t.title) + '</textarea>' +
-    '<div class="pn-chips">' + statusChip + (isPast(t) ? pastChip(t) : '') + '</div>' +
+    '<div class="pn-chips">' + statusChip + (isPast(t) ? pastChip(t) : '') + (t.archivedAt ? '<span class="chip2 c-n">Archived ' + esc(fmtDate(t.archivedAt, true)) + '</span><button type="button" class="lnk" data-act="restore-task">Restore</button>' : t.status === 'Done' ? '<button type="button" class="lnk" data-act="archive-task">Archive</button>' : '') + '</div>' +
     (paused ? '<div class="why"><b>Why it\'s paused</b><p>' + esc(t.holdReason) + '</p><div class="acts"><button type="button" class="btn" data-act="resume" data-id="' + esc(t.id) + '">Resume</button><button type="button" class="btn ghost" data-act="remind" data-id="' + esc(t.id) + '" aria-pressed="' + !!remindSet + '">' + ic('bell') + (remindSet ? 'Reminder on ' + esc(weekday(t.remindOn)) : 'Remind me ' + esc(weekday(nextRemind()))) + '</button></div></div>' : '') +
     '<div class="flow" role="group" aria-label="Status">' + flow.map(s => '<button type="button" class="fl fl-' + slug(s) + '" data-act="set-status" data-s="' + esc(s) + '" aria-pressed="' + (t.status === s) + '">' + esc(s) + '</button>').join('') + (!paused ? '<button type="button" class="fl fl-on-hold" data-act="ask-hold" data-id="' + esc(t.id) + '">' + ic('pause') + 'Pause…</button>' : '') + '</div>' +
     '<dl class="pn-grid">' +
@@ -577,6 +592,7 @@ function renderPanel(focus) {
       '<dt>' + ic('graph') + 'Waits for</dt><dd class="col-dd">' + (waitsFor.length ? depList(waitsFor) : '<span class="muted">Nothing, it can start any time.</span>') + '<button type="button" class="lnk" data-act="edit-deps">Change</button></dd>' +
       (blocks.length ? '<dt>' + ic('link') + 'Blocks</dt><dd class="col-dd">' + depList(blocks) + '</dd>' : '') +
     '</dl>' +
+    checklistBox(t) +
     '<div class="ptabs" role="tablist"><button type="button" role="tab" data-act="ptab" data-k="activity" aria-selected="' + (ui.panelTab === 'activity') + '">Activity ' + ((t.history || []).length || '') + '</button><button type="button" role="tab" data-act="ptab" data-k="comments" aria-selected="' + (ui.panelTab === 'comments') + '">Comments ' + ((t.comments || []).length || '') + '</button></div>' +
     (ui.panelTab === 'comments'
       ? ((t.comments || []).length ? '<ul class="comments">' + t.comments.map(c => '<li>' + avatar(c.by, 'sm') + '<div><p class="c-meta"><b>' + esc(c.by) + '</b> · ' + esc(fmtStamp(c.at)) + '</p><p>' + esc(c.text) + '</p></div></li>').join('') + '</ul>' : '<p class="muted small pad">No comments yet. Write the first note below.</p>')
@@ -699,7 +715,7 @@ function dateForm(id) {
   $$('[data-pick]', dlg).forEach(b => b.addEventListener('click', () => { $('#f-due', dlg).value = b.dataset.pick; dlg.querySelector('form').requestSubmit(); }));
 }
 function depsForm(id) {
-  const t = task(id); const choices = data.tasks.filter(x => x.projectId === t.projectId && x.id !== t.id);
+  const t = task(id); const here = x => x.projectId === t.projectId ? 0 : 1; const choices = data.tasks.filter(x => x.id !== t.id && (!x.archivedAt || t.deps.includes(x.id))).sort((a, b) => here(a) - here(b) || a.key.localeCompare(b.key));
   openForm('What does ' + t.key + ' wait for?', choices.length ? '<div class="deplist" role="group" aria-label="Waits for">' + choices.map(x => '<label class="dep"><input type="checkbox" name="deps" value="' + esc(x.id) + '"' + (t.deps.includes(x.id) ? ' checked' : '') + '> <span class="key">' + esc(x.key) + '</span> <span>' + esc(x.title) + '</span> <small class="muted">' + esc(x.status) + '</small></label>').join('') + '</div><small class="err" id="e-deps" hidden></small>' : '<p class="muted">No other task in this project.</p>',
     fd => { const r = E.updateTask(data, id, { deps: fd.getAll('deps') }, data.me, stamp()); if (Object.keys(r.errors).length) return r.errors; commit(r.data, 'Dependencies saved.', { undo: true }); });
 }
@@ -878,6 +894,10 @@ document.addEventListener('click', e => {
     case 'ask-hold': askHold(id, reason => { const r = E.hold(data, id, reason, data.me, stamp()); if (Object.keys(r.errors).length) toast(Object.values(r.errors)[0], 'error'); else commit(r.data, task(id).key + ' is paused.', { undo: true }); }); break;
     case 'resume': { const r = E.resume(data, id, data.me, stamp()); if (Object.keys(r.errors).length) toast(Object.values(r.errors)[0], 'error'); else commit(r.data, task(id).key + ' resumed.', { undo: true }); break; }
     case 'assign-me': panelUpdate({ owner: data.me }, 'Assigned to you.'); break;
+    case 'chk-toggle': { const cl = (task(ui.panel).checklist || []).map(c => c.id === el.dataset.c ? { ...c, done: el.checked } : c); panelUpdate({ checklist: cl }); { const b = $('#panel [data-act="chk-toggle"][data-c="' + el.dataset.c + '"]'); if (b) b.focus(); } break; }
+    case 'chk-del': { const cl = (task(ui.panel).checklist || []).filter(c => c.id !== el.dataset.c); panelUpdate({ checklist: cl }, 'Item removed.'); break; }
+    case 'archive-task': case 'restore-task': { const t = task(ui.panel); const r = act === 'archive-task' ? E.archiveTask(data, t.id, TODAY, data.me, stamp()) : E.restoreTask(data, t.id, data.me, stamp()); if (Object.keys(r.errors).length) { toast(Object.values(r.errors)[0], 'error'); break; } commit(r.data, act === 'archive-task' ? t.key + ' archived. It stays in search, reports and Lists › Archived.' : t.key + ' is back.', { undo: true }); break; }
+    case 'archive-project': case 'restore-project': { const p = proj(id); const r = act === 'archive-project' ? E.archiveProject(data, id, TODAY, data.me, stamp()) : E.restoreProject(data, id, data.me, stamp()); if (r.error) { toast(r.error, 'error'); break; } commit(r.data, act === 'archive-project' ? p.name + ' archived with its tasks. Find it in Projects › Archived.' : p.name + ' is back.', { undo: true }); break; }
     case 'rm-label': panelUpdate({ labels: (task(ui.panel).labels || []).filter(l => l !== el.dataset.l) }, 'Label removed.'); break;
     case 'edit-deps': depsForm(ui.panel); break;
     case 'ptab': ui.panelTab = el.dataset.k; renderPanel(); { const b = $('#panel [data-k="' + el.dataset.k + '"]'); if (b) b.focus(); } break;
@@ -1039,6 +1059,7 @@ document.addEventListener('submit', async e => {
     admin.data.settings = r.body.settings; signupMode = r.body.settings.signup; admin.log = null; loadAdmin(); toast('Settings saved.');
     return;
   }
+  if (f.dataset.form === 'chk-add') { e.preventDefault(); const text = f.text.value.trim(); if (!text) return; const cl = [...(task(ui.panel).checklist || []), { id: E.uid('c'), text: text.slice(0, 120), done: false }]; if (panelUpdate({ checklist: cl })) setTimeout(() => { const i = $('#chkNew'); if (i) i.focus(); }, 30); return; }
   if (f.dataset.form !== 'comment') return; e.preventDefault();
   const r = E.addComment(data, ui.panel, f.text.value, data.me, stamp());
   if (Object.keys(r.errors).length) { const er = f.querySelector('.err'); er.textContent = Object.values(r.errors)[0]; er.hidden = false; return; }
@@ -1361,14 +1382,15 @@ function taskPage(r) {
 }
 
 // ---------- lists: a table of tasks with your filters, columns, grouping and order; save it, pin it to Home ----------
-const Q0 = { text: '', assignee: '', status: [], priority: [], label: '', project: '', overdue: false, onHold: false };
-const LCOLS = [['key', 'Key'], ['title', 'Task'], ['project', 'Project'], ['status', 'Status'], ['owner', 'Assignee'], ['priority', 'Priority'], ['due', 'Due'], ['labels', 'Labels'], ['estimate', 'Estimate'], ['milestone', 'Milestone'], ['deps', 'Waits for']];
+const Q0 = { text: '', assignee: '', status: [], priority: [], label: '', project: '', overdue: false, onHold: false, archived: false };
+const LCOLS = [['key', 'Key'], ['title', 'Task'], ['project', 'Project'], ['status', 'Status'], ['owner', 'Assignee'], ['priority', 'Priority'], ['due', 'Due'], ['labels', 'Labels'], ['estimate', 'Estimate'], ['milestone', 'Milestone'], ['deps', 'Waits for'], ['checklist', 'Checklist']];
 const LDEF = ['key', 'title', 'project', 'status', 'owner', 'priority', 'due'];
 const PRESETS = [
   { id: 'p-open', name: 'All open tasks', q: { status: E.TASK_STATUSES.filter(x => x !== 'Done') } },
   { id: 'p-mine', name: 'My tasks', q: { assignee: 'me' } },
   { id: 'p-past', name: 'Could use a new date', q: { overdue: true } },
   { id: 'p-paused', name: 'Paused', q: { onHold: true } },
+  { id: 'p-archived', name: 'Archived', q: { archived: true } },
 ];
 ui.list = { id: 'p-open', columns: LDEF, group: 'none', sort: { k: 'due', dir: 1 } };
 const PRANK = { Critical: 0, High: 1, Medium: 2, Low: 3 };
@@ -1396,6 +1418,7 @@ function applyList(id) {
 function listCell(k, t) {
   const p = proj(t.projectId);
   switch (k) {
+    case 'checklist': return (t.checklist || []).length ? (t.checklist.filter(c => c.done).length + ' of ' + t.checklist.length) : '<span class="muted">—</span>';
     case 'key': return '<button type="button" class="key lk" data-act="open" data-id="' + esc(t.id) + '" title="Open beside the list">' + esc(t.key) + '</button>';
     case 'title': return '<a class="lt-title" href="#/task/' + esc(t.id) + '">' + esc(t.title) + '</a>' + (t.status === 'On hold' && t.holdReason ? '<small class="lt-why">' + esc(t.holdReason) + '</small>' : '');
     case 'project': return p ? '<span class="lt-p"' + pcs(p.id) + '><span class="pd"></span>' + esc(p.name) + '</span>' : '';

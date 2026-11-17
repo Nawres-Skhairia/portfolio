@@ -6,14 +6,14 @@ export const TYPES = ['project', 'milestone', 'task', 'risk'];
 const LIST = { project: 'projects', milestone: 'milestones', task: 'tasks', risk: 'risks' };
 // Only these fields are kept; anything else the browser sends is dropped.
 const FIELDS = {
-  project: ['id', 'code', 'name', 'owner', 'objective', 'description', 'start', 'deadline', 'status', 'priority'],
+  project: ['id', 'code', 'name', 'owner', 'objective', 'description', 'start', 'deadline', 'status', 'priority', 'archivedAt'],
   milestone: ['id', 'projectId', 'name', 'target', 'done'],
-  task: ['id', 'key', 'projectId', 'title', 'owner', 'priority', 'status', 'due', 'estimate', 'labels', 'deps', 'milestoneId', 'holdReason', 'heldFrom', 'remindOn', 'rank', 'comments'],
+  task: ['id', 'key', 'projectId', 'title', 'owner', 'priority', 'status', 'due', 'estimate', 'labels', 'deps', 'milestoneId', 'holdReason', 'heldFrom', 'remindOn', 'rank', 'comments', 'checklist', 'archivedAt'],
   risk: ['id', 'projectId', 'title', 'impact', 'probability', 'status', 'mitigation', 'owner'],
 };
 export const LIMITS = { ops: 2000, projects: 100, tasks: 3000, milestones: 1000, risks: 1000, comments: 200, filters: 20, docBytes: 64 * 1024 };
 const ID = /^[A-Za-z0-9_-]{1,48}$/;
-const TRACKED = { title: 'Title', owner: 'Assignee', priority: 'Priority', status: 'Status', due: 'Due date', estimate: 'Estimate', labels: 'Labels', milestoneId: 'Milestone', deps: 'Waits for', holdReason: 'Hold reason' };
+const TRACKED = { title: 'Title', owner: 'Assignee', priority: 'Priority', status: 'Status', due: 'Due date', estimate: 'Estimate', labels: 'Labels', milestoneId: 'Milestone', deps: 'Waits for', holdReason: 'Hold reason', checklist: 'Checklist', archivedAt: 'Archived' };
 
 export const emptyData = () => ({ projects: [], milestones: [], tasks: [], risks: [], filters: [] });
 
@@ -27,6 +27,7 @@ const str = (v, n) => typeof v === 'string' && v.length <= n;
 // Light shape check of one entity before the engine rules (types the engine assumes).
 function shapeError(type, d) {
   if (!ID.test(d.id || '')) return 'An id is not valid.';
+  if (d.archivedAt !== undefined && !(d.archivedAt === '' || (typeof d.archivedAt === 'string' && E.isIso(d.archivedAt)))) return 'An archive date is not valid.';
   if (type !== 'project' && !ID.test(d.projectId || '')) return 'A project reference is not valid.';
   if (type === 'project') { for (const k of ['code', 'name', 'owner', 'start', 'deadline', 'status', 'priority']) if (!str(d[k], 1000)) return 'Project ' + k + ' is missing.'; if (d.objective !== undefined && !str(d.objective, 240)) return 'Objective is not valid.'; if (d.description !== undefined && !str(d.description, 1000)) return 'Description is not valid.'; }
   if (type === 'milestone') { if (!str(d.name, 80) || !str(d.target, 10)) return 'A milestone is not valid.'; if (d.done !== undefined && typeof d.done !== 'boolean') return 'A milestone is not valid.'; }
@@ -40,10 +41,13 @@ function shapeError(type, d) {
     if (d.milestoneId && !ID.test(d.milestoneId)) return 'A milestone reference is not valid.';
     if (d.heldFrom && !E.TASK_STATUSES.includes(d.heldFrom)) return 'A task is not valid.';
     if (d.remindOn !== undefined && d.remindOn !== '' && !(typeof d.remindOn === 'string' && E.isIso(d.remindOn))) return 'A reminder date is not valid.';
+    if (d.checklist !== undefined && (!Array.isArray(d.checklist) || d.checklist.length > 30)) return 'A checklist is not valid.';
   }
   if (type === 'risk') { if (!str(d.title, 120) || !str(d.status, 20)) return 'A risk is not valid.'; if (d.owner !== undefined && !str(d.owner, 40)) return 'A risk is not valid.'; if (d.mitigation !== undefined && !str(d.mitigation, 400)) return 'A risk is not valid.'; }
   return '';
 }
+
+function cleanChecklist(doc) { if (doc.checklist !== undefined) doc.checklist = doc.checklist.map(c => ({ id: c && c.id, text: String((c && c.text) || ''), done: !!(c && c.done) })); }
 
 function validComment(c) { return c && ID.test(c.id || '') && str(c.text, 1000) && c.text.trim() && str(c.by, 60) && str(c.at, 40); }
 
@@ -116,7 +120,7 @@ export function applyOps(current, ops, actor, at) {
     if (doc.id !== op.id) return { error: 'A change is not valid.' };
     const se = shapeError(op.type, doc); if (se) return { error: se };
     if (op.type === 'task') {
-      doc.labels = doc.labels || []; doc.deps = doc.deps || [];
+      doc.labels = doc.labels || []; doc.deps = doc.deps || []; cleanChecklist(doc);
       const mc = mergeComments(old, doc, actor, at); if (mc.error) return { error: mc.error };
       doc.comments = mc.comments;
       if (old && old.projectId !== doc.projectId) return { error: 'A task cannot move to another project.' };
@@ -134,6 +138,7 @@ export function applyOps(current, ops, actor, at) {
 
 function fmt(k, v, data) {
   if (k === 'labels') return (v || []).join(', ') || 'none';
+  if (k === 'checklist') return E.checklistText(v);
   if (k === 'deps') return (v || []).map(d => (data.tasks.find(x => x.id === d) || {}).key || '?').join(', ') || 'none';
   if (k === 'milestoneId') return (data.milestones.find(m => m.id === v) || {}).name || 'none';
   return v === '' || v === undefined || v === null ? 'none' : String(v);
@@ -151,7 +156,7 @@ export function checkImport(d) {
       if (!raw || typeof raw !== 'object') return { error: 'The workspace has a broken item.' };
       const doc = pick(type, raw);
       const se = shapeError(type, doc); if (se) return { error: se };
-      if (type === 'task') { doc.labels = doc.labels || []; doc.deps = doc.deps || []; doc.comments = (doc.comments || []).map(c => ({ id: c && c.id, text: String((c && c.text) || ''), by: String((c && c.by) || ''), at: String((c && c.at) || '') })); if (doc.comments.some(c => !validComment(c))) return { error: 'Task ' + doc.key + ' has a comment that is not valid.' }; }
+      if (type === 'task') { doc.labels = doc.labels || []; doc.deps = doc.deps || []; cleanChecklist(doc); doc.comments = (doc.comments || []).map(c => ({ id: c && c.id, text: String((c && c.text) || ''), by: String((c && c.by) || ''), at: String((c && c.at) || '') })); if (doc.comments.some(c => !validComment(c))) return { error: 'Task ' + doc.key + ' has a comment that is not valid.' }; }
       out[LIST[type]].push(doc);
     }
   }

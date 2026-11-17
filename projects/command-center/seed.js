@@ -87,6 +87,19 @@ export function seed(today) {
   tk('t-f2').comments.push({ id: 'c-4', by: 'Jonas Berg', at: d(-5) + 'T11:30', text: 'The vendor patch needs a restart window. Planned for the weekend.' });
   tk('t-x8').history.push({ at: d(0) + 'T09:40', by: 'Lina Haddad', field: 'Status', from: 'In review', to: 'Done' });
   tk('t-f2').history.push({ at: d(-6) + 'T08:15', by: 'Jonas Berg', field: 'Assignee', from: 'Marc Olsen', to: 'Jonas Berg' });
+  tk('t-a7').checklist = [
+    { id: 'k-1', text: 'Backup of the old portal taken', done: true },
+    { id: 'k-2', text: 'Rollback steps tried on the test copy', done: true },
+    { id: 'k-3', text: 'Support team briefed', done: false },
+    { id: 'k-4', text: 'Go or no-go call booked', done: false },
+  ];
+  tk('t-a5').checklist = [
+    { id: 'k-5', text: 'Pick 30 pilot clients', done: true },
+    { id: 'k-6', text: 'Write the invitation', done: false },
+    { id: 'k-7', text: 'Send and track answers', done: false },
+  ];
+  // one link across projects: the finance data dictionary waits for the invoice screens in the client portal
+  tk('t-x1').deps = ['t-a3'];
 
   const risks = [
     { id: 'r-1', projectId: 'p-atlas', title: 'Invoice data from the old system is incomplete', impact: 4, probability: 4, owner: 'Priya Nair', mitigation: 'Run a data check on 500 sample invoices before the pilot.', status: 'Mitigating' },

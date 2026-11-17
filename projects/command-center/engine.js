@@ -37,6 +37,7 @@ export function validateProject(p, all = []) {
   if (!/^[A-Z]{2,5}$/.test(p.code || '')) e.code = 'Key must be 2 to 5 capital letters, for example ATL.';
   else if (all.some(o => o.id !== p.id && o.code === p.code)) e.code = 'Another project already uses this key.';
   if (p.name && all.some(o => o.id !== p.id && o.name.trim().toLowerCase() === p.name.trim().toLowerCase())) e.name = 'Another project already has this name.';
+  if (p.archivedAt) { if (!isIso(p.archivedAt)) e.archivedAt = 'The archive date is not valid.'; else if (p.status !== 'Completed') e.status = 'An archived project stays Completed. Restore it first.'; }
   return e;
 }
 
@@ -65,7 +66,6 @@ export function validateTask(t, data) {
     for (const d of deps) {
       const other = data.tasks.find(x => x.id === d);
       if (!other) { e.deps = 'A chosen dependency no longer exists.'; break; }
-      if (other.projectId !== t.projectId) { e.deps = 'Dependencies must be in the same project.'; break; }
     }
     if (!e.deps) {
       const loop = findCycle(data.tasks.filter(x => x.id !== t.id).concat([{ ...t, deps }]));
@@ -75,6 +75,11 @@ export function validateTask(t, data) {
   if (t.status === 'On hold' && !String(t.holdReason || '').trim()) e.holdReason = 'Say why the task is paused.';
   if (t.remindOn !== undefined && t.remindOn !== '' && !isIso(t.remindOn)) e.remindOn = 'The reminder date is not valid.';
   maxLen(e, 'holdReason', t.holdReason, 200, 'Reason');
+  if (t.checklist !== undefined) {
+    if (!Array.isArray(t.checklist) || t.checklist.length > 30) e.checklist = 'Up to 30 checklist items.';
+    else if (t.checklist.some(c => !c || typeof c.id !== 'string' || !/^[A-Za-z0-9_-]{1,48}$/.test(c.id) || typeof c.text !== 'string' || !c.text.trim() || c.text.length > 120 || typeof c.done !== 'boolean')) e.checklist = 'Each checklist item needs a text of up to 120 characters.';
+  }
+  if (t.archivedAt) { if (!isIso(t.archivedAt)) e.archivedAt = 'The archive date is not valid.'; else if (t.status !== 'Done') e.archivedAt = 'Only done tasks can be archived.'; }
   const labels = t.labels || [];
   if (labels.length > 5) e.labels = 'Up to 5 labels.';
   else if (labels.some(l => !/^[a-z0-9][a-z0-9-]{0,19}$/.test(l))) e.labels = 'Labels use small letters, digits and dashes, up to 20 characters.';
@@ -191,7 +196,7 @@ export function health(data, project, today) {
   const expected = project.status === 'Planned' ? 0 : expectedProgress(project, today);
   const lag = Math.max(0, expected - prog);
   const overdueMs = ms.filter(m => isMilestoneOverdue(m, today));
-  const blocked = tasks.filter(t => t.status !== 'Done' && (t.status === 'On hold' || (isWaiting(t, tasks) && isTaskOverdue(t, today))));
+  const blocked = tasks.filter(t => t.status !== 'Done' && (t.status === 'On hold' || (isWaiting(t, data.tasks) && isTaskOverdue(t, today))));
   const highRisks = risks.filter(r => riskScore(r) >= 10);
   const midRisks = risks.filter(r => riskScore(r) >= 5 && riskScore(r) < 10);
   const pastDeadline = project.status !== 'Completed' && project.deadline < today;
@@ -213,7 +218,7 @@ export function health(data, project, today) {
 }
 
 export function portfolioSummary(data, today) {
-  const ps = data.projects;
+  const ps = data.projects.filter(p => !p.archivedAt);
   const hs = ps.map(p => ({ project: p, h: health(data, p, today) }));
   const upcoming = data.milestones.filter(m => !m.done && m.target >= today && m.target <= addDays(today, 30)).sort((a, b) => a.target.localeCompare(b.target));
   const topRisks = data.risks.filter(r => r.status !== 'Closed').sort((a, b) => riskScore(b) - riskScore(a) || a.title.localeCompare(b.title)).slice(0, 5);
@@ -233,7 +238,7 @@ export function portfolioSummary(data, today) {
 export function insights(data, today) {
   const out = [];
   const name = pid => (data.projects.find(p => p.id === pid) || {}).name || 'Unknown project';
-  for (const p of data.projects) {
+  for (const p of data.projects.filter(x => !x.archivedAt)) {
     if (p.status === 'Completed') continue;
     const h = health(data, p, today);
     const tasks = projectTasks(data, p.id);
@@ -340,7 +345,7 @@ export function nextKey(data, projectId) {
   return p.code + '-' + ((nums.length ? Math.max(...nums) : 0) + 1);
 }
 
-const TRACKED = { title: 'Title', owner: 'Assignee', priority: 'Priority', status: 'Status', due: 'Due date', estimate: 'Estimate', labels: 'Labels', milestoneId: 'Milestone', deps: 'Waits for', holdReason: 'Hold reason' };
+const TRACKED = { title: 'Title', owner: 'Assignee', priority: 'Priority', status: 'Status', due: 'Due date', estimate: 'Estimate', labels: 'Labels', milestoneId: 'Milestone', deps: 'Waits for', holdReason: 'Hold reason', checklist: 'Checklist', archivedAt: 'Archived' };
 const same = (a, b) => JSON.stringify(a ?? '') === JSON.stringify(b ?? '');
 
 // One change to one task, validated, with its history. Returns { data, errors }.
@@ -360,7 +365,9 @@ export function updateTask(data, id, patch, by, at) {
   next.history = [...(t.history || []), ...changes];
   return { data: { ...data, tasks: data.tasks.map(x => x.id === id ? next : x) }, errors: {}, changes };
 }
+export function checklistText(v) { v = v || []; return v.length ? v.filter(c => c.done).length + ' of ' + v.length + ' done' : 'none'; }
 function fmtVal(k, v, data) {
+  if (k === 'checklist') return checklistText(v);
   if (k === 'labels') return (v || []).join(', ') || 'none';
   if (k === 'deps') return (v || []).map(d => (data.tasks.find(x => x.id === d) || {}).key || '?').join(', ') || 'none';
   if (k === 'milestoneId') return (data.milestones.find(m => m.id === v) || {}).name || 'none';
@@ -387,6 +394,25 @@ export function placeTask(data, id, status, beforeId, by, at, reason) {
   const nxt = i === -1 ? null : col[i];
   const rank = nxt ? ((prev ? prev.rank : nxt.rank - 2) + nxt.rank) / 2 : (prev ? prev.rank + 1 : 1);
   return { ...r, data: { ...r.data, tasks: r.data.tasks.map(t => t.id === id ? { ...t, rank } : t) } };
+}
+// Archive: done tasks and completed projects leave the working views but stay in search, reports and history.
+export function archiveTask(data, id, today, by, at) { return updateTask(data, id, { archivedAt: today }, by, at); }
+export function restoreTask(data, id, by, at) { return updateTask(data, id, { archivedAt: '' }, by, at); }
+export function archiveProject(data, id, today, by, at) {
+  const p = data.projects.find(x => x.id === id); if (!p) return { data, error: 'This project no longer exists.' };
+  if (p.status !== 'Completed') return { data, error: 'Only a completed project can be archived. Set it to Completed first.' };
+  const open = projectTasks(data, id).filter(t => t.status !== 'Done');
+  if (open.length) return { data, error: open.length === 1 ? 'One task in this project is not done yet: ' + open[0].key + '.' : open.length + ' tasks in this project are not done yet.' };
+  let d = { ...data, projects: data.projects.map(x => x.id === id ? { ...x, archivedAt: today } : x) };
+  for (const t of projectTasks(d, id)) if (!t.archivedAt) d = updateTask(d, t.id, { archivedAt: today }, by, at).data;
+  return { data: d, error: '' };
+}
+export function restoreProject(data, id, by, at) {
+  const p = data.projects.find(x => x.id === id); if (!p) return { data, error: 'This project no longer exists.' };
+  const day = p.archivedAt;
+  let d = { ...data, projects: data.projects.map(x => x.id === id ? { ...x, archivedAt: '' } : x) };
+  for (const t of projectTasks(d, id)) if (t.archivedAt && t.archivedAt === day) d = updateTask(d, t.id, { archivedAt: '' }, by, at).data;
+  return { data: d, error: '' };
 }
 export function byRank(a, b) { return (a.rank ?? 0) - (b.rank ?? 0) || a.due.localeCompare(b.due); }
 
@@ -420,7 +446,8 @@ export function applyFilter(tasks, q, me, today) {
     (!q.label || (t.labels || []).includes(q.label)) &&
     (!q.project || t.projectId === q.project) &&
     (!q.overdue || isTaskOverdue(t, today)) &&
-    (!q.onHold || t.status === 'On hold'));
+    (!q.onHold || t.status === 'On hold') &&
+    (q.archived ? !!t.archivedAt : !t.archivedAt));
 }
 
 export function validateFilterName(name, list) {

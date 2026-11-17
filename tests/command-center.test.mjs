@@ -35,7 +35,7 @@ test('task validation: estimate range, self-dependency, other project, loops, do
   assert.ok(E.validateTask({ ...base, estimate: 0 }, d).estimate);
   assert.ok(E.validateTask({ ...base, estimate: 2.5 }, d).estimate);
   assert.match(E.validateTask({ ...base, deps: ['t-a4'] }, d).deps, /itself/);
-  assert.match(E.validateTask({ ...base, deps: ['t-b1'] }, d).deps, /same project/);
+  assert.equal(E.validateTask({ ...base, deps: ['t-b1'] }, d).deps, undefined); // across projects is allowed
   // t-a2 depends on t-a1; making t-a1 depend on t-a7 (which depends on t-a2 chain) creates a loop
   const a1 = d.tasks.find(t => t.id === 't-a1');
   assert.match(E.validateTask({ ...a1, deps: ['t-a7'] }, d).deps, /loop/);
@@ -236,4 +236,30 @@ test('workload adds open work per person', () => {
   const w = E.workload(data());
   const total = data().tasks.filter(t => t.status !== 'Done').reduce((s, t) => s + t.estimate, 0);
   assert.equal(w.reduce((s, x) => s + x.days, 0), total);
+});
+
+test('checklist items and archive rules', () => {
+  const d = seed('2026-11-17');
+  const t = d.tasks.find(x => x.status !== 'Done');
+  assert.equal(E.validateTask({ ...t, checklist: [{ id: 'c1', text: 'Write it', done: false }] }, d).checklist, undefined);
+  assert.match(E.validateTask({ ...t, checklist: [{ id: 'c1', text: ' ', done: false }] }, d).checklist, /120/);
+  assert.match(E.validateTask({ ...t, checklist: Array.from({ length: 31 }, (_, i) => ({ id: 'c' + i, text: 'x', done: false })) }, d).checklist, /30/);
+  const r = E.updateTask(d, t.id, { checklist: [{ id: 'c1', text: 'One', done: true }, { id: 'c2', text: 'Two', done: false }] }, 'Ana', '2026-11-17T10:00');
+  assert.equal(r.changes[0].to, '1 of 2 done');
+  assert.match(E.archiveTask(d, t.id, '2026-11-17', 'Ana', 'x').errors.archivedAt, /done/);
+  const done = d.tasks.find(x => x.status === 'Done');
+  const a = E.archiveTask(d, done.id, '2026-11-17', 'Ana', 'x');
+  assert.deepEqual(a.errors, {});
+  assert.ok(!E.applyFilter(a.data.tasks, {}, 'Ana', '2026-11-17').some(x => x.id === done.id));
+  assert.ok(E.applyFilter(a.data.tasks, { archived: true }, 'Ana', '2026-11-17').some(x => x.id === done.id));
+  const active = d.projects.find(p => p.status === 'Active');
+  assert.match(E.archiveProject(d, active.id, '2026-11-17', 'Ana', 'x').error, /completed/);
+  const p2 = { ...active, status: 'Completed' };
+  const d2 = { ...d, projects: d.projects.map(p => p.id === active.id ? p2 : p), tasks: d.tasks.map(x => x.projectId === active.id ? { ...x, status: 'Done', holdReason: '' } : x) };
+  const ar = E.archiveProject(d2, active.id, '2026-11-17', 'Ana', 'x');
+  assert.equal(ar.error, '');
+  assert.ok(E.projectTasks(ar.data, active.id).every(x => x.archivedAt === '2026-11-17'));
+  assert.ok(!E.portfolioSummary(ar.data, '2026-11-17').health.some(h => h.project.id === active.id));
+  const back = E.restoreProject(ar.data, active.id, 'Ana', 'x');
+  assert.ok(E.projectTasks(back.data, active.id).every(x => !x.archivedAt));
 });
