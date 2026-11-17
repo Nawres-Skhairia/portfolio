@@ -36,6 +36,9 @@ export function explain(raw) {
   if ((m = raw.match(/parser error : Opening and ending tag mismatch: (\S+) line (\d+) and (\S+)/))) {
     return { layer: 'xml', element: m[1], openLine: Number(m[2]), message: `The tag <${m[1]}> opened on line ${m[2]} is never closed: the next closing tag is </${m[3]}>.`, expected: `</${m[1]}>`, found: `</${m[3]}>`, fix: `Add </${m[1]}> where the ${FIELDS[m[1]] || m[1]} ends.`, ref: 'XML 1.0 well-formedness' };
   }
+  if (/parser error : Excessive depth in document/.test(raw)) {
+    return { layer: 'xml', element: '', message: 'The file is nested more than 256 levels deep. Payment files never are, so it was not read further.', fix: 'Check the program that made the file: a pain.001 file is only about 10 levels deep.', ref: 'XML 1.0 well-formedness' };
+  }
   if ((m = raw.match(/parser error : (.*)$/))) {
     return { layer: 'xml', element: '', message: 'The file is not well-formed XML: ' + m[1].trim().replace(/\.$/, '') + '.', fix: 'Fix the XML syntax at this line; nothing else can be checked until then.', ref: 'XML 1.0 well-formedness' };
   }

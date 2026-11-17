@@ -127,5 +127,16 @@ for (const s of SCENARIOS.filter((x) => x.expect)) {
   const ctl = (await check('<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.001.001.09">\u0001</Document>', { procDate, validateSchema }));
   ok(ctl.status === 'refused', 'Safety: control characters refused');
 }
+// Daniel's hands-on Minors (PORT-40 10667)
+{
+  const { safetyGate, sizeWords } = await import(new URL('js/engine.js', base));
+  ok(safetyGate('x', 10 * 1048576 + 100) === 'This file is just over the 10 MB limit.', 'size: 10.0 MB reads as just over the limit');
+  ok(sizeWords(12.4 * 1048576) === 'This file is 12.4 MB. The limit is 10 MB.', 'size: 12.4 MB says the size');
+  const deep = '<?xml version="1.0" encoding="UTF-8"?><Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.001.001.09">' + '<a>'.repeat(300) + '</a>'.repeat(300) + '</Document>';
+  const r = await check(deep, { procDate, validateSchema });
+  ok(r.status === 'not-wellformed' && /nested more than 256 levels deep/.test(r.findings[0].message) && !r.findings.some((f) => /XML_PARSE_HUGE/.test(f.message + f.fix)), 'nesting bomb in plain words', r.findings[0] && r.findings[0].message);
+  const app = readFileSync(new URL('js/app.js', base), 'utf8');
+  ok(/MAX_SHOWN = 500/.test(app) && /all\.slice\(0, MAX_SHOWN\)/.test(app), 'findings list capped at 500 cards');
+}
 console.log(`${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

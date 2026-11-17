@@ -8,8 +8,13 @@ export const TOOL = { name: 'Payment XML Lab (ISO 20022)', version: '0.1.0' };
 export const SUPPORTED = { ns: 'urn:iso:std:iso:20022:tech:xsd:pain.001.001.09', id: 'pain.001.001.09', xsd: 'pain.001.001.09.xsd' };
 export const MAX_BYTES = 10 * 1024 * 1024;
 
+// "10.0 MB, limit 10 MB" read as if it fits (Daniel, PORT-40 10667)
+export function sizeWords(bytes, limit = MAX_BYTES, what = 'This file') {
+  const mb = (bytes / 1048576).toFixed(1), lim = limit / 1048576;
+  return Number(mb) <= lim ? `${what} is just over the ${lim} MB limit.` : `${what} is ${mb} MB. The limit is ${lim} MB.`;
+}
 export function safetyGate(src, bytes) {
-  if (bytes > MAX_BYTES) return `This file is ${(bytes / 1048576).toFixed(1)} MB. The limit is 10 MB.`;
+  if (bytes > MAX_BYTES) return sizeWords(bytes);
   if (!src.trim()) return 'The file is empty.';
   // XML 1.0 forbids these control characters. A NUL also means a UTF-16 file read as UTF-8, which could hide a DOCTYPE.
   if (/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/.test(src)) return 'The file contains control characters that XML does not allow (often a sign it is UTF-16, not UTF-8). Only UTF-8 files are checked here.';

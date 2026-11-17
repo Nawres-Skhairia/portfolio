@@ -1,7 +1,7 @@
 // Payment XML Lab: the workbench. Everything happens in this tab; nothing is uploaded or stored.
 import { RULES, SOURCES, CATALOGUE_VERSION, nextBusinessDay } from './rules.js';
 import { SCENARIOS, generate, sample } from './factory.js';
-import { SUPPORTED, TOOL, MAX_BYTES } from './engine.js';
+import { SUPPORTED, TOOL, MAX_BYTES, sizeWords } from './engine.js';
 import { toHtml, toJson, toJUnit } from './reports.js';
 import { scriptURL } from './tt.js';
 
@@ -81,7 +81,7 @@ async function load(text, fileName, bytesArr) {
 const fmtBytes = (n) => (n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : n > 1024 ? Math.round(n / 1024) + ' KB' : n + ' bytes');
 
 async function loadFile(file) {
-  if (file.size > MAX_BYTES) return showRefused(file.name, `This file is ${fmtBytes(file.size)}. The limit is 10 MB.`);
+  if (file.size > MAX_BYTES) return showRefused(file.name, sizeWords(file.size));
   const buf = new Uint8Array(await file.arrayBuffer());
   let text;
   try { text = new TextDecoder('utf-8', { fatal: true }).decode(buf); } catch (e) { return showRefused(file.name, 'This file is not valid UTF-8 text. Only UTF-8 files are checked here (SEPA files are UTF-8).'); }
@@ -150,11 +150,14 @@ function visible(f) {
   if (state.filter === 'rule') return f.layer === 'rule' && f.severity === 'error';
   return f.severity === 'warning';
 }
+const MAX_SHOWN = 500;
 function renderFindings() {
   const list = $('findings'); list.replaceChildren();
   const r = state.report;
-  state.shown = r ? r.findings.map((f, i) => ({ f, i })).filter((x) => visible(x.f)) : [];
-  $('findMeta').textContent = r ? `${state.shown.length} shown` : '';
+  const all = r ? r.findings.map((f, i) => ({ f, i })).filter((x) => visible(x.f)) : [];
+  // 50,000 cards froze the tab for about 10 s: show the first 500, the reports keep all (Daniel, PORT-40 10667)
+  state.shown = all.slice(0, MAX_SHOWN);
+  $('findMeta').textContent = r ? (all.length > MAX_SHOWN ? `first ${MAX_SHOWN} of ${all.length.toLocaleString('en')} shown` : `${all.length} shown`) : '';
   if (!r) return;
   if (!r.findings.length && r.status === 'checked') {
     const li = h('li', 'empty'); li.append(h('b', null, 'No findings.'), h('span', null, ` The file follows the ISO 20022 schema and all ${RULES.length} SEPA rules in the catalogue.`)); list.append(li); return;
@@ -186,6 +189,7 @@ function renderFindings() {
     li.addEventListener('keydown', (e) => { if (e.key === 'Enter') select(i, true); });
     list.append(li);
   }
+  if (all.length > MAX_SHOWN) list.append(h('li', 'empty', `And ${(all.length - MAX_SHOWN).toLocaleString('en')} more. Fix these first, or download the report to see every finding.`));
 }
 function select(i, scrollCode, scrollList) {
   state.sel = i;
