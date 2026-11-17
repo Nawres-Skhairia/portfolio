@@ -270,7 +270,7 @@ function goals() {
   const banner = E.bannerGoal(all);
   const row = g => {
     const p = E.goalProgress(g, TODAY);
-    return '<tr><td class="g-name">' + gicon(g.icon) + '<span><b>' + esc(g.name) + '</b>' + (banner && banner.id === g.id && !g.archivedAt ? ' <span class="chip">' + (g.pinned ? 'Pinned' : 'On the overview') + '</span>' : '') + '<small>' + esc(p.line) + '</small></span></td>' +
+    return '<tr><td><div class="g-name">' + gicon(g.icon) + '<span><b>' + esc(g.name) + '</b>' + (banner && banner.id === g.id && !g.archivedAt ? ' <span class="chip">' + (g.pinned ? 'Pinned' : 'On the overview') + '</span>' : '') + '<small>' + esc(p.line) + '</small></span></div></td>' +
       '<td class="g-prog">' + goalBar(p) + '</td><td class="r money">' + esc(money(p.saved)) + '</td><td class="r money">' + esc(money(g.target)) + '</td><td class="r">' + p.percent + ' %</td>' +
       '<td>' + (g.by ? esc(ddate(g.by)) : '<span class="muted">No date</span>') + '</td><td class="pace-c">' + (g.archivedAt ? '<span class="muted">Archived</span>' : paceLine(g, p).replace('<p class="pace">', '').replace('</p>', '')) + '</td>' +
       '<td class="acts">' + (g.archivedAt ? '<button type="button" class="lnk" data-act="goal-unarchive" data-id="' + esc(g.id) + '">Bring back</button>' :
