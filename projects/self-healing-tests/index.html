@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Self-Healing Tests · Tests that repair themselves, and never hide a real bug · Nawres Skhairia</title>
+  <meta name="description" content="A shop page is redesigned and its automated tests break. The robot finds each moved element again, proves every repair by running the test again, and keeps a real bug red.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="/assets/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/instrument-serif-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/assets/fonts/site-fonts.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="/assets/tool-theme.css">
+  <script src="/assets/theme.js"></script>
+</head>
+<body>
+  <header class="top wrap">
+    <a class="back" href="/#work">← Nawres Skhairia</a>
+    <span class="tag">New project · preview</span>
+    <button class="theme-switch" type="button" aria-label="Dark theme" aria-pressed="false"><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 14.6A8.5 8.5 0 0 1 9.4 3.5a8.5 8.5 0 1 0 11.1 11.1z"/></svg></button>
+  </header>
+
+  <main class="wrap">
+    <section class="intro">
+      <h1>Tests that repair themselves, <em>and never hide a real bug.</em></h1>
+      <p>A made-up shop has 8 automated tests. Redesign the page and watch them break. Press Heal: the robot finds each moved element again, proves the repair by running the test again, and keeps a real bug red.</p>
+    </section>
+
+    <div class="layout">
+      <section class="panel controls" aria-label="Redesign and heal">
+        <label for="stop" class="lbl">1 · Redesign the shop</label>
+        <input type="range" id="stop" min="0" max="3" step="1" value="0">
+        <ol class="ticks" id="ticks" aria-hidden="true"></ol>
+        <ul class="changes" id="changes"></ul>
+
+        <p class="lbl">2 · Run and heal</p>
+        <div class="btns">
+          <button type="button" class="btn" id="runBtn">Run the 8 tests</button>
+          <button type="button" class="btn primary" id="healBtn" disabled>Heal</button>
+        </div>
+        <div class="row">
+          <label for="speed" class="lbl small">Robot speed</label>
+          <select id="speed"><option value="350">Watch</option><option value="0">Fast</option></select>
+        </div>
+        <p class="who"><span class="b k-rules">rules</span> The healer uses plain rules, no AI. <span class="b k-robot">robot</span> The robot clicks and types. <span class="b k-check">rerun</span> Only a green rerun accepts a repair.</p>
+      </section>
+
+      <section class="panel stagewrap" aria-label="The shop">
+        <div class="stagebox" id="stagebox">
+          <div class="stage" id="stage">
+            <iframe id="shop" title="The made-up shop the tests run on" src="shop.html?stop=0"></iframe>
+            <div class="cursor" id="cursor" hidden aria-hidden="true"></div>
+          </div>
+        </div>
+        <p class="hint" id="now" aria-live="polite">Original shop. Press "Run the 8 tests".</p>
+      </section>
+    </div>
+
+    <section class="panel results" aria-label="Test results">
+      <div class="res-head">
+        <h2 class="h2">The 8 tests <span class="count" id="tally"></span></h2>
+        <div class="dl" id="downloads" hidden>
+          <button type="button" class="btn small" id="dlTests">Test file after healing</button>
+          <button type="button" class="btn small" id="dlJunit">JUnit report</button>
+        </div>
+      </div>
+      <ol class="tests" id="tests"></ol>
+    </section>
+
+    <section class="panel hood" aria-label="Under the hood">
+      <h2 class="h2">Under the hood</h2>
+      <div class="cols">
+        <div>
+          <h3>How the healer finds a moved element</h3>
+          <p>Every test target was recorded once on the original page: its kind (button, text box…), its words (button text or label), the section it sits in, its test id and its rough place. When the test id is gone, the healer scores every element on the new page against that record:</p>
+          <ul id="weights"></ul>
+          <p>The score is a match score, not a probability. Under <span id="minScore"></span> the healer gives up and asks for a person.</p>
+        </div>
+        <div>
+          <h3>Why a repair can be refused</h3>
+          <p>A proposal changes nothing on its own. The robot runs the whole test again on a fresh page. Green: the repair is kept. Still red: the healer tries the next best element. If nothing turns green and every match was clear, the page is wrong, not the test: <b>real bug</b>.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+  <footer class="wrap foot"><p>Made-up shop, made-up data. Nothing you do here is stored or sent. <a href="/privacy/">Privacy</a></p></footer>
+  <script src="redesign.js"></script>
+  <script src="tests.js"></script>
+  <script src="heal-core.js"></script>
+  <script src="engine.js"></script>
+  <script src="app.js"></script>
+  <script src="/assets/page-fx.js" defer></script>
+</body>
+</html>

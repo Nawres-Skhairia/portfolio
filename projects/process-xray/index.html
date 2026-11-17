@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Process X-ray · Where do orders get stuck? · Nawres Skhairia</title>
+  <meta name="description" content="Process mining in your browser: 2,000 made-up orders become a process map, the bottleneck is found and explained, and every deviation is counted.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="/assets/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/instrument-serif-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/assets/fonts/site-fonts.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="/assets/tool-theme.css">
+  <script src="/assets/theme.js"></script>
+</head>
+<body>
+  <header class="top wrap">
+    <a class="back" href="/#work">← Nawres Skhairia</a>
+    <span class="tag">New project · preview</span>
+    <button class="theme-switch" type="button" aria-label="Dark theme" aria-pressed="false"><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 14.6A8.5 8.5 0 0 1 9.4 3.5a8.5 8.5 0 1 0 11.1 11.1z"/></svg></button>
+  </header>
+
+  <main class="wrap">
+    <section class="intro">
+      <h1>Where do orders get <em>stuck</em>?</h1>
+      <p>2,000 made-up orders from a pretend online shop, mined in your browser. <span class="b k-data">made-up data</span></p>
+    </section>
+
+    <section class="panel mapcard" aria-labelledby="mapTitle">
+      <h2 class="vh" id="mapTitle">Process map</h2>
+      <div id="sentence"><p class="sentence" id="sMain"></p><p class="sdetail" id="sDetail"></p></div>
+      <p class="who"><span class="b k-rules">summary written by rules</span> Every number is counted from the event log on this page.</p>
+      <div class="map" id="map" role="img" aria-describedby="sentence"></div>
+      <div class="actions">
+        <button type="button" class="btn" id="showOrders" aria-expanded="false">Show me the orders</button>
+        <button type="button" class="btn ghost" id="showDetours" aria-expanded="false">Show the detours</button>
+      </div>
+    </section>
+
+    <section class="panel" id="ordersBox" hidden aria-labelledby="ordersTitle">
+      <h2 class="h2" id="ordersTitle"></h2>
+      <div class="bars" id="whBars"></div>
+      <div class="tablewrap"><table id="ordersTable"></table></div>
+    </section>
+
+    <section class="panel" id="detoursBox" hidden aria-labelledby="detoursTitle">
+      <h2 class="h2" id="detoursTitle">Detours from the reference process</h2>
+      <p class="hint">The reference process is the 5 steps above, once each, in order. Click a detour to see its orders.</p>
+      <ul class="detours" id="detourList"></ul>
+      <div class="tablewrap"><table id="detourTable" hidden></table></div>
+    </section>
+
+    <section class="kpis" id="kpis" aria-label="Key figures"></section>
+
+    <section class="deep">
+      <details>
+        <summary>Variants: every distinct path an order took</summary>
+        <div class="tablewrap"><table id="variants"></table></div>
+      </details>
+      <details>
+        <summary>Directly-follows relations: the raw material of the map</summary>
+        <p class="hint">How often one step was immediately followed by another, over all orders.</p>
+        <div class="tablewrap"><table id="dfg"></table></div>
+      </details>
+      <details>
+        <summary>The event log</summary>
+        <p class="hint">Case ID, activity, timestamp (UTC) and warehouse: the standard shape of an event log. First 25 of <span id="evCount"></span> events, in time order.</p>
+        <div class="tablewrap"><table id="log"></table></div>
+        <p><a id="csv" class="linkbtn" download="process-xray-made-up-event-log.csv" href="#">Download the whole made-up log (CSV)</a></p>
+      </details>
+      <details>
+        <summary>Under the hood</summary>
+        <table class="honest">
+          <thead><tr><th>Part</th><th>Who</th><th>Real or made up</th></tr></thead>
+          <tbody>
+            <tr><td>The 2,000 orders</td><td>Generator with a fixed seed</td><td>Made up. Same numbers for every visitor. The 3 detours and the slow warehouse are planted on purpose for this demo.</td></tr>
+            <tr><td>Map, waits, variants, conformance, lead times</td><td>Fixed code (process mining)</td><td>Real calculation on the log, in your browser</td></tr>
+            <tr><td>The slowest step</td><td>Fixed code</td><td>The largest average wait between two steps</td></tr>
+            <tr><td>The sentence</td><td>Fixed wording filled with computed numbers</td><td>No AI in this version</td></tr>
+          </tbody>
+        </table>
+        <p class="hint">How a wait is measured: for each order, the time from the last event of one step to the first event of the next step. Orders that skip a step, or do them out of order, are counted as detours instead.</p>
+      </details>
+    </section>
+
+    <p class="foot">Everything happens in your browser: nothing is uploaded, sent or kept. Created by <a href="/">Nawres Skhairia</a>. A work in progress: ideas and feedback are welcome, <a href="/#contact">get in touch</a>. <a href="/privacy/">Privacy</a></p>
+  </main>
+
+  <script src="gen.js"></script>
+  <script src="core.js"></script>
+  <script src="app.js"></script>
+  <script src="/assets/page-fx.js" defer></script>
+</body>
+</html>

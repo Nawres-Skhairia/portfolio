@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Little Roastery · Checkout (made-up shop)</title>
+  <link rel="stylesheet" href="/assets/fonts/fonts.css">
+  <link rel="stylesheet" href="shop.css">
+</head>
+<body>
+  <main class="shop" id="shop">
+    <h1>Little Roastery <span>· checkout</span></h1>
+    <section class="sec" id="sec-basket" aria-labelledby="h-basket">
+      <h2 id="h-basket">Basket</h2>
+      <div class="line"><label for="qty-beans">Coffee beans, 250 g · €12.00</label><input id="qty-beans" data-test="qty-beans" type="number" min="0" max="9" value="1" inputmode="numeric"></div>
+      <div class="line"><label for="qty-mug">Mug · €8.50</label><input id="qty-mug" data-test="qty-mug" type="number" min="0" max="9" value="1" inputmode="numeric"></div>
+    </section>
+    <section class="sec" id="sec-delivery" aria-labelledby="h-delivery">
+      <h2 id="h-delivery">Delivery</h2>
+      <div class="line"><label for="delivery">Delivery</label>
+        <select id="delivery" data-test="delivery"><option value="standard">Standard, €4.90</option><option value="pickup">Pick up in the shop, free</option></select></div>
+    </section>
+    <section class="sec" id="sec-code" aria-labelledby="h-code">
+      <h2 id="h-code">Discount</h2>
+      <div class="line"><label for="code">Discount code</label><input id="code" data-test="code" autocomplete="off"><button id="apply" data-test="apply" type="button">Apply</button></div>
+      <output id="code-msg" data-test="code-msg" aria-label="Discount message"></output>
+    </section>
+    <section class="sec" id="sec-contact" aria-labelledby="h-contact">
+      <h2 id="h-contact">Your details</h2>
+      <div class="line"><label for="name">Name</label><input id="name" data-test="name" autocomplete="off"></div>
+      <div class="line"><label for="email">Email</label><input id="email" data-test="email" type="email" autocomplete="off"></div>
+    </section>
+    <section class="sec total" id="sec-total">
+      <span id="total-label">Total</span><output id="total" data-test="total" aria-labelledby="total-label"></output>
+    </section>
+    <div class="actions" id="actions">
+      <button id="cancel" data-test="cancel" type="button">Cancel order</button>
+      <button id="place" data-test="place" type="button" class="primary">Place order</button>
+    </div>
+    <p id="result" data-test="result" role="status" aria-label="Order status"></p>
+  </main>
+  <script src="redesign.js"></script>
+  <script src="shop.js"></script>
+</body>
+</html>

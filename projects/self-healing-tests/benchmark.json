@@ -1,0 +1,269 @@
+{
+  "breaks": 24,
+  "rulesRight": 23,
+  "measured": "2026-11-17",
+  "view": {
+    "width": 480,
+    "height": 640
+  },
+  "expected": {
+    "0": [
+      "passed",
+      "passed",
+      "passed",
+      "passed",
+      "passed",
+      "passed",
+      "passed",
+      "passed"
+    ],
+    "1": [
+      "healed",
+      "healed",
+      "healed",
+      "passed",
+      "passed",
+      "healed",
+      "healed",
+      "passed"
+    ],
+    "2": [
+      "healed",
+      "healed",
+      "healed",
+      "healed",
+      "healed",
+      "healed",
+      "healed",
+      "passed"
+    ],
+    "3": [
+      "healed",
+      "real bug",
+      "healed",
+      "healed",
+      "healed",
+      "healed",
+      "healed",
+      "healed"
+    ]
+  },
+  "rows": [
+    {
+      "stop": 1,
+      "target": "name",
+      "answer": "full-name",
+      "proposed": "full-name",
+      "score": 0.73,
+      "next": 0.33,
+      "right": true
+    },
+    {
+      "stop": 1,
+      "target": "email",
+      "answer": "contact-email",
+      "proposed": "contact-email",
+      "score": 0.73,
+      "next": 0.33,
+      "right": true
+    },
+    {
+      "stop": 1,
+      "target": "total",
+      "answer": "order-total",
+      "proposed": "order-total",
+      "score": 0.73,
+      "next": 0.18,
+      "right": true
+    },
+    {
+      "stop": 1,
+      "target": "place",
+      "answer": "btn-place",
+      "proposed": "btn-place",
+      "score": 1,
+      "next": 0.52,
+      "right": true
+    },
+    {
+      "stop": 2,
+      "target": "qty-mug",
+      "answer": "mug-qty",
+      "proposed": "mug-qty",
+      "score": 0.96,
+      "next": 0.48,
+      "right": true
+    },
+    {
+      "stop": 2,
+      "target": "delivery",
+      "answer": "shipping",
+      "proposed": "shipping",
+      "score": 0.4,
+      "next": 0.03,
+      "right": true
+    },
+    {
+      "stop": 2,
+      "target": "code",
+      "answer": "promo",
+      "proposed": "promo",
+      "score": 0.57,
+      "next": 0.24,
+      "right": true
+    },
+    {
+      "stop": 2,
+      "target": "apply",
+      "answer": "use-promo",
+      "proposed": "use-promo",
+      "score": 0.44,
+      "next": 0.17,
+      "right": true
+    },
+    {
+      "stop": 2,
+      "target": "name",
+      "answer": "full-name",
+      "proposed": "full-name",
+      "score": 0.63,
+      "next": 0.25,
+      "right": true
+    },
+    {
+      "stop": 2,
+      "target": "email",
+      "answer": "contact-email",
+      "proposed": "contact-email",
+      "score": 0.64,
+      "next": 0.27,
+      "right": true
+    },
+    {
+      "stop": 2,
+      "target": "total",
+      "answer": "order-total",
+      "proposed": "order-total",
+      "score": 0.71,
+      "next": 0.17,
+      "right": true
+    },
+    {
+      "stop": 2,
+      "target": "place",
+      "answer": "btn-place",
+      "proposed": "btn-place",
+      "score": 0.98,
+      "next": 0.51,
+      "right": true
+    },
+    {
+      "stop": 3,
+      "target": "qty-beans",
+      "answer": "beans-qty",
+      "proposed": "beans-qty",
+      "score": 0.96,
+      "next": 0.45,
+      "right": true
+    },
+    {
+      "stop": 3,
+      "target": "qty-mug",
+      "answer": "mug-qty",
+      "proposed": "mug-qty",
+      "score": 0.96,
+      "next": 0.48,
+      "right": true
+    },
+    {
+      "stop": 3,
+      "target": "delivery",
+      "answer": "shipping",
+      "proposed": "shipping",
+      "score": 0.4,
+      "next": 0.03,
+      "right": true
+    },
+    {
+      "stop": 3,
+      "target": "code",
+      "answer": "promo",
+      "proposed": "promo",
+      "score": 0.57,
+      "next": 0.24,
+      "right": true
+    },
+    {
+      "stop": 3,
+      "target": "apply",
+      "answer": "use-promo",
+      "proposed": "use-promo",
+      "score": 0.44,
+      "next": 0.17,
+      "right": true
+    },
+    {
+      "stop": 3,
+      "target": "code-msg",
+      "answer": "promo-note",
+      "proposed": "promo-note",
+      "score": 0.58,
+      "next": 0.15,
+      "right": true
+    },
+    {
+      "stop": 3,
+      "target": "name",
+      "answer": "full-name",
+      "proposed": "full-name",
+      "score": 0.63,
+      "next": 0.25,
+      "right": true
+    },
+    {
+      "stop": 3,
+      "target": "email",
+      "answer": "contact-email",
+      "proposed": "contact-email",
+      "score": 0.64,
+      "next": 0.27,
+      "right": true
+    },
+    {
+      "stop": 3,
+      "target": "total",
+      "answer": "order-total",
+      "proposed": "order-total",
+      "score": 0.71,
+      "next": 0.17,
+      "right": true
+    },
+    {
+      "stop": 3,
+      "target": "cancel",
+      "answer": "action-2",
+      "proposed": "action-2",
+      "score": 0.78,
+      "next": 0.56,
+      "right": true
+    },
+    {
+      "stop": 3,
+      "target": "place",
+      "answer": "action-1",
+      "proposed": "action-2",
+      "score": 0.57,
+      "next": 0.51,
+      "right": false
+    },
+    {
+      "stop": 3,
+      "target": "result",
+      "answer": "status-line",
+      "proposed": "status-line",
+      "score": 0.84,
+      "next": 0.18,
+      "right": true
+    }
+  ]
+}
