@@ -106,6 +106,12 @@ export function guessAddress(lines) {
 }
 
 // ---------- the converter ----------
+// A result for input refused before it is read (for example a file that is too big)
+export function refuse(message, fix) {
+  const e = { severity: 'error', line: 1, tag: null, message, fix, rule: 'MT', mtLine: 1 };
+  return { mt: { fields: [], blocks: { b3: [], b5: [] }, errors: [e], lineCount: 0 }, rows: [], findings: [{ severity: 'error', rule: 'MT', mtLine: null, xmlLine: null, message, fix }], errors: [e], counts: { mapped: 0, transformed: 0, defaulted: 0, lost: 0, review: 0 }, verdict: 'Not converted', facts: {}, xml: '', refused: true, tool: MAP_TOOL, catalogue: MAP_CATALOGUE_VERSION, xsd: MX.id };
+}
+
 export function convert(src) {
   const mt = readMt(src);
   if (mt.refused) {

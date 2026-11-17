@@ -1,5 +1,5 @@
 // MT to MX Migration Lab: the page. Everything happens in this tab; nothing is uploaded or stored.
-import { convert, MAP_RULES, MAP_SOURCES, MAP_TOOL, MAP_CATALOGUE_VERSION, MX, STATUS } from './mt-map.js';
+import { convert, refuse, MAP_RULES, MAP_SOURCES, MAP_TOOL, MAP_CATALOGUE_VERSION, MX, STATUS } from './mt-map.js';
 import { MT_SAMPLES, NATIVE_PACS008 } from './mt-samples.js';
 import { reverseCheck } from './mt-reverse.js';
 import { validate, loadSchema } from './schema.js';
@@ -18,10 +18,10 @@ async function sha256(text) {
 }
 
 // ---------- convert ----------
-async function run(src, name) {
+async function run(src, name, refused) {
   const my = ++state.run;
   state.src = String(src).replace(/\r\n?/g, '\n'); state.name = name || 'pasted MT103';
-  state.res = convert(state.src); state.schema = { busy: true }; state.selMt.clear(); state.selMx.clear();
+  state.res = refused || convert(state.src); state.schema = { busy: true }; state.selMt.clear(); state.selMx.clear();
   state.sha = await sha256(state.src);
   if (state.res.refused) { state.schema = { failed: 'nothing to check' }; render(); return; }
   render();
@@ -173,7 +173,7 @@ $('pasteBtn').addEventListener('click', () => { $('pasteText').value = ''; $('pa
 $('pasteDlg').addEventListener('close', () => { if ($('pasteDlg').returnValue === 'ok' && $('pasteText').value.trim()) load($('pasteText').value, 'pasted MT103'); });
 $('fileIn').addEventListener('change', async (e) => {
   const f = e.target.files[0]; e.target.value = ''; if (!f) return;
-  if (f.size > MAX_CHARS * 4) { load('x'.repeat(MAX_CHARS + 1), f.name); return; }
+  if (f.size > MAX_CHARS * 4) { sel.value = ''; run('', f.name, refuse(`The file is too big (${Math.round(f.size / 1024)} KB). An MT103 has at most ${MAX_CHARS.toLocaleString('en')} characters.`, 'Open a file that holds a single MT103.')); return; }
   let txt; try { txt = new TextDecoder('utf-8', { fatal: true }).decode(await f.arrayBuffer()); } catch (err) { load('\u0000', f.name); return; }
   load(txt, f.name);
 });
