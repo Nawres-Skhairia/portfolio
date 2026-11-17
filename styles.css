@@ -4,7 +4,7 @@
 
 /* ---------- tokens ---------- */
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
 
   --bg: #f7f5f0;
   --bg-raised: #ffffff;
@@ -47,8 +47,8 @@
   --spring: cubic-bezier(.34, 1.4, .64, 1);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
+/* dark theme: the default on screen (theme.js sets data-theme="dark" unless the visitor chose light for this visit); printing stays light */
+@media screen { :root[data-theme="dark"] {
     --bg: #0e0d0b;
     --bg-raised: #181613;
     --bg-sunk: #14120f;
@@ -66,8 +66,9 @@
     --glow: rgba(143, 202, 174, .11);
     --shadow-1: 0 1px 2px rgba(0, 0, 0, .4);
     --shadow-2: 0 2px 6px rgba(0, 0, 0, .35), 0 30px 60px -20px rgba(0, 0, 0, .8);
-  }
-}
+} }
+:root { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
 
 /* ---------- base ---------- */
 *, *::before, *::after { box-sizing: border-box; }
@@ -320,7 +321,7 @@ h2 { font-size: var(--step-3); line-height: 1; letter-spacing: -.025em; max-widt
   .ln em { display: none; }
   .ln.verdict em { display: block; }
 }
-@media (prefers-color-scheme: dark) { .contact-box { background: #171612; border: 1px solid var(--line); } }
+:root[data-theme="dark"] .contact-box { background: #171612; border: 1px solid var(--line); }
 
 /* ======================= round 2: more depth, more pull down the page ======================= */
 
@@ -357,12 +358,10 @@ h2 { font-size: var(--step-3); line-height: 1; letter-spacing: -.025em; max-widt
 .about-text a:hover, .footer a:hover { background-size: 0 1px; background-position: 100% 100%; }
 
 /* dark mode polish */
-@media (prefers-color-scheme: dark) {
-  .media img, .portrait img { filter: brightness(.92) contrast(1.02); }
-  .row:hover .media img { filter: none; }
-  .proof { border-color: var(--line-strong); }
-  .eyebrow, .num, .facts span { background: var(--bg-sunk); }
-}
+:root[data-theme="dark"] .media img, :root[data-theme="dark"] .portrait img { filter: brightness(.92) contrast(1.02); }
+:root[data-theme="dark"] .row:hover .media img { filter: none; }
+:root[data-theme="dark"] .proof { border-color: var(--line-strong); }
+:root[data-theme="dark"] .eyebrow, :root[data-theme="dark"] .num, :root[data-theme="dark"] .facts span { background: var(--bg-sunk); }
 
 /* ======================= round 4: finer motion on what is already there ======================= */
 
@@ -464,3 +463,35 @@ h2 { font-size: var(--step-3); line-height: 1; letter-spacing: -.025em; max-widt
 @media (prefers-reduced-motion: reduce) {
   .pt-panel, .pt-pic, .from-tool body::before { display: none; }
 }
+
+/* ======================= light and dark switch ======================= */
+.theme-switch { display: none; position: relative; place-items: center; flex: none; width: 40px; height: 40px; margin-left: 4px; padding: 0; border-radius: 50%; border: 1px solid var(--line-strong); background: transparent; color: var(--ink); cursor: pointer; overflow: hidden; transition: background-color .3s, border-color .3s, transform .5s var(--spring); }
+.has-theme-switch .theme-switch { display: inline-grid; }
+.theme-switch:hover { background: var(--bg-sunk); border-color: var(--ink); transform: rotate(-12deg); }
+.theme-switch:active { transform: scale(.92); }
+.theme-switch svg { grid-area: 1 / 1; width: 18px; height: 18px; transition: transform .6s var(--spring), opacity .35s; }
+.theme-switch .i-moon { transform: translateY(120%) rotate(-90deg); opacity: 0; }
+.theme-switch[aria-pressed="true"] .i-sun { transform: translateY(-120%) rotate(90deg); opacity: 0; }
+.theme-switch[aria-pressed="true"] .i-moon { transform: none; opacity: 1; }
+/* the new theme spreads out in a circle from the switch (browsers with view transitions; others switch at once) */
+.theme-changing::view-transition-old(root), .theme-changing::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+.theme-changing::view-transition-new(root) { animation: theme-in .8s cubic-bezier(.7, 0, .2, 1); }
+@keyframes theme-in { from { clip-path: circle(0 at var(--theme-x, 100%) var(--theme-y, 0)); } to { clip-path: circle(150vmax at var(--theme-x, 100%) var(--theme-y, 0)); } }
+body { transition: background-color .4s, color .4s; }
+@media (max-width: 400px) { .theme-switch { width: 36px; height: 36px; margin-left: 0; } .theme-switch svg { width: 16px; height: 16px; } }
+@media (max-width: 560px) {
+  .theme-switch { width: 34px; height: 34px; margin-left: 0; }
+  .theme-switch svg { width: 16px; height: 16px; }
+  .nav { gap: 4px; }
+  .nav nav { gap: 0; }
+  .nav nav a:not(.nav-cta) { padding: 0 6px; }
+  .nav nav a:not(.nav-cta)::after { left: 6px; right: 6px; }
+  .nav nav .nav-cta { padding: 0 12px; margin-left: 4px; }
+}
+@media (max-width: 400px) {
+  .logo-mark { width: 28px; height: 28px; font-size: 1rem; }
+  .nav nav a:not(.nav-cta) { padding: 0 5px; }
+  .nav nav .nav-cta { padding: 0 10px; margin-left: 2px; }
+  .nav .cv-pill { padding: 0 2px; }
+}
+@media (max-width: 400px) { .site-head .wrap { padding-inline: 16px; } }
