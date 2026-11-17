@@ -3,7 +3,7 @@
 import { MAP_RULES, MAP_TOOL, MAP_CATALOGUE_VERSION, MX, STATUS } from './mt-map.js';
 
 const x = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-const NOTE = 'Simplified, not SWIFT\'s official translation, not affiliated with SWIFT. Made on the device; the message was not uploaded.';
+const NOTE = 'Not SWIFT\'s official translation and not CBPR+ validated. For learning and testing only. Not certified, not affiliated with SWIFT. Made on the device; the message was not uploaded.';
 function meta({ res, sha, name, when }) {
   return { tool: MAP_TOOL.name, toolVersion: MAP_TOOL.version, catalogue: MAP_CATALOGUE_VERSION, target: MX.id, input: name, sha256: sha, exportedAt: when, verdict: res.verdict, counts: res.counts };
 }
@@ -14,7 +14,8 @@ export function mapJson(ctx) {
     findings: ctx.res.findings.map((f) => ({ severity: f.severity, rule: f.rule, status: f.status || null, mtLine: f.mtLine, xmlLine: f.xmlLine, message: f.message, why: f.why, fix: f.fix })), note: NOTE }, null, 2);
 }
 
-const csvCell = (v) => { const s = String(v ?? ''); return /[",\n;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+// a cell that starts with = + - @ (or a tab or return) could run as a formula in a spreadsheet: prefix it with '
+const csvCell = (v) => { let s = String(v ?? ''); if (/^[=+\-@\t\r]/.test(s)) s = "'" + s; return /[",\n;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
 export function mapCsv(ctx) {
   const m = meta(ctx);
   const head = [`# ${m.tool} ${m.toolVersion}, catalogue ${m.catalogue}, exported ${m.exportedAt}, MT SHA-256 ${m.sha256}`, `# ${NOTE}`];
@@ -37,7 +38,7 @@ export function mapJUnit(ctx) {
   const s = ctx.schema;
   cases.push(`<testcase classname="Schema" name="ISO 20022 ${MX.id} schema">${s.valid ? '' : s.errors ? `<failure message="${x(s.errors.length + ' error(s)')}" type="XSD">${x(s.errors.map((e) => `Line ${e.line}: ${e.raw}`).join('\n'))}</failure>` : '<skipped message="Schema not checked"/>'}</testcase>`);
   const failures = cases.filter((c) => c.includes('<failure')).length, skipped = cases.filter((c) => c.includes('<skipped')).length;
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<testsuites name="${x(m.tool)}" tests="${cases.length}" failures="${failures}">\n<testsuite name="${x(m.input)}" tests="${cases.length}" failures="${failures}" skipped="${skipped}" timestamp="${x(m.exportedAt.slice(0, 19))}">\n<properties><property name="toolVersion" value="${x(m.toolVersion)}"/><property name="catalogue" value="${x(m.catalogue)}"/><property name="mtSha256" value="${x(m.sha256)}"/><property name="note" value="${x(NOTE)}"/></properties>\n${cases.join('\n')}\n</testsuite>\n</testsuites>\n`;
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<testsuites name="${x(m.tool)}" tests="${cases.length}" failures="${failures}">\n<testsuite name="${x(m.input)}" tests="${cases.length}" failures="${failures}" skipped="${skipped}" timestamp="${x(m.exportedAt.slice(0, 19))}">\n<properties><property name="toolVersion" value="${x(m.toolVersion)}"/><property name="catalogue" value="${x(m.catalogue)}"/><property name="mtSha256" value="${x(m.sha256)}"/><property name="reviewPoints" value="${res.findings.filter((f) => f.severity === 'review').length}"/><property name="note" value="${x(NOTE)}"/></properties>\n${cases.join('\n')}\n</testsuite>\n</testsuites>\n`;
 }
 
 export function mapHtml(ctx) {

@@ -104,5 +104,36 @@ ok(MAP_RULES.every((r) => r.source.length && r.source.every((s) => MAP_SOURCES[s
   { const c = convert(S.clean.replace('INVOICE 2026-118', 'INVOICE\u0000 2026-118')); ok(c.refused && c.errors.length === 1 && /control character/.test(c.errors[0].message), 'Control characters refused up front (Noah)'); }
   ok(convert('x'.repeat(10001)).errors.length === 1 && convert('').errors.length === 1, 'Too long or empty input is refused');
 }
+// Mia's test round (PORT-41)
+{
+  const ga = (l) => { const g = guessAddress(l); return g ? [g.pc, g.town, g.sub, g.ctry].join('|') : null; };
+  ok(ga(['10 EXAMPLE ROAD', 'LONDON SW1A 1AA', 'GB']) === 'SW1A 1AA|LONDON||GB', 'Mia 1 UK town then postcode', ga(['10 EXAMPLE ROAD', 'LONDON SW1A 1AA', 'GB']));
+  ok(ga(['1 EXAMPLE AVENUE', 'NEW YORK NY 10001', 'US']) === '10001|NEW YORK|NY|US', 'Mia 1 US town, state, ZIP', ga(['1 EXAMPLE AVENUE', 'NEW YORK NY 10001', 'US']));
+  ok(ga(['12 RUE DE L EXEMPLE', '69002 LYON FRANCE']) === '69002|LYON||FR', 'Mia 1 country name at the end of the town line', ga(['12 RUE DE L EXEMPLE', '69002 LYON FRANCE']));
+  ok(ga(['12 RUE DE L EXEMPLE', 'LYON, FR']) === '|LYON||FR', 'Country code after the town', ga(['12 RUE DE L EXEMPLE', 'LYON, FR']));
+  ok(ga(['BEISPIELSTRASSE 12', 'DE']) === null, 'A street with a house number is not taken as a town');
+  ok(ga(['NOWHERE IN PARTICULAR']) === null, 'No town and country still gives nothing');
+  const us = convert(S.address.replace('12 RUE DE L EXEMPLE\n69002 LYON\nFRANCE', '1 EXAMPLE AVENUE\nNEW YORK NY 10001\nUS'));
+  ok(!us.errors.some((e) => e.rule === 'MAP-50') && (await valid(us.xml)) === true, 'Mia 1 US address converts and is schema-valid', await valid(us.xml));
+  const rep = convert(S.clean.replace(':23B:CRED', ':13C:/CLSTIME/0915+0100\n:13C:/SNDTIME/0800+0100\n:23B:CRED\n:23E:PHOB\n:23E:SDVA'));
+  ok(!rep.errors.some((e) => /appears twice/.test(e.message)), 'Mia 2 13C and 23E may repeat');
+  ok((await valid(rep.xml)) === true, 'Mia 2 repeated 13C/23E output schema-valid', await valid(rep.xml));
+  ok(convert(S.charges.replace(':33B:EUR1250,00', ':33B:EUR1250,00\n:36:1,0')).errors.some((e) => e.rule === 'MAP-11'), 'Mia 3 :36: with the same currency is refused');
+  ok(convert(S.clean.replace(':50F:', ':36:1,0\n:50F:')).errors.some((e) => e.rule === 'MAP-11'), 'Mia 3 :36: without :33B: is refused');
+  ok(!convert(S.charges.replace(':33B:EUR1250,00', ':33B:USD1350,00\n:36:0,925925')).errors.some((e) => e.rule === 'MAP-11'), 'Mia 3 :36: with another currency is fine');
+  const r = convert(S.clean.replace('INVOICE 2026-118', '=HYPERLINK(1)')); const csv = mapCsv({ res: r, schema: { valid: true }, sha: 'x', name: 'n', when: '2026-11-18T10:00:00Z' });
+  ok(csv.includes("'=HYPERLINK(1)") && !/(^|,)=HYPERLINK/m.test(csv), 'Mia 4 CSV formula guard');
+  const c1 = convert(S.clean.replace('INVOICE 2026-118', 'INVOICE\u0001 2026-118'));
+  ok(c1.refused && c1.xml === '', 'Mia 5 U+0001 is refused, so no broken pacs.008 can be downloaded');
+  ok(convert(S.clean.replace('INVOICE', 'INV\uD800OICE')).refused, 'A lone surrogate is refused');
+  const b4 = convert(S.clean.slice(S.clean.indexOf('{4:') + 4));
+  const last = b4.mt.fields[b4.mt.fields.length - 1];
+  ok(last.tag === '71A' && last.value === 'SHA', 'Info: block 4 only, "-}" not joined to the last field', last.value);
+  const full = convert(S.clean.replace(':70:INVOICE 2026-118', ':70:' + ['A'.repeat(35), 'B'.repeat(35), 'C'.repeat(35), 'D'.repeat(35)].join('\n')));
+  ok(full.rows.some((x) => x.rule === 'MAP-60' && x.status === 'review' && /glued/.test(x.note)), 'Info: 4 full :70: lines flagged for review');
+  const two = convert(S.clean.replace(':70:INVOICE 2026-118', ':70:INVOICE 2026-118\nORDER 5521'));
+  ok(/<Ustrd>INVOICE 2026-118 ORDER 5521<\/Ustrd>/.test(two.xml), 'Info: :70: lines joined with a space');
+  ok(/reviewPoints" value="3"/.test(mapJUnit({ res: convert(S.address), schema: { valid: true }, sha: 'x', name: 'n', when: '2026-11-18T10:00:00Z' })), 'Info: JUnit carries the number of review points');
+}
 console.log(`${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

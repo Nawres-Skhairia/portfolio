@@ -85,24 +85,45 @@ const BIC = /^[A-Z0-9]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$/;
 const fi = (bic) => E('FinInstnId', [E('BICFI', bic)]);
 
 // Find town and country in free-text address lines (MAP-50). Returns null when not both are found.
+const TOWN = "[A-Z][A-Z' .-]{0,33}[A-Z.]";
+const UK_PC = '[A-Z]{1,2}\\d[A-Z\\d]? ?\\d[A-Z]{2}';
+// "69002 LYON", "3511 AB UTRECHT" (postcode first)
+const PC_FIRST = new RegExp(`^(\\d{4} ?[A-Z]{2}|\\d{3} ?\\d{2}|\\d{4,6}|${UK_PC})\\s+(${TOWN})$`);
+// "LONDON SW1A 1AA", "NEW YORK NY 10001", "WIEN 1010" (town first, optional state code; never a short house number)
+const TOWN_FIRST = new RegExp(`^([A-Z][A-Z' .-]{0,33}?[A-Z.])[ ,]+(?:([A-Z]{2})\\s+)?(\\d{5}(?:-\\d{4})?|${UK_PC}|\\d{4,6})$`);
+function countryAtEnd(l) { // "69002 LYON FRANCE", "LYON, FR", "MILANO ITALY"
+  const u = l.toUpperCase();
+  for (const [name, code] of Object.entries(COUNTRY_NAMES)) if (u.endsWith(' ' + name) || u.endsWith(',' + name)) return { code, rest: u.slice(0, u.length - name.length).replace(/[ ,]+$/, '') };
+  const m = /^(.*?)[ ,]+([A-Z]{2})$/.exec(u);
+  if (m && COUNTRIES.has(m[2]) && m[1].length > 1 && !/\d$/.test(m[1])) return { code: m[2], rest: m[1].trim() };
+  return null;
+}
+function townIn(l) {
+  let m = PC_FIRST.exec(l); if (m) return { pc: m[1], town: m[2].trim() };
+  m = TOWN_FIRST.exec(l); if (m && m[1].trim().length > 1) return { pc: m[3], town: m[1].trim(), sub: m[2] || null };
+  return null;
+}
+
+// Find town and country in free-text address lines (MAP-50). Returns null when not both are found.
 export function guessAddress(lines) {
   const L = lines.map((l) => l.trim()).filter(Boolean);
   if (!L.length) return null;
-  let ctry = null, ctryIdx = -1, town = null, pc = null, townIdx = -1;
+  let ctry = null, ctryIdx = -1, t = null, townIdx = -1;
   const last = L[L.length - 1].toUpperCase();
   if (COUNTRIES.has(last)) { ctry = last; ctryIdx = L.length - 1; } else if (COUNTRY_NAMES[last]) { ctry = COUNTRY_NAMES[last]; ctryIdx = L.length - 1; }
   const upto = ctryIdx < 0 ? L.length : ctryIdx;
   for (let i = upto - 1; i >= 0; i--) {
-    let l = L[i].toUpperCase();
-    // "LYON, FR" or "LYON FR" on the same line when no country line was found
-    if (!ctry) { const m = /^(.*?)[ ,]+([A-Z]{2})$/.exec(l); if (m && COUNTRIES.has(m[2]) && m[1].length > 1) { ctry = m[2]; l = m[1].trim(); } }
-    const m = POSTCODE_TOWN.exec(l);
-    if (m) { pc = m[1]; town = m[2].trim(); townIdx = i; break; }
-    if (ctry && i === upto - 1 && /^[A-Z][A-Z' .-]{1,34}$/.test(l) && !/\d/.test(l)) { town = l; townIdx = i; break; }
+    let l = L[i].toUpperCase(), sameLine = false;
+    if (!ctry) { const c = countryAtEnd(l); if (c) { ctry = c.code; l = c.rest; sameLine = true; } }
+    t = townIn(l);
+    if (t) { townIdx = i; break; }
+    if ((ctry && i === upto - 1) || sameLine) {
+      if (/^[A-Z][A-Z' .-]{1,34}$/.test(l)) { t = { town: l.trim(), pc: null }; townIdx = i; break; }
+    }
     if (ctry) break;
   }
-  if (!ctry || !town) return null;
-  return { ctry, town, pc, rest: L.filter((_, i) => i !== ctryIdx && i !== townIdx), ctryLine: ctryIdx, townLine: townIdx };
+  if (!ctry || !t) return null;
+  return { ctry, town: t.town, pc: t.pc, sub: t.sub || null, rest: L.filter((_, i) => i !== ctryIdx && i !== townIdx), ctryLine: ctryIdx, townLine: townIdx };
 }
 
 // ---------- the converter ----------
@@ -225,6 +246,10 @@ export function convert(src) {
     if (a) { const x = put(tx, E('InstdAmt', { Ccy: m[1] }, a)); row({ rule: 'MAP-11', tag: '33B', mtLines: [f33.line], mtValue: f33.value, path: 'InstdAmt', value: `${a} ${m[1]}`, status: 'transformed', node: x, note: 'Instructed amount, decimal comma becomes a point.' }); }
     if (m && m32 && m[1] !== m32[2] && !f36) fail('MAP-11', f33.line, `The instructed currency ${m[1]} differs from the settled currency ${m32[2]}, but there is no exchange rate :36:.`, 'Add field 36 with the rate used.', 'Without the rate the two amounts cannot be reconciled.');
   }
+  if (f36) {
+    const m33 = f33 && /^([A-Z]{3})/.exec(f33.lines[0]);
+    if (!m33 || (m32 && m33[1] === m32[2])) fail('MAP-11', f36.line, m33 ? `An exchange rate :36: is given, but :33B: has the same currency as :32A: (${m32[2]}).` : 'An exchange rate :36: is given without an instructed amount :33B:.', 'Remove :36:, or check the currencies.', 'A rate only makes sense when two different currencies are involved.');
+  }
   if (f36) { use(f36); const r = f36.lines[0].replace(',', '.').replace(/\.$/, ''); const x = put(tx, E('XchgRate', r)); row({ rule: 'MAP-11', tag: '36', mtLines: [f36.line], mtValue: f36.value, path: 'XchgRate', value: r, status: 'transformed', node: x, note: 'Exchange rate, decimal comma becomes a point (our choice).' }); }
 
   // 71A, 71F, 71G (MAP-61)
@@ -327,10 +352,11 @@ export function convert(src) {
         const pa = E('PstlAdr'); node.add(pa);
         if (g) {
           if (g.pc) pa.add(E('PstCd', g.pc));
+          if (g.sub) pa.add(E('CtrySubDvsn', g.sub));
           const tw = E('TwnNm', g.town), ct = E('Ctry', g.ctry); pa.add([tw, ct]);
           g.rest.forEach((l) => pa.add(E('AdrLine', l)));
           sortBy(pa, ORDERS.PstlAdr);
-          row({ rule: 'MAP-50', tag: f.tag, mtLines: adrN, mtValue: adrL.join(' | '), path: P + '/PstlAdr', value: [g.pc && 'PstCd ' + g.pc, 'TwnNm ' + g.town, 'Ctry ' + g.ctry, g.rest.length && g.rest.length + ' AdrLine'].filter(Boolean).join(', '), status: 'review', node: pa,
+          row({ rule: 'MAP-50', tag: f.tag, mtLines: adrN, mtValue: adrL.join(' | '), path: P + '/PstlAdr', value: [g.pc && 'PstCd ' + g.pc, 'TwnNm ' + g.town, g.sub && 'CtrySubDvsn ' + g.sub, 'Ctry ' + g.ctry, g.rest.length && g.rest.length + ' AdrLine'].filter(Boolean).join(', '), status: 'review', node: pa,
             note: `${P === 'Dbtr' ? 'Ordering customer' : 'Beneficiary'} address is free text. We found town "${g.town}" and country "${g.ctry}" and built a hybrid address with the other lines kept as address lines. Check them.`,
             why: 'Cross-border messages on the Swift network need at least town and country as separate fields (see the Swift FAQ in the sources).', fix: 'Confirm the town and country, or correct them.' });
         } else {
@@ -392,12 +418,11 @@ export function convert(src) {
   const f70 = field('70');
   if (f70) {
     use(f70);
-    const full = f70.lines.every((l) => l.length === 35);
-    let v = f70.lines.join(full ? '' : ' '); if (v.length > 140) v = f70.lines.join('');
+    let v = f70.lines.join(' '); const glued = v.length > 140; if (glued) v = f70.lines.join('');
     const x = E('RmtInf', [E('Ustrd', v)]); tx.add(x);
     const codes = [...new Set((v.match(/\/(INV|RFB|ROC|IPI|RFF|TSU)\//g) || []))];
-    row({ rule: 'MAP-60', tag: '70', mtLines: f70.lineNos, mtValue: f70.value, path: 'RmtInf/Ustrd', value: v, status: codes.length ? 'review' : f70.lines.length > 1 ? 'transformed' : 'mapped', node: x,
-      note: codes.length ? `Kept as unstructured text. It holds the codes ${codes.join(' ')}, which could become structured remittance (invoice or creditor reference): check with the receiver.` : f70.lines.length > 1 ? 'Lines joined into one text of at most 140 characters: nothing is cut.' : 'Remittance information.' });
+    row({ rule: 'MAP-60', tag: '70', mtLines: f70.lineNos, mtValue: f70.value, path: 'RmtInf/Ustrd', value: v, status: codes.length || glued ? 'review' : f70.lines.length > 1 ? 'transformed' : 'mapped', node: x,
+      note: glued ? 'The 4 full lines only fit in 140 characters when joined without spaces, so a word split across two lines is kept whole but two words may be glued together: check the text.' + (codes.length ? ` It also holds the codes ${codes.join(' ')}.` : '') : codes.length ? `Kept as unstructured text. It holds the codes ${codes.join(' ')}, which could become structured remittance (invoice or creditor reference): check with the receiver.` : f70.lines.length > 1 ? 'Lines joined into one text of at most 140 characters: nothing is cut.' : 'Remittance information.' });
   }
   // everything else (MAP-99)
   for (const f of mt.fields) if (!used.has(f)) row({ rule: 'MAP-99', tag: f.tag, mtLines: f.lineNos, mtValue: f.value, path: '(none)', value: '', status: 'lost', note: FIELDS[f.tag] ? `${FIELDS[f.tag]} (:${f.tag}:) has no place in this simplified mapping.` : `:${f.tag}: is not an MT103 field.` });

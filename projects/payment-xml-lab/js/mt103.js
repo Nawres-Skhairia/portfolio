@@ -47,7 +47,7 @@ export function readMt(src) {
   const lines = text.split('\n');
   const out = { blocks: { b1: null, b2: null, b3: [], b5: [] }, fields: [], errors: [], lineCount: lines.length, hasBlock4: false };
   if (text.length > MAX_CHARS) { out.errors.push(err(1, null, `The message has ${text.length} characters. An MT message has at most ${MAX_CHARS}.`, 'Paste a single MT103.')); out.refused = true; return out; }
-  const ctl = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/.exec(text);
+  const ctl = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\uFFFE\uFFFF]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/.exec(text);
   if (ctl) { const ln = text.slice(0, ctl.index).split('\n').length; out.errors.push(err(ln, null, `The message contains a control character (code ${ctl[0].charCodeAt(0)}) on line ${ln}. An MT message is plain text.`, 'Remove it, or paste the message again from its source.')); out.refused = true; return out; }
   if (!text.trim()) { out.errors.push(err(1, null, 'The message is empty.', 'Paste an MT103 or load a sample.')); out.refused = true; return out; }
 
@@ -73,6 +73,7 @@ export function readMt(src) {
   let cur = null;
   for (let i = from; i < b4End; i++) {
     let l = lines[i];
+    if (b4Start < 0 && /^-\}\s*$/.test(l)) break;
     if (i === b4Start) { l = l.slice(l.indexOf('{4:') + 3); if (!l.trim()) continue; }
     const m = /^:(\d{2}[A-Z]?):(.*)$/.exec(l);
     if (m) { cur = { tag: m[1], line: i + 1, lines: [m[2]] }; out.fields.push(cur); continue; }
@@ -127,5 +128,5 @@ function checkFields(mt) {
   }
   for (const set of MANDATORY) if (!mt.fields.some((f) => set.includes(f.tag))) E.push(err(1, set[0], `Mandatory field :${set.join(': or :')}: (${FIELDS[set[0]]}) is missing.`, 'Add it.'));
   const seen = new Set();
-  for (const f of mt.fields) { if (f.tag !== '71F' && seen.has(f.tag)) E.push(err(f.line, f.tag, `Field :${f.tag}: appears twice.`, 'Keep only one.')); seen.add(f.tag); }
+  for (const f of mt.fields) { if (!['71F', '13C', '23E'].includes(f.tag) && seen.has(f.tag)) E.push(err(f.line, f.tag, `Field :${f.tag}: appears twice.`, 'Keep only one.')); seen.add(f.tag); }
 }
