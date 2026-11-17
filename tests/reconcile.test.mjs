@@ -57,6 +57,9 @@ for (const t of ['', 'abc', 'a'.repeat(55), 'a'.repeat(56), 'a'.repeat(64), 'Zo√
   ok(ev('XMPL2611170006').some((l) => l.m === '‚úì' && /RF creditor reference RF18 5390 0754 7034 found in the structured reference, check digits valid/.test(l.t)), 'RF reference evidence line');
   ok(ev('XMPL2611170020').some((l) => l.m === '‚âà' && /short by 5\.00, within the tolerance of 5\.00/.test(l.t)), 'REC-02 amount evidence line');
   ok(place(s, 'XMPL2611170020').match.effect.includes('5.00 booked as small difference'), 'REC-02 effect');
+  ok(ev('XMPL2611170020').some((l) => /tolerance of 5\.00 \(the fixed 5\.00, smaller than 0\.5 % of 1,200\.00 \(6\.00\)\)/.test(l.t)), 'evidence names the tolerance that applied');
+  ok(ev('XMPL2611170016').some((l) => /beyond the tolerance of 4\.75 \(0\.5 % of 950\.00, smaller than the fixed 5\.00\)/.test(l.t)), 'evidence names the percent tolerance');
+  ok(place(s, 'XMPL2611170025').sug && !/%/.test(ev('XMPL2611170025').map((l) => l.t).join(' ')), 'REC-10 is suggested and shows no percentage');
   ok(ev('XMPL2611170025').some((l) => /"INV1O59" read as INV-1059/.test(l.t)), 'REC-10 typo evidence');
   ok(ev('XMPL2611170005').some((l) => l.k === 'Conflict' && /XMPL2611170024/.test(l.t)), 'REC-03 two partials for one invoice show the conflict');
   ok(ev('XMPL2611170001').some((l) => /number 1047 found in a list after an invoice word, read as INV-1047/i.test(l.t)), 'REC-05 messy list "Factures 1042, 1047, 1051"');
@@ -65,7 +68,7 @@ for (const t of ['', 'abc', 'a'.repeat(55), 'a'.repeat(56), 'a'.repeat(64), 'Zo√
   ok(/INV-1050 \(Tamberly SA\)/.test(place(s, 'XMPL2611170013').un.reason), 'unknown payer names the invoice of the same amount');
   ok(/USD 500\.00/.test(place(s, 'XMPL2611170023').un.reason) && place(s, 'XMPL2611170023').un.candidates.join() === 'INV-1060', 'REC-09 other currency with its candidate');
   ok(/bank fee/.test(place(s, 'XMPL2611170008').un.reason) && /refund/.test(place(s, 'XMPL2611170026').un.reason), 'REC-09 fee and refund');
-  ok(!JSON.stringify(s.view.suggestions.map((p) => p.evidence)).match(/score|%/i), 'no scores or percentages in evidence');
+  ok(!JSON.stringify(s.view.suggestions.map((p) => p.evidence)).match(/score|similar|confiden|\d+ ?% (match|sure)/i), 'no scores or percentages in evidence');
   // AT10 totals add up
   ok(s.view.totals.ok, 'AT10 totals add up at start', s.view.totals.checks.filter((x) => !x.ok).map((x) => x.text).join(' | '));
 }
@@ -75,7 +78,7 @@ for (const t of ['', 'abc', 'a'.repeat(55), 'a'.repeat(56), 'a'.repeat(64), 'Zo√
   const { s } = await session();
   E.changeSettings(s, { tolAbs: 0n, tolBp: 0 });
   ok(place(s, 'XMPL2611170020').place === 'review' && place(s, 'XMPL2611170022').place === 'review', 'AT3 tolerance 0: REC-02 cases wait for review');
-  ok(s.view.counts.auto === 12 && s.trail[s.trail.length - 13].action === 'settings', 'AT3 restart is in the trail', s.view.counts.auto);
+  ok(s.view.counts.auto === 12 && s.trail[s.trail.length - 13].action === 'settings changed' && /0 decisions by a person undone/.test(s.trail[s.trail.length - 13].detail), 'AT3 restart is in the trail', s.view.counts.auto);
   const { s: s2 } = await session(undefined, undefined, { tolAbs: 500000n, tolBp: 0 });
   ok(place(s2, 'XMPL2611170020').place === 'review', 'tolerance is the smaller of the two settings');
 }

@@ -182,12 +182,18 @@ function dateLine(e, invs) {
   const d = days(e.bookDate, due[due.length - 1]);
   return { m: d > 30 ? '≈' : '✓', k: 'Date', t: d > 0 ? `Paid ${d} day${d > 1 ? 's' : ''} after the due date.` : d < 0 ? `Paid ${-d} day${d < -1 ? 's' : ''} before the due date.` : 'Paid on the due date.' };
 }
-function amountLine(paid, due, t, ccy, n) {
+// which setting gave the tolerance, in words (Olivia, PORT-42 v1.2)
+function tolWhy(due, st) {
+  const pct = (due * BigInt(st.tolBp)) / 10000n, p = `${st.tolBp / 100} % of ${amt(due)}`;
+  if (st.tolAbs === 0n || st.tolBp === 0) return 'tolerance switched off';
+  return pct < st.tolAbs ? `${p}, smaller than the fixed ${amt(st.tolAbs)}` : `the fixed ${amt(st.tolAbs)}, smaller than ${p} (${amt(pct)})`;
+}
+function amountLine(paid, due, t, ccy, n, st) {
   const d = paid - due;
   const what = n > 1 ? `${n} invoices add up to ${amt(due)}` : `${amt(due)} due`;
   if (d === 0n) return { m: '✓', k: 'Amount', t: `${amt(paid)} ${ccy} paid, ${what}.` };
   const w = abs(d) <= t && t > 0n;
-  return { m: w ? '≈' : '✗', k: 'Amount', t: `${amt(paid)} paid, ${what}: ${d < 0n ? 'short by' : 'more by'} ${amt(abs(d))}${w ? `, within the tolerance of ${amt(t)}` : t > 0n ? `, beyond the tolerance of ${amt(t)}` : ''}.` };
+  return { m: w ? '≈' : '✗', k: 'Amount', t: `${amt(paid)} paid, ${what}: ${d < 0n ? 'short by' : 'more by'} ${amt(abs(d))}${w ? `, within the tolerance of ${amt(t)} (${tolWhy(due, st)})` : t > 0n ? `, beyond the tolerance of ${amt(t)} (${tolWhy(due, st)})` : ', the tolerance is switched off'}.` };
 }
 
 // builds a proposal: rule, entry, invoices, amounts, treatment, evidence and effect
@@ -203,7 +209,7 @@ function proposal(s, rule, e, invs, hits, extra = []) {
   const ev = [];
   for (const h of hits) ev.push({ m: '✓', k: 'Reference', t: h.how[0].toUpperCase() + h.how.slice(1) + '.' });
   ev.push(...extra);
-  ev.push(amountLine(paid, due, t, ccy, invs.length));
+  ev.push(amountLine(paid, due, t, ccy, invs.length, s.settings));
   const pl = payerLines(s, e, invs); ev.push(...pl.lines);
   const dl = dateLine(e, invs); if (dl) ev.push(dl);
   const nums = invs.map((i) => i.number);
@@ -428,8 +434,9 @@ export function undo(s) {
   return recompute(s);
 }
 export function changeSettings(s, settings) {
+  const undone = personDecisions(s);
   s.settings = { ...settings }; s.matches = []; s.rejected = new Map(); s.undo = [];
-  log(s, { actor: 'Reviewer', action: 'settings', detail: `${settingsText(s.settings)}; reconciliation restarted from the files` });
+  log(s, { actor: 'Reviewer', action: 'settings changed', detail: `${settingsText(s.settings)}; reconciliation restarted from the files; ${undone} decision${undone === 1 ? '' : 's'} by a person undone` });
   return recompute(s);
 }
 export const personDecisions = (s) => s.matches.filter(isPerson).length + s.rejected.size;
