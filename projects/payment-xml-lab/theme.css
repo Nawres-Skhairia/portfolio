@@ -87,3 +87,42 @@ a.tb { text-decoration: none; }
 .adv { margin: 8px 0 24px; border-top: 1px solid var(--line); padding-top: 14px; }
 .adv > summary { cursor: pointer; color: var(--soft); font-weight: 600; width: max-content; margin-bottom: 14px; }
 @media (max-width: 760px) { .pm-boxes { gap: 6px; } .pm-box { padding: 10px; } .pm-box b { font-size: 1.6rem; } .pm-box span { font-size: .85rem; } }
+
+/* Dark theme (site rule, 17 Nov: the site opens in dark, one switch for every page). Only colours change. */
+@media screen {
+  :root[data-theme="dark"] {
+    --line2: #26231e; --navy2: #e4dfd5; --xml: #a59c8e; --xsd: #8fcaae; --rule: #7cc4c4;
+    --err: #ff8a7a; --err-bg: #3a1f19; --warn: #e3a948; --warn-bg: #33280f; --ok: #8fcaae; --ok-bg: #1c2a24;
+    --hover: #22201b; --sel: #1d2a33; --code-bg: #12110e; --gut-bg: #181613;
+  }
+  [data-theme="dark"] .tb:hover:not(:disabled), [data-theme="dark"] .pane-head, [data-theme="dark"] .cat th { background: var(--hover); }
+  [data-theme="dark"] .tb:disabled { color: #6f685e; }
+  [data-theme="dark"] .tb-main, [data-theme="dark"] .flt.on, [data-theme="dark"] .flt.on b, [data-theme="dark"] .pm-go, [data-theme="dark"] .pm-yes, [data-theme="dark"] .layer { color: var(--paper); }
+  [data-theme="dark"] .tb-main:hover:not(:disabled) { background: var(--navy2); }
+  [data-theme="dark"] .v-ok .v-chip { border-color: #2f5443; } [data-theme="dark"] .v-warn .v-chip, [data-theme="dark"] .st-review, [data-theme="dark"] .st-inv-partly-paid { border-color: #5a4518; }
+  [data-theme="dark"] .v-bad .v-chip, [data-theme="dark"] .st-lost, [data-theme="dark"] .st-unmatched { border-color: #5a2e22; }
+  [data-theme="dark"] .st-mapped, [data-theme="dark"] .st-auto, [data-theme="dark"] .st-person, [data-theme="dark"] .st-inv-closed { border-color: #2f5443; }
+  [data-theme="dark"] .st-transformed { background: var(--sel); color: #9cc3e6; border-color: #2c4253; }
+  [data-theme="dark"] .st-defaulted, [data-theme="dark"] .st-inv-open { background: var(--hover); color: var(--soft); }
+  [data-theme="dark"] .stages { color: #7d7569; } [data-theme="dark"] .stages li.done { border-color: var(--green); }
+  [data-theme="dark"] .code { background: var(--code-bg); }
+  [data-theme="dark"] .gut { background: var(--gut-bg); color: #8a8276; }
+  [data-theme="dark"] .txt { color: var(--ink); }
+  [data-theme="dark"] .t-tag { color: #8fb8e6; } [data-theme="dark"] .t-pun { color: #7d7569; } [data-theme="dark"] .t-att, [data-theme="dark"] .t-blk { color: #e3a948; } [data-theme="dark"] .t-com { color: #8fa58f; }
+  [data-theme="dark"] .row.m-error { background: #2a1814; } [data-theme="dark"] .row.m-warning { background: #261f10; }
+  [data-theme="dark"] .row.sel, [data-theme="dark"] .row.sel .gut { background: var(--sel); color: var(--ink); }
+  [data-theme="dark"] .lc .row:hover, [data-theme="dark"] .map tbody tr:hover { background: var(--hover); }
+  [data-theme="dark"] .lc .row.linked, [data-theme="dark"] .map tr.hot, [data-theme="dark"] .ritem.hot { background: var(--ok-bg); }
+  [data-theme="dark"] .lc .row.linked .gut { background: #22332b; }
+  [data-theme="dark"] .card, [data-theme="dark"] .rcard, [data-theme="dark"] .ritem { background: var(--card); }
+  [data-theme="dark"] .card:hover, [data-theme="dark"] .ritem:hover { border-color: #4a443b; }
+  [data-theme="dark"] .card.sel, [data-theme="dark"] .rcard.sel, [data-theme="dark"] .ritem.sel { box-shadow: 0 0 0 2px rgba(143, 202, 174, .25); }
+  [data-theme="dark"] .honest { background: #161d1a; border-color: #2a3a33; }
+  [data-theme="dark"] .learn-band { background: var(--hover); color: var(--soft); }
+  [data-theme="dark"] input[type=date], [data-theme="dark"] input[type=number] { background: var(--field); }
+  [data-theme="dark"] dialog { background: var(--card); }
+  [data-theme="dark"] .menu { box-shadow: 0 8px 24px rgba(0, 0, 0, .5); }
+  [data-theme="dark"] .pm-msg { background: var(--red-bg); border-color: #5a2e22; }
+  [data-theme="dark"] .pm-box.b-paid b { color: #8fcaae; } [data-theme="dark"] .pm-box.b-check b { color: #e3a948; } [data-theme="dark"] .pm-box.b-lost b { color: #ff8a7a; }
+  [data-theme="dark"] .pm-text { background: var(--field); }
+}
