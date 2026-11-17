@@ -3,9 +3,19 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="robots" content="noindex">
   <title>Test Pilot · Can a robot find the bug before your customers do? · Nawres Skhairia</title>
   <meta name="description" content="A test robot really runs a test plan on a small booking form, then says whether it is ready to ship and why. Runs in your browser.">
+  <meta property="og:title" content="Test Pilot · Can a robot find the bug before your customers do?">
+  <meta property="og:description" content="Pick a bug, press Test it, and watch a test plan really run on a small booking form. Runs in your browser.">
+  <meta property="og:type" content="website">
+  <link rel="canonical" href="https://nawres-skhairia.vercel.app/projects/test-pilot/">
+  <meta property="og:url" content="https://nawres-skhairia.vercel.app/projects/test-pilot/">
+  <meta property="og:site_name" content="Nawres Skhairia">
+  <meta property="og:image" content="https://nawres-skhairia.vercel.app/assets/og/test-pilot.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Test Pilot running tests on a small booking form, with one red test">
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/assets/fonts/fonts.css">
   <link rel="stylesheet" href="style.css">
@@ -13,7 +23,7 @@
 <body>
   <header class="top wrap">
     <a class="back" href="/#work">← Nawres Skhairia</a>
-    <span class="tag">New project · preview</span>
+    <span class="tag">New project</span>
   </header>
 
   <main class="wrap">
@@ -123,11 +133,23 @@
       </details>
       <details>
         <summary>How it was made</summary>
-        <p class="todo">Text to come: the project story is being written and will be checked before this page is public.</p>
+        <p>I created Test Pilot through vibe coding, between 16 and 17 November 2026. I wanted one small tool that shows what good testing looks like, in under a minute.</p>
+        <p>A restaurant booking form keeps it clear at a glance. Six real-life bugs make it worth testing: a guest limit, a closed day, a lunch time window, a time zone, an email with "+" and a double click.</p>
+        <p>One rule matters most: the robot really types and clicks in the form, and fixed rules, never a guess, decide pass, fail and the verdict.</p>
+        <p>Before release, every mention of AI that was not true yet was taken out. The AI step comes in a later version, once it really works.</p>
       </details>
       <details>
         <summary>How it was tested</summary>
-        <p class="todo">Results to come: catch rate per bug, false alarms on the clean form and consistency, measured automatically on each change.</p>
+        <p>Tested on a laptop and a phone, on 16 and 17 November 2026.</p>
+        <ul>
+          <li>Each of the six planted bugs is caught by its own test, 5 runs out of 5: bug 1 by T5, bug 2 by T6, bug 3 by T10, bug 4 by T14, bug 5 by T17, bug 6 by T19.</li>
+          <li>The clean form passes all 19 tests and says "Ready to ship": no false alarm in 5 runs.</li>
+          <li>The same choice always gives the same tests and the same report (35 runs).</li>
+          <li>The results are identical in 3 time zones: Sofia, Los Angeles and UTC+14.</li>
+          <li>A run at watch speed takes about 24 seconds, and the page never freezes.</li>
+          <li>Nothing is sent to any other website, and the accessibility check is clean.</li>
+        </ul>
+        <p>One thing the tests caught: before the first run, two boxes showed an "AI" badge although this version has no AI. They now say "pre-made" from the start.</p>
       </details>
     </section>
 
