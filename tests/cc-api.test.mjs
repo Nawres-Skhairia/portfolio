@@ -45,7 +45,7 @@ const ops = data => ['project', 'milestone', 'task', 'risk'].flatMap(type => dat
 
 test('Command Center server', { skip }, async t => {
   admin = postgres(URL_, { onnotice: () => {} });
-  await admin.unsafe(`drop table if exists cc_activity, cc_risk, cc_task_dep, cc_task, cc_milestone, cc_project, cc_membership, cc_workspace, cc_outbox, cc_attempt, cc_token, cc_session, cc_user, cc_migration cascade; drop function if exists cc_is_member(uuid);`);
+  await admin.unsafe(`drop table if exists cc_invite, cc_activity, cc_risk, cc_task_dep, cc_task, cc_milestone, cc_project, cc_membership, cc_workspace, cc_outbox, cc_attempt, cc_token, cc_session, cc_user, cc_migration cascade; drop function if exists cc_is_member(uuid);`);
   ({ handle } = await import('../api/_cc/server.js'));
   ({ closeForTests } = await import('../api/_cc/db.js'));
   t.after(async () => { await closeForTests(); await admin.end(); });
@@ -214,6 +214,94 @@ test('Command Center server', { skip }, async t => {
     assert.ok((await asA('select * from cc_activity where workspace_id = $1')).length > 0);
     await assert.rejects(asA(`update cc_activity set field = 'x' where workspace_id = $1`), /permission denied/);
     await assert.rejects(asA(`delete from cc_activity where workspace_id = $1`), /permission denied/);
+  });
+
+  const inviteLink = async email => { const r = await call('GET', '/dev/mailbox', { query: { email } }); const m = r.body.mails.find(x => /#\/join\//.test(x.body)); return m && /#\/join\/([A-Za-z0-9_-]+)/.exec(m.body)[1]; };
+
+  await t.test('sharing: invite by email, join with that address only, then both see and change the same work', async () => {
+    const A = await account('Owner Ana'); const B = await account('Member Ben'); const C = await account('Stranger Cleo');
+    const d = seed('2026-11-17');
+    const s0 = await call('POST', '/workspaces/' + A.ws + '/sync', { cookie: A.cookie, body: { version: 0, ops: ops(d) } });
+    // A member cannot invite before joining; a non-member does not even see the workspace.
+    assert.equal((await call('POST', '/workspaces/' + A.ws + '/invites', { cookie: B.cookie, body: { email: C.email } })).status, 404);
+    const inv = await call('POST', '/workspaces/' + A.ws + '/invites', { cookie: A.cookie, body: { email: B.email, role: 'member' } });
+    assert.equal(inv.status, 200);
+    const token = await inviteLink(B.email); assert.ok(token);
+    assert.equal((await admin`select count(*)::int as c from cc_invite where id = ${token}`)[0].c, 0, 'only a hash of the token is stored');
+    const peek = await call('GET', '/invites/' + token);
+    assert.equal(peek.body.workspace, "Owner's workspace"); assert.equal(peek.body.invitedBy, 'Owner Ana');
+    // The link is bound to B's address: C cannot use it.
+    const wrong = await call('POST', '/invites/accept', { cookie: C.cookie, body: { token } });
+    assert.equal(wrong.status, 422); assert.ok(wrong.body.wrongEmail);
+    const ok = await call('POST', '/invites/accept', { cookie: B.cookie, body: { token } });
+    assert.equal(ok.status, 200); assert.equal(ok.body.id, A.ws);
+    assert.equal((await call('POST', '/invites/accept', { cookie: B.cookie, body: { token } })).status, 422, 'a link works once');
+    // B now reads and changes the same workspace; A sees the change and who made it.
+    const wsB = await call('GET', '/workspaces/' + A.ws, { cookie: B.cookie }); assert.equal(wsB.status, 200);
+    const t1 = { ...wsB.body.data.tasks.find(x => x.id === 't-a4') }; delete t1.history; t1.status = 'In progress';
+    const ch = await call('POST', '/workspaces/' + A.ws + '/sync', { cookie: B.cookie, body: { version: wsB.body.version, ops: [{ type: 'task', op: 'put', id: t1.id, doc: t1 }] } });
+    assert.equal(ch.status, 200);
+    const wsA = await call('GET', '/workspaces/' + A.ws, { cookie: A.cookie });
+    const h = wsA.body.data.tasks.find(x => x.id === 't-a4').history.at(-1);
+    assert.equal(h.by, 'Member Ben'); assert.equal(h.to, 'In progress');
+    // A stale version from A is refused with the latest copy, never silently overwritten.
+    const stale = await call('POST', '/workspaces/' + A.ws + '/sync', { cookie: A.cookie, body: { version: s0.body.version, ops: [{ type: 'task', op: 'del', id: 't-a4' }] } });
+    assert.equal(stale.status, 409); assert.ok(stale.body.workspace);
+    // Members see names and roles, not email addresses; the owner sees addresses.
+    const mB = await call('GET', '/workspaces/' + A.ws + '/members', { cookie: B.cookie });
+    assert.equal(mB.body.members.length, 2); assert.ok(mB.body.members.every(x => !('email' in x))); assert.equal(mB.body.invites.length, 0);
+    const mA = await call('GET', '/workspaces/' + A.ws + '/members', { cookie: A.cookie });
+    assert.ok(mA.body.members.every(x => x.email));
+    // C still cannot see it.
+    assert.equal((await call('GET', '/workspaces/' + A.ws, { cookie: C.cookie })).status, 404);
+  });
+
+  await t.test('sharing: roles decide who can invite, rename, remove and delete; anyone but the owner can leave', async () => {
+    const A = await account('Owner'); const B = await account('Admin'); const M = await account('Member'); const X = await account('Extra');
+    const join = async (P, role) => { await call('POST', '/workspaces/' + A.ws + '/invites', { cookie: A.cookie, body: { email: P.email, role } }); return call('POST', '/invites/accept', { cookie: P.cookie, body: { token: await inviteLink(P.email) } }); };
+    assert.equal((await join(B, 'admin')).status, 200);
+    assert.equal((await join(M, 'member')).status, 200);
+    const ids = Object.fromEntries((await call('GET', '/workspaces/' + A.ws + '/members', { cookie: A.cookie })).body.members.map(x => [x.name, x.id]));
+    assert.equal((await call('POST', '/workspaces/' + A.ws + '/invites', { cookie: M.cookie, body: { email: X.email } })).status, 403, 'a member cannot invite');
+    assert.equal((await call('POST', '/workspaces/' + A.ws + '/invites', { cookie: B.cookie, body: { email: X.email, role: 'admin' } })).status, 422, 'an admin cannot invite an admin');
+    assert.equal((await call('POST', '/workspaces/' + A.ws + '/invites', { cookie: B.cookie, body: { email: X.email, role: 'member' } })).status, 200);
+    const pending = (await call('GET', '/workspaces/' + A.ws + '/members', { cookie: B.cookie })).body.invites;
+    assert.equal(pending.length, 1);
+    assert.equal((await call('POST', '/workspaces/' + A.ws + '/invites/' + pending[0].id + '/cancel', { cookie: B.cookie })).status, 200);
+    assert.equal((await call('POST', '/invites/accept', { cookie: X.cookie, body: { token: await inviteLink(X.email) } })).status, 422, 'a cancelled invitation does not work');
+    assert.equal((await call('POST', '/workspaces/' + A.ws + '/rename', { cookie: M.cookie, body: { name: 'Mine now' } })).status, 403);
+    assert.equal((await call('POST', '/workspaces/' + A.ws + '/rename', { cookie: B.cookie, body: { name: 'Team space' } })).status, 200);
+    assert.equal((await call('POST', '/workspaces/' + A.ws + '/members/' + ids.Owner + '/remove', { cookie: B.cookie })).status, 403, 'nobody removes the owner');
+    assert.equal((await call('POST', '/workspaces/' + A.ws + '/members/' + ids.Member + '/role', { cookie: B.cookie, body: { role: 'admin' } })).status, 403, 'only the owner changes roles');
+    assert.equal((await call('POST', '/workspaces/' + A.ws + '/delete', { cookie: B.cookie, body: { confirm: 'Team space' } })).status, 403);
+    assert.equal((await call('POST', '/workspaces/' + A.ws + '/leave', { cookie: A.cookie })).status, 422, 'the owner cannot leave');
+    assert.equal((await call('POST', '/workspaces/' + A.ws + '/members/' + ids.Member + '/remove', { cookie: B.cookie })).status, 200);
+    assert.equal((await call('GET', '/workspaces/' + A.ws, { cookie: M.cookie })).status, 404, 'removed means no access');
+    assert.equal((await call('POST', '/workspaces/' + A.ws + '/leave', { cookie: B.cookie })).status, 200);
+    assert.equal((await call('GET', '/workspaces/' + A.ws, { cookie: B.cookie })).status, 404);
+    const extra = await call('POST', '/workspaces', { cookie: A.cookie, body: { name: 'Second' } }); assert.equal(extra.status, 200);
+    assert.equal((await call('POST', '/workspaces/' + A.ws + '/delete', { cookie: A.cookie, body: { confirm: 'wrong' } })).status, 422);
+    assert.equal((await call('POST', '/workspaces/' + A.ws + '/delete', { cookie: A.cookie, body: { confirm: 'Team space' } })).status, 200);
+    assert.equal((await admin`select count(*)::int as c from cc_workspace where id = ${A.ws}`)[0].c, 0);
+  });
+
+  await t.test('your data: download everything, delete the account with the password', async () => {
+    const A = await account('Leaving Lou'); const B = await account('Staying Sam');
+    await call('POST', '/workspaces/' + A.ws + '/sync', { cookie: A.cookie, body: { version: 0, ops: ops(seed('2026-11-17')) } });
+    const shared = (await call('POST', '/workspaces', { cookie: A.cookie, body: { name: 'Shared one' } })).body.id;
+    await call('POST', '/workspaces/' + shared + '/invites', { cookie: A.cookie, body: { email: B.email } });
+    await call('POST', '/invites/accept', { cookie: B.cookie, body: { token: await inviteLink(B.email) } });
+    const ex = await call('GET', '/account/export', { cookie: A.cookie });
+    assert.equal(ex.status, 200); assert.equal(ex.body.account.email, A.email); assert.equal(ex.body.workspaces.length, 2);
+    assert.ok(!JSON.stringify(ex.body).includes('scrypt'), 'no password hash in the download');
+    assert.equal((await call('POST', '/account/delete', { cookie: A.cookie, body: { password: 'wrong one here' } })).status, 422);
+    const del = await call('POST', '/account/delete', { cookie: A.cookie, body: { password: 'correct horse 1' } });
+    assert.equal(del.status, 200);
+    assert.equal((await admin`select count(*)::int as c from cc_user where email = ${A.email}`)[0].c, 0);
+    assert.equal((await admin`select count(*)::int as c from cc_workspace where id = ${A.ws}`)[0].c, 0, 'the private workspace is gone');
+    const meB = await call('GET', '/me', { cookie: B.cookie });
+    assert.equal(meB.body.workspaces.find(w => w.id === shared).role, 'owner', 'the shared one goes on with the other person as owner');
+    assert.equal((await call('GET', '/me', { cookie: A.cookie })).body.user, null, 'signed out everywhere');
   });
 
   await t.test('the test mailbox is closed on the live site', async () => {

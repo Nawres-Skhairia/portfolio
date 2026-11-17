@@ -168,7 +168,7 @@ test('on hold needs a reason, resume goes back to the previous status', () => {
   assert.deepEqual(t.history.slice(-2).map(x => x.field), ['Status', 'Hold reason']);
   const back = E.resume(h.data, 't-b3', 'Lina Haddad', AT).data.tasks.find(x => x.id === 't-b3');
   assert.equal(back.status, 'In progress'); assert.equal(back.holdReason, '');
-  assert.match(E.resume(d, 't-a4', 'x', AT).errors.status, /not on hold/);
+  assert.match(E.resume(d, 't-a4', 'x', AT).errors.status, /not paused/);
 });
 
 test('on hold counts against project health', () => {

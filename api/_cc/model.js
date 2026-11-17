@@ -8,7 +8,7 @@ const LIST = { project: 'projects', milestone: 'milestones', task: 'tasks', risk
 const FIELDS = {
   project: ['id', 'code', 'name', 'owner', 'objective', 'description', 'start', 'deadline', 'status', 'priority'],
   milestone: ['id', 'projectId', 'name', 'target', 'done'],
-  task: ['id', 'key', 'projectId', 'title', 'owner', 'priority', 'status', 'due', 'estimate', 'labels', 'deps', 'milestoneId', 'holdReason', 'heldFrom', 'rank', 'comments'],
+  task: ['id', 'key', 'projectId', 'title', 'owner', 'priority', 'status', 'due', 'estimate', 'labels', 'deps', 'milestoneId', 'holdReason', 'heldFrom', 'remindOn', 'rank', 'comments'],
   risk: ['id', 'projectId', 'title', 'impact', 'probability', 'status', 'mitigation', 'owner'],
 };
 export const LIMITS = { ops: 2000, projects: 100, tasks: 3000, milestones: 1000, risks: 1000, comments: 200, filters: 20, docBytes: 64 * 1024 };
@@ -39,6 +39,7 @@ function shapeError(type, d) {
     for (const k of ['milestoneId', 'holdReason', 'heldFrom']) if (d[k] !== undefined && !str(d[k], 200)) return 'A task is not valid.';
     if (d.milestoneId && !ID.test(d.milestoneId)) return 'A milestone reference is not valid.';
     if (d.heldFrom && !E.TASK_STATUSES.includes(d.heldFrom)) return 'A task is not valid.';
+    if (d.remindOn !== undefined && d.remindOn !== '' && !(typeof d.remindOn === 'string' && E.isIso(d.remindOn))) return 'A reminder date is not valid.';
   }
   if (type === 'risk') { if (!str(d.title, 120) || !str(d.status, 20)) return 'A risk is not valid.'; if (d.owner !== undefined && !str(d.owner, 40)) return 'A risk is not valid.'; if (d.mitigation !== undefined && !str(d.mitigation, 400)) return 'A risk is not valid.'; }
   return '';

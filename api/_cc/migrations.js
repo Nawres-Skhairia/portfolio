@@ -147,4 +147,19 @@ grant select, insert, update, delete on cc_project, cc_milestone, cc_task, cc_ta
 grant select, insert on cc_activity to cc_app;
 grant usage on sequence cc_activity_id_seq to cc_app;
 ` },
+  // Sharing: invitations by email. The token itself is never stored, only its keyed hash (the id).
+  { id: 2, sql: `
+create table cc_invite (
+  id text primary key,
+  workspace_id uuid not null references cc_workspace on delete cascade,
+  email text not null check (email = lower(email) and length(email) <= 254),
+  role text not null check (role in ('admin', 'member')),
+  invited_by uuid references cc_user on delete set null,
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null,
+  accepted_at timestamptz
+);
+create index cc_invite_ws on cc_invite (workspace_id);
+alter table cc_invite enable row level security;
+` },
 ];

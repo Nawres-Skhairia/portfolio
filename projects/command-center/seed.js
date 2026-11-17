@@ -59,6 +59,12 @@ export function seed(today) {
     T('t-f4', 'p-fjord', 'Evidence pack for the auditor', 'Jonas Berg', 'Medium', 'To do', -3, 2, ['t-f2', 't-f3'], 'm-f2'),
     T('t-x1', 'p-cobalt', 'Data dictionary for new reports', 'Tomás Ruiz', 'Low', 'To do', 4, 2, []),
     T('t-x2', 'p-beacon', 'Update app store notes', 'Tomás Ruiz', 'Low', 'To do', 3, 1, []),
+    T('t-x3', 'p-beacon', 'Review the help screen wording', 'Lina Haddad', 'Medium', 'In progress', 0, 1, []),
+    T('t-x4', 'p-beacon', 'Read the accessibility audit summary', 'Lina Haddad', 'Low', 'To do', 0, 1, []),
+    T('t-x5', 'p-cobalt', 'Agree the switch-over date with finance', 'Lina Haddad', 'High', 'To do', 2, 1, []),
+    T('t-x6', 'p-fjord', 'Send the dated action plan to the auditor', 'Lina Haddad', 'Critical', 'To do', -1, 1, []),
+    T('t-x7', 'p-cobalt', 'Write the switch-over notice', 'Lina Haddad', 'Medium', 'To do', 3, 2, []),
+    T('t-x8', 'p-beacon', 'Approve the new colour palette', 'Lina Haddad', 'Low', 'Done', 0, 1, []),
   ];
   // keys, labels, board order, on-hold reasons, comments and history (all made up)
   const LABELS = { 't-a3': ['frontend', 'invoices'], 't-a4': ['frontend'], 't-a6': ['performance'], 't-a7': ['release'], 't-b3': ['accessibility'], 't-b4': ['accessibility', 'mobile'], 't-b5': ['accessibility', 'release'], 't-c2': ['data', 'access'], 't-c3': ['data', 'reports'], 't-c4': ['data', 'reports'], 't-c5': ['data'], 't-f2': ['security'], 't-f3': ['security'], 't-f4': ['security', 'audit'], 't-e1': ['experiment'], 't-x1': ['data', 'docs'], 't-a8': ['docs'] };
@@ -79,6 +85,7 @@ export function seed(today) {
   tk('t-a3').history.push({ at: d(-2) + 'T16:40', by: 'Priya Nair', field: 'Status', from: 'In progress', to: 'In review' });
   tk('t-a3').comments.push({ id: 'c-3', by: 'Priya Nair', at: d(-2) + 'T16:41', text: 'Ready for review. Download works for PDF; CSV export comes in a second step.' });
   tk('t-f2').comments.push({ id: 'c-4', by: 'Jonas Berg', at: d(-5) + 'T11:30', text: 'The vendor patch needs a restart window. Planned for the weekend.' });
+  tk('t-x8').history.push({ at: d(0) + 'T09:40', by: 'Lina Haddad', field: 'Status', from: 'In review', to: 'Done' });
   tk('t-f2').history.push({ at: d(-6) + 'T08:15', by: 'Jonas Berg', field: 'Assignee', from: 'Marc Olsen', to: 'Jonas Berg' });
 
   const risks = [

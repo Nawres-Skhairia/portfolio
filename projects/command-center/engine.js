@@ -72,7 +72,8 @@ export function validateTask(t, data) {
       if (loop) e.deps = 'This would create a loop: ' + loop.map(id => (data.tasks.find(x => x.id === id) || t).title).join(' → ') + '.';
     }
   }
-  if (t.status === 'On hold' && !String(t.holdReason || '').trim()) e.holdReason = 'Say why the task is on hold.';
+  if (t.status === 'On hold' && !String(t.holdReason || '').trim()) e.holdReason = 'Say why the task is paused.';
+  if (t.remindOn !== undefined && t.remindOn !== '' && !isIso(t.remindOn)) e.remindOn = 'The reminder date is not valid.';
   maxLen(e, 'holdReason', t.holdReason, 200, 'Reason');
   const labels = t.labels || [];
   if (labels.length > 5) e.labels = 'Up to 5 labels.';
@@ -248,7 +249,7 @@ export function insights(data, today) {
     if (h.pastDeadline) out.push({ level: 'high', kind: 'deadline', project: p.id, title: p.name + ' has passed its deadline',
       text: 'The deadline was ' + p.deadline + ' (' + daysBetween(p.deadline, today) + ' days ago) and the project is not completed.',
       action: 'Agree a new date with the owner, ' + p.owner + ', and record it.', evidence: [{ type: 'project', id: p.id }] });
-    for (const m of h.overdueMilestones) out.push({ level: 'high', kind: 'milestone', project: p.id, title: 'Milestone overdue: ' + m.name,
+    for (const m of h.overdueMilestones) out.push({ level: 'high', kind: 'milestone', project: p.id, title: 'Milestone date passed: ' + m.name,
       text: name(p.id) + ' · target was ' + m.target + ', ' + daysBetween(m.target, today) + ' days ago.',
       action: 'Close it if it is done, or move the target date and tell the people who depend on it.', evidence: [{ type: 'milestone', id: m.id }] });
     // blocking tasks: unfinished, others wait for them, and they are late or blocked
@@ -257,7 +258,7 @@ export function insights(data, today) {
       const waiting = downstream(tasks, t.id);
       if (waiting.length >= 2 && (isTaskOverdue(t, today) || t.status === 'On hold')) out.push({ level: 'high', kind: 'blocker', project: p.id,
         title: 'Unblock "' + t.title + '" first',
-        text: waiting.length + ' tasks in ' + p.name + ' wait for it, and it is ' + (t.status === 'On hold' ? 'on hold (' + (t.holdReason || 'no reason given') + ')' : 'overdue since ' + t.due) + '. Owner: ' + t.owner + '.',
+        text: waiting.length + ' tasks in ' + p.name + ' wait for it, and it is ' + (t.status === 'On hold' ? 'paused (' + (t.holdReason || 'no reason given') + ')' : 'was due ' + t.due) + '. Owner: ' + t.owner + '.',
         action: 'Resolve what stops it, or split it so the waiting tasks can start.', evidence: [{ type: 'task', id: t.id }].concat(waiting.map(id => ({ type: 'task', id }))) });
     }
   }
@@ -277,7 +278,7 @@ export function insights(data, today) {
     text: 'Across ' + [...new Set(list.map(t => name(t.projectId)))].join(', ') + '.', action: 'Move one or two to someone with capacity, or re-date the lowest priority ones.',
     evidence: list.map(t => ({ type: 'task', id: t.id })) });
   const overdueTasks = data.tasks.filter(t => isTaskOverdue(t, today));
-  if (overdueTasks.length) out.push({ level: 'medium', kind: 'overdue', title: overdueTasks.length + ' overdue task' + (overdueTasks.length > 1 ? 's' : ''),
+  if (overdueTasks.length) out.push({ level: 'medium', kind: 'overdue', title: overdueTasks.length + ' task' + (overdueTasks.length > 1 ? 's' : '') + ' could use a new date',
     text: overdueTasks.slice(0, 4).map(t => t.title + ' (' + name(t.projectId) + ', due ' + t.due + ')').join('; ') + (overdueTasks.length > 4 ? '; and more.' : '.'),
     action: 'Update their status or due date so the plan stays true.', evidence: overdueTasks.map(t => ({ type: 'task', id: t.id })) });
   const rank = { high: 0, medium: 1, low: 2 };
@@ -293,9 +294,9 @@ export function statusSummary(data, project, today) {
   parts.push(project.name + ' is ' + h.label.toLowerCase() + ' (health ' + h.score + '/100).');
   if (project.status === 'Completed') return parts.join(' ');
   parts.push(Math.round(h.progress * 100) + '% of the work is done (' + tasks.filter(t => t.status === 'Done').length + ' of ' + tasks.length + ' tasks); ' + Math.round(h.expected * 100) + '% was expected by today.');
-  if (next) parts.push('Next milestone: ' + next.name + ' on ' + next.target + (isMilestoneOverdue(next, today) ? ' (overdue).' : '.'));
+  if (next) parts.push('Next milestone: ' + next.name + ' on ' + next.target + (isMilestoneOverdue(next, today) ? ' (date passed).' : '.'));
   if (h.openRisks.length) parts.push(h.openRisks.length + ' open risk' + (h.openRisks.length > 1 ? 's' : '') + ', ' + h.highRisks.length + ' high or critical.');
-  if (h.blocked.length) parts.push(h.blocked.length + ' task' + (h.blocked.length > 1 ? 's are' : ' is') + ' on hold or stuck.');
+  if (h.blocked.length) parts.push(h.blocked.length + ' task' + (h.blocked.length > 1 ? 's are' : ' is') + ' paused or stuck.');
   return parts.join(' ');
 }
 
@@ -370,7 +371,7 @@ function fmtVal(k, v, data) {
 export function hold(data, id, reason, by, at) { return updateTask(data, id, { status: 'On hold', holdReason: String(reason || '').trim() }, by, at); }
 export function resume(data, id, by, at) {
   const t = data.tasks.find(x => x.id === id);
-  if (!t || t.status !== 'On hold') return { data, errors: { status: 'This task is not on hold.' } };
+  if (!t || t.status !== 'On hold') return { data, errors: { status: 'This task is not paused.' } };
   return updateTask(data, id, { status: t.heldFrom && t.heldFrom !== 'On hold' ? t.heldFrom : 'To do' }, by, at);
 }
 
