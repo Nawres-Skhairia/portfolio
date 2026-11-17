@@ -7,15 +7,19 @@
   <title>Reconciliation Workbench · Nawres Skhairia</title>
   <meta name="description" content="Match a made-up ISO 20022 bank statement (camt.053) with open invoices. Every match explains itself, the rest waits for a person, and every decision goes into a fingerprinted audit trail. Runs in your browser.">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/assets/fonts/fonts.css">
+  <link rel="preload" href="/assets/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/instrument-serif-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/assets/fonts/site-fonts.css">
   <link rel="stylesheet" href="../style.css">
   <link rel="stylesheet" href="../rec.css">
+  <link rel="stylesheet" href="/assets/tool-theme.css">
+  <link rel="stylesheet" href="../theme.css">
   <link rel="modulepreload" href="../js/rec-app.js">
 </head>
 <body>
   <header class="bar">
     <div class="bar-in">
-      <a class="home" href="/#work" aria-label="Back to Nawres Skhairia's portfolio">N.&nbsp;Skhairia</a>
+      <a class="home back" href="/#work" aria-label="Back to Nawres Skhairia's portfolio">Nawres Skhairia</a>
       <div class="brand">
         <span class="brand-name">Reconciliation Workbench</span>
         <span class="brand-sub">ISO 20022 camt.053.001.08 bank statement ↔ open invoices · rules only</span>
@@ -162,5 +166,6 @@
   </dialog>
 
   <script type="module" src="../js/rec-app.js"></script>
+  <script src="/assets/page-fx.js" defer></script>
 </body>
 </html>
