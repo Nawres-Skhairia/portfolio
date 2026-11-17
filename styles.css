@@ -560,3 +560,6 @@ body { transition: background-color .4s, color .4s; }
   .xp-group { background: none; }
   .xp-item { opacity: 1 !important; transform: none !important; }
 }
+/* Olivia's fixes: company on its own line below 900 px (no orphan dot); readable "Full CV on request" */
+@media (max-width: 899px) { .xp-org { display: block; margin-top: 4px; } .xp-sep { display: none; } }
+.cv-note { color: #c6bfb3; }
