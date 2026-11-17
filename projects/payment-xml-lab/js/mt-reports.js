@@ -14,8 +14,8 @@ export function mapJson(ctx) {
     findings: ctx.res.findings.map((f) => ({ severity: f.severity, rule: f.rule, status: f.status || null, mtLine: f.mtLine, xmlLine: f.xmlLine, message: f.message, why: f.why, fix: f.fix })), note: NOTE }, null, 2);
 }
 
-// a cell that starts with = + - @ (or a tab or return) could run as a formula in a spreadsheet: prefix it with '
-const csvCell = (v) => { let s = String(v ?? ''); if (/^[=+\-@\t\r]/.test(s)) s = "'" + s; return /[",\n;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+// a cell that starts with = + - @ (also their full-width forms, a tab or a return) could run as a formula in a spreadsheet: prefix it with '
+const csvCell = (v) => { let s = String(v ?? ''); if (/^[=+\-@\t\r\uFF1D\uFF0B\uFF0D\uFF20]/.test(s)) s = "'" + s; return /[",\n\r;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
 export function mapCsv(ctx) {
   const m = meta(ctx);
   const head = [`# ${m.tool} ${m.toolVersion}, catalogue ${m.catalogue}, exported ${m.exportedAt}, MT SHA-256 ${m.sha256}`, `# ${NOTE}`];
@@ -55,3 +55,4 @@ export function mapHtml(ctx) {
 <p class="n">${x(NOTE)}</p>
 </body></html>`;
 }
+export const csvCellForTest = csvCell;

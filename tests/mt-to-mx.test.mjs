@@ -123,6 +123,9 @@ ok(MAP_RULES.every((r) => r.source.length && r.source.every((s) => MAP_SOURCES[s
   ok(!convert(S.charges.replace(':33B:EUR1250,00', ':33B:USD1350,00\n:36:0,925925')).errors.some((e) => e.rule === 'MAP-11'), 'Mia 3 :36: with another currency is fine');
   const r = convert(S.clean.replace('INVOICE 2026-118', '=HYPERLINK(1)')); const csv = mapCsv({ res: r, schema: { valid: true }, sha: 'x', name: 'n', when: '2026-11-18T10:00:00Z' });
   ok(csv.includes("'=HYPERLINK(1)") && !/(^|,)=HYPERLINK/m.test(csv), 'Mia 4 CSV formula guard');
+  { const { csvCellForTest: c } = await import(new URL('js/mt-reports.js', base));
+    for (const ch of ['=', '+', '-', '@', '\t', '\r', '\uFF1D', '\uFF0B', '\uFF0D', '\uFF20']) ok(c(ch + '1+1').replace(/^"/, '').startsWith("'" + ch), 'CSV guard for ' + JSON.stringify(ch));
+    ok(c('a\rb') === '"a\rb"', 'CSV cell with a CR in the middle is quoted'); }
   const c1 = convert(S.clean.replace('INVOICE 2026-118', 'INVOICE\u0001 2026-118'));
   ok(c1.refused && c1.xml === '', 'Mia 5 U+0001 is refused, so no broken pacs.008 can be downloaded');
   ok(convert(S.clean.replace('INVOICE', 'INV\uD800OICE')).refused, 'A lone surrogate is refused');
