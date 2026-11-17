@@ -46,7 +46,7 @@
     if (x === null) { if (img) { img.style.removeProperty('--ix'); img.style.removeProperty('--iy'); } return; }
     el.style.setProperty('--mx', (x * 100) + '%');
     el.style.setProperty('--my', (yy * 100) + '%');
-    if (img) { img.style.setProperty('--ix', ((0.5 - x) * 14) + 'px'); img.style.setProperty('--iy', ((0.5 - yy) * 10) + 'px'); }
+    if (img) { img.style.setProperty('--ix', ((0.5 - x) * 8) + 'px'); img.style.setProperty('--iy', ((0.5 - yy) * 6) + 'px'); }
   });
   track('.proof', function (el, x, yy) {
     if (x === null) { el.style.setProperty('--rx', '0deg'); el.style.setProperty('--ry', '0deg'); return; }
@@ -66,14 +66,6 @@
     el.style.setProperty('--hx', ((x - 0.7) * 160) + 'px');
     el.style.setProperty('--hy', ((yy - 0.3) * 120) + 'px');
   });
-  track('.wordmark', function (el, x, yy, e) {
-    var sp = el.firstElementChild; if (!sp) return;
-    if (x === null) { sp.style.setProperty('--wx', '-300px'); return; }
-    var r = sp.getBoundingClientRect();
-    sp.style.setProperty('--wx', (e.clientX - r.left) + 'px');
-    sp.style.setProperty('--wy', (e.clientY - r.top) + 'px');
-  });
-
   // buttons lean towards the pointer, and their fill starts where the pointer came in
   track('.magnetic', function (el, x, yy) {
     if (x === null) { el.style.setProperty('--tx', '0px'); el.style.setProperty('--ty', '0px'); return; }
