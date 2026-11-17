@@ -225,6 +225,23 @@ for (const t of ['', 'abc', 'a'.repeat(55), 'a'.repeat(56), 'a'.repeat(64), 'Zo√
   ok(place(sb, 'XMPL2611170006').place !== 'auto', 'RF reference with wrong check digits is not matched automatically', place(sb, 'XMPL2611170006').place);
 }
 
+// PRCD (previous closing booked) is accepted as the opening balance when there is no OPBD (Mia)
+{
+  const prcd = statementXml().replace('<Cd>OPBD</Cd>', '<Cd>PRCD</Cd>');
+  const st = await readStatement(prcd, { validateSchema });
+  ok(st.reconcilable && st.stmt.balance.ok && !st.findings.some((f) => f.id === 'STM-03'), 'PRCD accepted as opening balance', st.findings.map((f) => f.message).join(' | '));
+  const none = await readStatement(statementXml().replace('<Cd>OPBD</Cd>', '<Cd>ITBD</Cd>'), { validateSchema });
+  ok(none.findings.some((f) => f.id === 'STM-03'), 'no opening balance at all is still STM-03');
+}
+// a reason that really starts with an apostrophe survives the CSV round trip (Mia)
+{
+  const { st, s } = await session();
+  E.reject(s, s.view.suggestions[0].id, "'=quoted by the customer");
+  E.reject(s, s.view.suggestions[0].id, "'plain apostrophe");
+  const lines = R.parseTrail(R.trailCsv(ctx(s, st)));
+  ok(E.verifyTrail(lines).ok && lines.some((l) => l.reason === "'=quoted by the customer") && lines.some((l) => l.reason === "'plain apostrophe"), 'apostrophe reasons check out from CSV');
+}
+
 // a reversal sends the reversed payment to review instead of leaving it matched (Daniel, PORT-42)
 {
   const smp = REC_SAMPLES.find((x) => x.id === 'reversal');
@@ -241,6 +258,8 @@ for (const t of ['', 'abc', 'a'.repeat(55), 'a'.repeat(56), 'a'.repeat(64), 'Zo√
 
 // invoices CSV reader
 {
+  const dec5 = readInvoices('invoice,customer,amount,currency\nINV-1,A,10.12345,EUR\nINV-2,B,1000,JPY\nINV-3,C,1.5,JPY\nINV-4,D,1.125,KWD\n');
+  ok(!dec5.ok && dec5.problems.length === 2 && /more decimals than EUR allows \(2\)/.test(dec5.problems[0].message) && /JPY allows \(0\)/.test(dec5.problems[1].message), 'more decimals than the currency allows are refused', dec5.problems.map((p) => p.message).join(' | '));
   const semi = 'Rechnungsnummer;Kunde;IBAN;Betrag;W√§hrung;F√§lligkeit\nINV-1;Alpha GmbH;;1.250,50;EUR;17.11.2026\nINV-2;Beta;;"2.000,00";EUR;2026-11-18\n';
   const a = readInvoices(semi);
   ok(a.ok && a.sep === ';' && a.decimal === ',' && E.amt(a.invoices[0].amount) === '1,250.50' && a.invoices[0].due === '2026-11-17', 'semicolon CSV with decimal comma and German headers', a.error);

@@ -11,7 +11,7 @@ export const CAMT = { id: 'camt.053.001.08', ns: 'urn:iso:std:iso:20022:tech:xsd
 export const STM_RULES = [
   { id: 'STM-01', name: 'Official ISO 20022 schema', what: 'The statement follows the camt.053.001.08 schema, checked by libxml2 in this tab.' },
   { id: 'STM-02', name: 'Balances add up', what: 'Opening balance + booked credits − booked debits = closing balance, to the cent. Balances carry their own sign (an overdraft is negative).' },
-  { id: 'STM-03', name: 'Opening and closing balance present', what: 'The statement has one opening (OPBD) and one closing (CLBD) booked balance.' },
+  { id: 'STM-03', name: 'Opening and closing balance present', what: 'The statement has one opening balance (OPBD, or PRCD previous closing booked when there is no OPBD) and one closing (CLBD) booked balance.' },
   { id: 'STM-04', name: 'One currency', what: 'Every entry is in the account currency, so the balance can be checked.' },
   { id: 'STM-05', name: 'Pending entries apart', what: 'Entries that are not booked yet (status other than BOOK) are listed apart and left out of the balance and the matching.' },
   { id: 'STM-06', name: 'Bank references unique', what: 'No two entries share the same bank reference (AcctSvcrRef).' },
@@ -90,7 +90,9 @@ export async function readStatement(src, { bytes = src.length, validateSchema })
     return { type: text(path(b, 'Tp', 'CdOrPrtry', 'Cd')), amt: money(text(a)), ccy: a.getAttribute('Ccy'), cd: text(kid(b, 'CdtDbtInd')), dt: text(path(b, 'Dt', 'Dt')) || (text(path(b, 'Dt', 'DtTm')) || '').slice(0, 10), line: b.line };
   });
   const entries = kids(s, 'Ntry').map(entryOf);
-  const opening = bals.filter((b) => b.type === 'OPBD'), closing = bals.filter((b) => b.type === 'CLBD');
+  // opening: OPBD, or PRCD (previous closing booked) when the bank sends that instead (Mia, PORT-42)
+  const opbd = bals.filter((b) => b.type === 'OPBD'), prcd = bals.filter((b) => b.type === 'PRCD');
+  const opening = opbd.length ? opbd : prcd, closing = bals.filter((b) => b.type === 'CLBD');
   const ccy = text(kid(acct, 'Ccy')) || (opening[0] && opening[0].ccy) || (entries[0] && entries[0].ccy) || '';
   const st = out.stmt = {
     msgId: text(path(root, 'GrpHdr', 'MsgId')), created: text(path(root, 'GrpHdr', 'CreDtTm')),
@@ -102,7 +104,7 @@ export async function readStatement(src, { bytes = src.length, validateSchema })
 
   // STM-03
   if (opening.length !== 1 || closing.length !== 1) {
-    out.findings.push({ id: 'STM-03', severity: 'error', line: s.line, message: `The statement has ${opening.length} opening (OPBD) and ${closing.length} closing (CLBD) balances. Exactly one of each is needed for the balance check.`, fix: 'Ask for a statement that carries its opening and closing booked balances.' });
+    out.findings.push({ id: 'STM-03', severity: 'error', line: s.line, message: `The statement has ${opening.length} opening (OPBD, or PRCD previous closing) and ${closing.length} closing (CLBD) balances. Exactly one of each is needed for the balance check.`, fix: 'Ask for a statement that carries its opening and closing booked balances.' });
   }
   // STM-04
   for (const e of entries) if (e.ccy !== ccy) out.findings.push({ id: 'STM-04', severity: 'error', line: e.line, message: `Entry ${e.ref} is in ${e.ccy}, the account is in ${ccy}. The balance cannot be checked across currencies.`, fix: 'A statement lists every entry in the account currency; the original currency belongs in the amount details.' });

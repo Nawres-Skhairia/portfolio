@@ -8,7 +8,8 @@ import { euro } from './rules.js';
 export const REC_NOTE = 'A demonstration workbench, not accounting software. It does not post anything to a ledger. Not certified. Made-up data only; the files were read in the browser and not uploaded.';
 const x = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 // The same formula guard as the MT to MX exports (Noah's review): a cell starting with = + - @ (also full-width), a tab or a return gets a leading '
-const GUARD = /^[=+\-@\t\r＝＋－＠]/;
+// Here a cell that already starts with ' gets one too, so reading the trail back always removes exactly one (Mia, PORT-42).
+const GUARD = /^[=+\-@\t\r\uFF1D\uFF0B\uFF0D\uFF20']/;
 const csvCell = (v) => { let s = String(v ?? ''); if (GUARD.test(s)) s = "'" + s; return /[",\n\r;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
 const unguard = (s) => (s.length > 1 && s[0] === "'" && GUARD.test(s.slice(1)) ? s.slice(1) : s);
 export const csvCellForTest = csvCell;

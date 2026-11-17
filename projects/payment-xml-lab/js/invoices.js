@@ -14,6 +14,8 @@ export const INVOICE_FIELDS = [
   { key: 'due', label: 'Due date', required: false, names: ['duedate', 'dueon', 'faelligkeit', 'faellig', 'falligkeit', 'fallig', 'falligam', 'echeance', 'vencimiento'] },
   { key: 'reference', label: 'Payment reference', required: false, names: ['reference', 'paymentreference', 'ref', 'rf', 'rfreference', 'creditorreference', 'structuredreference'] },
 ];
+// decimals each currency allows (ISO 4217 minor units); 2 for any other
+export const MINOR = { JPY: 0, KRW: 0, ISK: 0, CLP: 0, VND: 0, XOF: 0, XAF: 0, BHD: 3, KWD: 3, OMR: 3, JOD: 3, TND: 3, LYD: 3, IQD: 3 };
 const norm = (h) => h.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '');
 
 export function splitCsv(text, sep) {
@@ -123,6 +125,7 @@ export function readInvoices(src, opts = {}) {
     if (/^\s*(-|\(|\u2212)/.test(rawAmt) || /-\s*$/.test(rawAmt)) p(`Invoice ${number || '?'}: "${rawAmt}" is a negative amount. Credit notes are not in this version: leave them out of the list.`);
     else if (amount == null) p(`Invoice ${number || '?'}: "${rawAmt}" is not an amount with the decimal mark "${dec}".`);
     else if (amount === 0n) p(`Invoice ${number || '?'}: the amount is zero.`);
+    if (amount != null && amount > 0n && /^[A-Z]{3}$/.test(currency)) { const mu = MINOR[currency] ?? 2; if (amount % (10n ** BigInt(5 - mu)) !== 0n) p(`Invoice ${number || '?'}: "${rawAmt}" has more decimals than ${currency} allows (${mu}).`); }
     if (!/^[A-Z]{3}$/.test(currency)) p(`Invoice ${number || '?'}: "${cell(r, 'currency')}" is not a 3-letter currency code.`);
     if (account && !(/^[A-Z]{2}\d{2}[A-Z0-9]{1,30}$/.test(account) && ibanIsValid(account))) p(`Invoice ${number || '?'}: the customer account "${cell(r, 'account')}" is not a valid IBAN.`);
     if (dueRaw && !due) p(`Invoice ${number || '?'}: the due date "${dueRaw}" is not a date (use 2026-11-17 or 17.11.2026).`);
