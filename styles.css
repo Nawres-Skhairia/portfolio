@@ -497,3 +497,6 @@ body { transition: background-color .4s, color .4s; }
 @media (max-width: 400px) { .site-head .wrap { padding-inline: 16px; } }
 /* page-change panel: a deep green in dark mode, so moving between pages never flashes bright */
 :root[data-theme="dark"] { --pt-panel: #1c2a24; }
+
+/* page transitions between pages of the site (the browser fades one page into the next); off under reduced motion */
+@media (prefers-reduced-motion: no-preference) { @view-transition { navigation: auto; } }

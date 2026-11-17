@@ -1,7 +1,17 @@
 /* CV page: print button and the rise-in motion (still under reduced motion). */
 (function () {
   var root = document.documentElement;
-  var still = !('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Motion switch: a per-visit choice (sessionStorage, erased when the tab closes), like the theme switch. Nothing is sent.
+  // Starts off when the system asks for reduced motion.
+  var saved = null;
+  try { saved = sessionStorage.getItem('cv-motion'); } catch (e) {}
+  var off = saved ? saved === 'off' : window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // no page transition when motion is off
+  var skipVT = function (e) { if (off && e.viewTransition) e.viewTransition.skipTransition(); };
+  window.addEventListener('pagereveal', skipVT);
+  window.addEventListener('pageswap', skipVT);
+  if (off) root.classList.add('cv-motion-off');
+  var still = off || !('IntersectionObserver' in window);
   if (!still) {
     root.classList.add('fx');
     // safety: if the reveal script never runs, show everything after 3 s
@@ -15,6 +25,11 @@
   window.addEventListener('beforeprint', function () { showAll(); unlink(); });
   window.addEventListener('afterprint', relink);
   document.addEventListener('DOMContentLoaded', function () {
+    var mot = document.querySelector('.cv-motion');
+    if (mot) {
+      mot.setAttribute('aria-pressed', off ? 'false' : 'true');
+      mot.addEventListener('click', function () { try { sessionStorage.setItem('cv-motion', off ? 'on' : 'off'); } catch (e) {} location.reload(); });
+    }
     var btn = document.querySelector('.cv-print');
     if (btn) btn.addEventListener('click', function () { showAll(); unlink(); window.print(); relink(); });
     if (still) return;
@@ -25,7 +40,9 @@
     // reading progress bar
     var bar = document.createElement('div'); bar.className = 'cv-progress'; bar.setAttribute('aria-hidden', 'true'); document.body.appendChild(bar);
     var tick = false, upd = function () { tick = false; var h = document.documentElement.scrollHeight - innerHeight; bar.style.setProperty('--p', h > 0 ? Math.min(1, scrollY / h) : 0); };
-    addEventListener('scroll', function () { if (!tick) { tick = true; requestAnimationFrame(upd); } }, { passive: true }); upd();
+    // native scroll-driven animation where the browser has it; a light scroll listener everywhere else
+    if (window.CSS && CSS.supports('animation-timeline: scroll()')) bar.classList.add('sd');
+    else { addEventListener('scroll', function () { if (!tick) { tick = true; requestAnimationFrame(upd); } }, { passive: true }); upd(); }
     // soft light that follows the pointer on the current role (fine pointers only)
     var card = document.querySelector('.cv-job.is-now');
     if (card && matchMedia('(hover: hover) and (pointer: fine)').matches) card.addEventListener('pointermove', function (e) { var r = card.getBoundingClientRect(); card.style.setProperty('--mx', (e.clientX - r.left) + 'px'); card.style.setProperty('--my', (e.clientY - r.top) + 'px'); });

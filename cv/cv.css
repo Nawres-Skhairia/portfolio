@@ -192,6 +192,14 @@
   .cv-job.lit::before { background: var(--accent); border-color: var(--accent); }
   .cv-jobs { perspective: 1400px; }
 }
+@media screen {
+  .cv-glow { position: fixed; right: -200px; top: -160px; width: 760px; height: 760px; border-radius: 50%; pointer-events: none; z-index: -1; background: radial-gradient(circle, color-mix(in srgb, var(--accent) 11%, transparent), transparent 65%); }
+  .cv-roll { font-variant-numeric: tabular-nums; }
+  .cv-job:not(.is-now) { transition: opacity .7s var(--ease), transform .9s var(--ease), filter .9s var(--ease), translate .4s var(--ease); }
+  .cv-job:not(.is-now):hover { translate: 6px 0; }
+  .cv-job:not(.is-now):hover::before { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+}
+@media print { .cv-glow, .cv-roll { display: none !important; } }
 @media screen and (max-width: 599px) { .cv-jobs::after { left: 2.5px; } .cv-comet { left: 3.5px; } }
 @media screen and (prefers-reduced-motion: no-preference) {
   .cv-hero { translate: 0 var(--py, 0px); opacity: var(--pf, 1); }
@@ -201,9 +209,30 @@
   .cv-kinetic .cv-hero.in h1 .cv-ch:hover { transform: translateY(-.1em); color: var(--accent); transition-delay: 0s; transition-duration: .25s; }
   .cv-hero .cv-print { transition: translate .4s cubic-bezier(.34, 1.56, .64, 1), border-color .25s, color .25s, background-color .25s; }
   @media (min-width: 600px) { .fx .cv-job:not(.in), .fx .cv-side .cv-block:not(.in) { filter: blur(8px); } }
-  .fx .cv-main > .cv-block > .cv-h, .fx .cv-side .cv-h { display: flex; align-items: center; }
+  .fx .cv-main > .cv-block > .cv-h, .fx .cv-side .cv-h { display: flex; align-items: center; white-space: nowrap; }
   .fx .cv-main > .cv-block > .cv-h::before, .fx .cv-side .cv-h::before { content: ""; flex: none; width: 0; height: 1px; margin-right: 0; background: var(--accent); transition: width .8s .25s var(--ease), margin-right .8s .25s var(--ease); }
   .fx .cv-main > .cv-block > .cv-h.in::before, .fx .cv-side .cv-block.in .cv-h::before { width: 28px; margin-right: 12px; }
   .fx .cv-side .cv-block.in .cv-tags li { background-image: linear-gradient(100deg, transparent 35%, color-mix(in srgb, var(--accent) 28%, transparent) 50%, transparent 65%); background-size: 260% 100%; background-repeat: no-repeat; animation: cv-sweep 1.3s calc(.6s + var(--d, 0ms)) var(--ease) both; }
   @keyframes cv-sweep { from { background-position: 130% 0; } to { background-position: -30% 0; } }
+}
+
+
+/* motion switch, next to EN | FR */
+.cv-topline { flex-wrap: wrap; }
+.cv-topline .cv-langs-switch { margin-left: auto; }
+.cv-motion { display: inline-flex; align-items: center; gap: 8px; min-height: 32px; padding: 0 12px 0 8px; border: 1px solid var(--line-strong); border-radius: 999px; background: transparent; color: var(--ink-2); font-family: var(--mono); font-size: var(--step--2); letter-spacing: .08em; cursor: pointer; transition: color .25s, border-color .25s; }
+.cv-motion::before { content: ""; width: 26px; height: 14px; border-radius: 999px; background: var(--line-strong) radial-gradient(circle at 7px 50%, var(--ink-3) 5px, transparent 5.5px); transition: background .3s; }
+.cv-motion[aria-pressed="true"]::before { background: var(--accent-soft) radial-gradient(circle at 19px 50%, var(--accent) 5px, transparent 5.5px); }
+.cv-motion:hover { color: var(--ink); border-color: var(--accent); }
+/* page transitions between site pages (both pages opt in; skipped under reduced motion) */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition { navigation: auto; }
+  ::view-transition-old(root) { animation: cv-vt-out .2s cubic-bezier(.4, 0, 1, 1) both; }
+  ::view-transition-new(root) { animation: cv-vt-in .25s cubic-bezier(0, 0, .2, 1) both; }
+  @keyframes cv-vt-out { to { opacity: 0; transform: translateY(-14px) scale(.985); filter: blur(4px); } }
+  @keyframes cv-vt-in { from { opacity: 0; transform: translateY(18px); filter: blur(6px); } }
+}
+@media screen and (prefers-reduced-motion: no-preference) {
+  .cv-progress.sd { animation: cv-prog linear both; animation-timeline: scroll(root); }
+  @keyframes cv-prog { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 }
