@@ -32,6 +32,9 @@
   'use strict';
   var root = document.documentElement;
   if (!('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  // Browser Back or Forward: show everything at once, so the browser puts the visitor back in the same place (PORT-43)
+  var entry = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
+  if (entry && entry.type === 'back_forward') return;
   root.classList.add('fx');
   try {
     var ref = document.referrer && new URL(document.referrer);
