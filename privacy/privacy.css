@@ -1,0 +1,7 @@
+/* Privacy page (moved out of the page for the browser safety settings, PORT-26). */
+.legal { max-width: 720px; padding-top: 32px; padding-bottom: 72px; }
+.legal h1 { font-size: clamp(40px, 6vw, 64px); margin-bottom: 12px; }
+.legal h2 { font-size: 26px; margin-top: 40px; margin-bottom: 8px; }
+.legal p, .legal li { color: #3a3129; margin: 0 0 14px; }
+.legal ul { padding-left: 20px; }
+.legal .muted { color: var(--ink-soft); font-size: 15px; }

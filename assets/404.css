@@ -1,0 +1,6 @@
+/* "Page not found" (PORT-14) */
+.notfound { padding-top: 48px; padding-bottom: 96px; max-width: 720px; }
+.notfound .code { font-family: "Gloock", Georgia, serif; font-size: clamp(72px, 14vw, 140px); line-height: 1; color: var(--rust, #a23b1c); margin: 0; }
+.notfound h1 { font-size: clamp(32px, 5vw, 52px); margin: 8px 0 12px; }
+.notfound .go { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; margin-top: 24px; }
+.notfound .btn-home { display: inline-flex; align-items: center; min-height: 48px; padding: 0 22px; border-radius: 999px; background: var(--green, #1e3a2f); color: #f3ece0; text-decoration: none; font-weight: 700; }
