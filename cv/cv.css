@@ -223,9 +223,9 @@
   .cv-contact li:not(.cv-print-item) { padding: 0; border: 0; background: none; font-size: 9pt; }
   .cv-contact a { color: inherit; }
   .cv-body { display: block; padding-top: 12px; }
-  .cv-body > * + * { margin-top: 14px; }
+  .cv-body > * + * { margin-top: 18px; }
   .cv2 .cv-h { font-size: 8pt; margin-bottom: 7px; color: #1d5bd8; }
-  .cv-profile { font-size: 9.2pt; line-height: 1.42; max-width: none; color: #222; }
+  .cv-profile { font-size: 9.8pt; line-height: 1.5; max-width: none; color: #222; }
   .cv-exp-head { margin-bottom: 6px; }
   .cv-jobs { padding-left: 0; gap: 9px; }
   .cv-jobs::before, .cv-jobs::after { display: none; }
@@ -236,11 +236,11 @@
   .cv-pill-now { display: none; }
   .cv-context { margin-top: 2px; font-size: 8.8pt; }
   .cv-cats { display: block; margin-top: 4px; }
-  .cv-cat { padding: 0; border: 0; background: none; margin-top: 7px; display: block !important; box-shadow: none; }
+  .cv-cat { padding: 0; border: 0; background: none; margin-top: 10px; display: block !important; box-shadow: none; }
   .cv-sub { margin: 0 0 3px; font-size: 9.2pt; }
   .cv-points { gap: 2px; }
   .cv-job:not(.is-now) .cv-points { margin-top: 3px; }
-  .cv-points li { font-size: 9pt; line-height: 1.38; color: #222; break-inside: avoid; }
+  .cv-points li { font-size: 9.6pt; line-height: 1.45; color: #222; break-inside: avoid; }
   .cv-arch { gap: 4px; }
   .cv-layer { grid-template-columns: 34mm 1fr; padding: 0; border: 0; background: none; box-shadow: none; gap: 8px; }
   .cv-layer::before { display: none; }
