@@ -24,7 +24,7 @@ for (const [file, lang] of pages) {
   for (const id of ['cv-profile', 'cv-exp', 'cv-skills']) if (!html.includes(`id="${id}"`)) fail.push(`${file}: section ${id} missing`);
 }
 const fx = readFileSync('cv/cv-fx.js', 'utf8');
-if (!/prefers-reduced-motion: reduce/.test(readFileSync('cv/cv.js', 'utf8'))) fail.push('cv.js no longer respects reduced motion');
+if (!/cv-motion-off/.test(readFileSync('cv/cv.js', 'utf8'))) fail.push('cv.js lost the Motion off switch');
 if (/localStorage|document\.cookie|fetch\(|XMLHttpRequest/.test(fx + readFileSync('cv/cv.js', 'utf8'))) fail.push('CV scripts must not store data or make requests');
 const css = readFileSync('cv/cv.css', 'utf8');
 if (!/@media print/.test(css)) fail.push('cv.css lost its print rules');

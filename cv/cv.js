@@ -2,15 +2,16 @@
 (function () {
   var root = document.documentElement;
   // Motion switch: a per-visit choice (sessionStorage, erased when the tab closes), like the theme switch. Nothing is sent.
-  // Starts off when the system asks for reduced motion.
+  // Motion is on unless the visitor turns it off with the switch (Nawres, 17 Nov: the effects must show on phones too,
+  // including phones with the system's reduce-motion setting). The page transition still follows the system setting.
   var saved = null;
   try { saved = sessionStorage.getItem('cv-motion'); } catch (e) {}
-  var off = saved ? saved === 'off' : window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var off = saved === 'off';
   // no page transition when motion is off
   var skipVT = function (e) { if (off && e.viewTransition) e.viewTransition.skipTransition(); };
   window.addEventListener('pagereveal', skipVT);
   window.addEventListener('pageswap', skipVT);
-  if (off) root.classList.add('cv-motion-off');
+  root.classList.add(off ? 'cv-motion-off' : 'cv-motion-on');
   var still = off || !('IntersectionObserver' in window);
   if (!still) {
     root.classList.add('fx');

@@ -89,8 +89,6 @@
 .fx .cv-hero.in > :nth-child(3) { transition-delay: .12s; }
 .fx .cv-hero.in > :nth-child(4) { transition-delay: .18s; }
 .fx .cv-hero.in > :nth-child(5) { transition-delay: .24s; }
-@media (prefers-reduced-motion: no-preference) {
-}
 
 /* phone: one column, Experience first; titles and company stack */
 @media (max-width: 599px) {
@@ -159,7 +157,7 @@
   .cv-job-head h3 { transition: color .25s; }
   .cv-job:hover > .cv-job-head h3 { color: var(--accent); }
 }
-@media screen and (prefers-reduced-motion: no-preference) {
+@media screen {
   .fx .cv-role-main { background-size: 0 2px; transition: background-size 1.2s .55s var(--ease); }
   .fx .cv-hero.in .cv-role-main { background-size: 100% 2px; }
   .fx .cv-job::before { transform: scale(0); transition: transform .6s .2s cubic-bezier(.34, 1.56, .64, 1); }
@@ -201,8 +199,7 @@
 }
 @media print { .cv-glow, .cv-roll { display: none !important; } }
 @media screen and (max-width: 599px) { .cv-jobs::after { left: 2.5px; } .cv-comet { left: 3.5px; } }
-@media screen and (prefers-reduced-motion: no-preference) {
-  .cv-hero { translate: 0 var(--py, 0px); opacity: var(--pf, 1); }
+@media screen {
   .cv-kinetic .cv-hero h1 .cv-word { display: inline-block; overflow: hidden; padding: .12em .02em .1em; margin: -.12em -.02em -.1em; vertical-align: top; }
   .cv-kinetic .cv-hero h1 .cv-ch { display: inline-block; opacity: 0; transform: translateY(110%) rotate(8deg); transform-origin: 0 100%; transition: transform 1s cubic-bezier(.2, .9, .2, 1), opacity .5s, color .3s; transition-delay: calc(.15s + var(--k, 0) * 40ms); }
   .cv-kinetic .cv-hero.in h1 .cv-ch { opacity: 1; transform: none; }
@@ -232,7 +229,7 @@
   @keyframes cv-vt-out { to { opacity: 0; transform: translateY(-14px) scale(.985); filter: blur(4px); } }
   @keyframes cv-vt-in { from { opacity: 0; transform: translateY(18px); filter: blur(6px); } }
 }
-@media screen and (prefers-reduced-motion: no-preference) {
+@media screen {
   .cv-progress.sd { animation: cv-prog linear both; animation-timeline: scroll(root); }
   @keyframes cv-prog { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 }
