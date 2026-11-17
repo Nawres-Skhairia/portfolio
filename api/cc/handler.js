@@ -3,7 +3,10 @@ import { handle } from '../_cc/server.js';
 
 export default async function handler(req, res) {
   const url = new URL(req.url, 'http://x');
-  const path = url.pathname.replace(/^\/api\/cc\/?/, '').split('/').filter(Boolean);
+  // vercel.json rewrites /api/cc/<path> to this file with the path in __p (Vercel has no multi-segment file routes here).
+  const raw = url.searchParams.has('__p') ? url.searchParams.get('__p') : url.pathname.replace(/^\/api\/cc\/?/, '');
+  url.searchParams.delete('__p');
+  const path = raw.split('/').filter(Boolean);
   const headers = {};
   for (const [k, v] of Object.entries(req.headers)) headers[k.toLowerCase()] = Array.isArray(v) ? v.join(', ') : String(v);
   let body = {};
