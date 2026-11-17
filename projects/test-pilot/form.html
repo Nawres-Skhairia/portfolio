@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Table for tonight · pretend booking form</title>
+  <link rel="stylesheet" href="/assets/fonts/fonts.css">
+  <link rel="stylesheet" href="form.css">
+</head>
+<body>
+  <main class="shop">
+    <p class="brand">Table for tonight</p>
+    <p class="note">A pretend restaurant, made for this demo. <span id="clock" data-test="clock"></span></p>
+    <form id="booking" novalidate>
+      <label>Name <input id="name" data-test="name" autocomplete="off" value="Alex Martin"></label>
+      <div class="two">
+        <label>Date <input id="date" data-test="date" type="date"></label>
+        <label>Time <input id="time" data-test="time" type="time"></label>
+      </div>
+      <button type="button" class="link" id="tonight" data-test="tonight">Tonight at 19:30</button>
+      <div class="two">
+        <label>Guests <input id="guests" data-test="guests" inputmode="numeric" autocomplete="off"></label>
+        <label>Email <input id="email" data-test="email" autocomplete="off" value="alex.martin@example.com"></label>
+      </div>
+      <button type="submit" id="book" data-test="book">Book a table</button>
+    </form>
+    <div id="result" data-test="result" data-state="none" aria-live="polite">
+      <p id="error" data-test="error" class="error" hidden></p>
+      <div id="summary" data-test="summary" class="summary" hidden>
+        <p class="ok">Your table is booked.</p>
+        <p><span>Date</span> <b data-test="sum-date" id="sumDate"></b></p>
+        <p><span>Time</span> <b data-test="sum-time" id="sumTime"></b></p>
+        <p><span>Guests</span> <b data-test="sum-guests" id="sumGuests"></b></p>
+      </div>
+    </div>
+    <p class="count">Bookings made: <b id="count" data-test="count">0</b></p>
+  </main>
+  <script src="clock.js"></script>
+  <script src="form.js"></script>
+</body>
+</html>

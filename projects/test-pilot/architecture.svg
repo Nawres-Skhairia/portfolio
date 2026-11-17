@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" width="960" height="600" role="img" aria-labelledby="t d" font-family="Karla, system-ui, sans-serif" xmlns:c2pa="http://c2pa.org/manifest">
+  <title id="t">How Test Pilot works</title>
+  <desc id="d">Everything runs in the visitor's browser. Our site sends the page and a pre-made test plan written by hand (no AI in this version). Fixed rules check the plan, the runner really clicks through the booking form, and the report explains the failing test. Nothing is sent anywhere.</desc>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#1e3a2f"/></marker>
+    <marker id="r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#a23b1c"/></marker>
+  </defs>
+  <rect width="960" height="600" fill="#f3ece0"/>
+  <text x="40" y="44" font-family="Gloock, Georgia, serif" font-size="26" fill="#1f1a15">How Test Pilot works</text>
+  <text x="40" y="70" font-size="14" fill="#4a4036">Everything happens on your device. Nothing you type is sent anywhere.</text>
+
+  <!-- server -->
+  <rect x="40" y="100" width="200" height="150" rx="12" fill="#fff" stroke="#d9cdb8" stroke-width="2"/>
+  <text x="140" y="128" text-anchor="middle" font-weight="700" font-size="15" fill="#1f1a15">Our website</text>
+  <text x="140" y="148" text-anchor="middle" font-size="12" fill="#4a4036">free hosting, files only</text>
+  <text x="58" y="178" font-size="12.5" fill="#1f1a15">• the page and the form</text>
+  <text x="58" y="198" font-size="12.5" fill="#1f1a15">• the test library</text>
+  <text x="58" y="218" font-size="12.5" fill="#1f1a15">• a pre-made test plan</text>
+  <text x="58" y="238" font-size="12.5" fill="#1f1a15">   (written by hand, no AI)</text>
+
+  <!-- other sites blocked -->
+  <rect x="40" y="420" width="200" height="90" rx="12" fill="#fff" stroke="#a23b1c" stroke-width="2" stroke-dasharray="6 5"/>
+  <text x="140" y="452" text-anchor="middle" font-weight="700" font-size="15" fill="#a23b1c">Other websites</text>
+  <text x="140" y="474" text-anchor="middle" font-size="12.5" fill="#4a4036">blocked by the page's</text>
+  <text x="140" y="492" text-anchor="middle" font-size="12.5" fill="#4a4036">security settings</text>
+
+  <!-- browser boundary -->
+  <rect x="290" y="96" width="636" height="470" rx="18" fill="none" stroke="#1e3a2f" stroke-width="2.5"/>
+  <rect x="306" y="84" width="268" height="26" rx="13" fill="#1e3a2f"/>
+  <text x="440" y="102" text-anchor="middle" font-size="13" font-weight="700" fill="#f3ece0">The visitor's browser</text>
+
+  <path d="M240 175 H316" stroke="#1e3a2f" stroke-width="2" marker-end="url(#a)"/>
+  <path d="M316 465 H246" stroke="#a23b1c" stroke-width="2" marker-end="url(#r)"/>
+  <text x="281" y="455" text-anchor="middle" font-size="22" fill="#a23b1c" font-weight="700">✕</text>
+
+  <!-- 1 story -->
+  <rect x="320" y="130" width="180" height="96" rx="12" fill="#fff" stroke="#d9cdb8" stroke-width="2"/>
+  <text x="336" y="156" font-size="12" font-weight="700" fill="#a23b1c">1</text>
+  <text x="352" y="156" font-size="14.5" font-weight="700" fill="#1f1a15">Story, then build</text>
+  <text x="336" y="180" font-size="12.5" fill="#4a4036">the rules the form must</text>
+  <text x="336" y="198" font-size="12.5" fill="#4a4036">follow (one fixed story)</text>
+
+  <!-- 2 Read and plan (pre-made in this version) -->
+  <rect x="540" y="120" width="200" height="116" rx="12" fill="#1e3a2f"/>
+  <text x="556" y="146" font-size="12" font-weight="700" fill="#f2c9a8">2</text>
+  <text x="572" y="146" font-size="14.5" font-weight="700" fill="#f3ece0">Read and plan</text>
+  <text x="556" y="170" font-size="12.5" fill="#f3ece0">this version: a plan written</text>
+  <text x="556" y="188" font-size="12.5" fill="#f3ece0">by hand for the story, labelled</text>
+  <text x="556" y="206" font-size="12.5" fill="#f3ece0">"no AI"; AI in a later version</text>
+  <text x="556" y="224" font-size="11.5" fill="#f2c9a8">then fixed rules check them</text>
+  <path d="M500 178 H536" stroke="#1e3a2f" stroke-width="2" marker-end="url(#a)"/>
+
+  <!-- library -->
+  <rect x="770" y="130" width="140" height="96" rx="12" fill="#fff" stroke="#d9cdb8" stroke-width="2"/>
+  <text x="786" y="156" font-size="14.5" font-weight="700" fill="#1f1a15">Test library</text>
+  <text x="786" y="180" font-size="12.5" fill="#4a4036">9 techniques the</text>
+  <text x="786" y="198" font-size="12.5" fill="#4a4036">robot may use</text>
+  <path d="M770 178 H744" stroke="#1e3a2f" stroke-width="2" marker-end="url(#a)"/>
+
+  <!-- 3 runner -->
+  <rect x="540" y="290" width="200" height="104" rx="12" fill="#fff" stroke="#1e3a2f" stroke-width="2"/>
+  <text x="556" y="316" font-size="12" font-weight="700" fill="#a23b1c">3</text>
+  <text x="572" y="316" font-size="14.5" font-weight="700" fill="#1f1a15">Test runner</text>
+  <text x="556" y="340" font-size="12.5" fill="#4a4036">really types and clicks,</text>
+  <text x="556" y="358" font-size="12.5" fill="#4a4036">step by step, and checks</text>
+  <text x="556" y="376" font-size="12.5" fill="#4a4036">each result</text>
+  <path d="M640 236 V286" stroke="#1e3a2f" stroke-width="2" marker-end="url(#a)"/>
+
+  <!-- form -->
+  <rect x="320" y="290" width="180" height="104" rx="12" fill="#f2c9a8" stroke="#a23b1c" stroke-width="2"/>
+  <text x="336" y="316" font-size="14.5" font-weight="700" fill="#1f1a15">Booking form</text>
+  <text x="336" y="340" font-size="12.5" fill="#1f1a15">pretend, in its own</text>
+  <text x="336" y="358" font-size="12.5" fill="#1f1a15">closed frame, with</text>
+  <text x="336" y="376" font-size="12.5" fill="#a23b1c" font-weight="700">a planted bug (1 to 6)</text>
+  <path d="M540 342 H504" stroke="#1e3a2f" stroke-width="2" marker-end="url(#a)"/>
+
+  <!-- 4 report -->
+  <rect x="540" y="444" width="370" height="100" rx="12" fill="#fff" stroke="#d9cdb8" stroke-width="2"/>
+  <text x="556" y="470" font-size="12" font-weight="700" fill="#a23b1c">4</text>
+  <text x="572" y="470" font-size="14.5" font-weight="700" fill="#1f1a15">Report: green, green, red</text>
+  <text x="556" y="494" font-size="12.5" fill="#4a4036">Pass, fail and the verdict come from fixed rules only.</text>
+  <text x="556" y="512" font-size="12.5" fill="#4a4036">Every line of the report is fixed text. No AI here.</text>
+  <text x="556" y="530" font-size="12.5" fill="#4a4036">Same story and build, same result.</text>
+  <path d="M640 394 V440" stroke="#1e3a2f" stroke-width="2" marker-end="url(#a)"/>
+
+  <!-- fallback note -->
+  <text x="320" y="440" font-family="Caveat, cursive" font-size="20" fill="#1e3a2f">This version has no AI.</text>
+  <text x="320" y="464" font-family="Caveat, cursive" font-size="20" fill="#1e3a2f">The plan is pre-made,</text>
+  <text x="320" y="488" font-family="Caveat, cursive" font-size="20" fill="#1e3a2f">labelled "no AI".</text>
+  <text x="320" y="530" font-size="12" fill="#4a4036">Nothing is saved: no account,</text>
+  <text x="320" y="547" font-size="12" fill="#4a4036">no cookies, no visitor data.</text>
+<metadata><c2pa:manifest>AAAWgmp1bWIAAAAeanVtZGMycGEAEQAQgAAAqgA4m3EDYzJwYQAAABZcanVtYgAAAEdqdW1kYzJtYQARABCAAACqADibcQN1cm46YzJwYToyYzhjNWFhZC1kNGZmLTQ2MzktYWE0MS1mNTgxZTQ4NmM1YjUAAAADl2p1bWIAAAApanVtZGMyYXMAEQAQgAAAqgA4m3EDYzJwYS5hc3NlcnRpb25zAAAAALxqdW1iAAAARGp1bWRjYm9yABEAEIAAAKoAOJtxE2MycGEuaW5ncmVkaWVudC52MwAAAAAYYzJzaJY7C86XPus0oivwiPu9zd8AAABwY2JvcqNpZGM6Zm9ybWF0bWltYWdlL3N2Zyt4bWxqaW5zdGFuY2VJRHgseG1wOmlpZDpiZWRlNzc0ZC0yNzkyLTRiMWYtYTgzZS1hZmRkZTFiMTk0YWJscmVsYXRpb25zaGlwaHBhcmVudE9mAAAB4mp1bWIAAABBanVtZGNib3IAEQAQgAAAqgA4m3ETYzJwYS5hY3Rpb25zLnYyAAAAABhjMnNoxb7nafEFVjf89bXrymJi/AAAAZljYm9yomdhY3Rpb25zgqJmYWN0aW9ua2MycGEub3BlbmVkanBhcmFtZXRlcnOha2luZ3JlZGllbnRzgaJjdXJseC1zZWxmI2p1bWJmPWMycGEuYXNzZXJ0aW9ucy9jMnBhLmluZ3JlZGllbnQudjNkaGFzaFgg1a74zsj6DV6IvJZgXsLrPtQJaHL8sfdrIu1M/jjf9HKkZmFjdGlvbngdY29tLmFudGhyb3BpYy5jbGF1ZGUucHJvdmlkZWRqcGFyYW1ldGVyc6F4H2NvbS5hbnRocm9waWMub3JpZ2luLWNvbmZpZGVuY2VndW5rbm93bmtkZXNjcmlwdGlvbnhmQ2xhdWRlIHByb3ZpZGVkIHRoaXMgZmlsZSBhdCB0aGUgcmVxdWVzdCBvZiBhIHVzZXIgYW5kIG1heSBoYXZlIGNyZWF0ZWQgb3IgbW9kaWZpZWQgdGhlIGZpbGUgY29udGVudHMubXNvZnR3YXJlQWdlbnShZG5hbWVmQ2xhdWRlcmFsbEFjdGlvbnNJbmNsdWRlZPUAAADIanVtYgAAAEBqdW1kY2JvcgARABCAAACqADibcRNjMnBhLmhhc2guZGF0YQAAAAAYYzJzaH2UoxZdqIQvJcExo+tlo3kAAACAY2JvcqVjYWxnZnNoYTI1NmNwYWRMAAAAAAAAAAAAAAAAZGhhc2hYIC53BuBeEHH6MyYsel5aXYGJCM6FMFN5u95JySGSlNPnZG5hbWVuanVtYmYgbWFuaWZlc3RqZXhjbHVzaW9uc4GiZXN0YXJ0GRvuZmxlbmd0aBkeBAAAAj5qdW1iAAAAJ2p1bWRjMmNsABEAEIAAAKoAOJtxA2MycGEuY2xhaW0udjIAAAACD2Nib3KlY2FsZ2ZzaGEyNTZpc2lnbmF0dXJleE1zZWxmI2p1bWJmPS9jMnBhL3VybjpjMnBhOjJjOGM1YWFkLWQ0ZmYtNDYzOS1hYTQxLWY1ODFlNDg2YzViNS9jMnBhLnNpZ25hdHVyZWppbnN0YW5jZUlEeCx4bXA6aWlkOjNhN2IyY2U3LWJmYTMtNGUzYi05Njg2LTlhMmJhZjEwMzI0YXJjcmVhdGVkX2Fzc2VydGlvbnODomN1cmx4LXNlbGYjanVtYmY9YzJwYS5hc3NlcnRpb25zL2MycGEuaW5ncmVkaWVudC52M2RoYXNoWCDVrvjOyPoNXoi8lmBewus+1Alocvyx92si7Uz+ON/0cqJjdXJseCpzZWxmI2p1bWJmPWMycGEuYXNzZXJ0aW9ucy9jMnBhLmFjdGlvbnMudjJkaGFzaFggPZT0GHgdCkYdZTgNSrfc6mlvXsDIql/3BNUWc3CsAI+iY3VybHgpc2VsZiNqdW1iZj1jMnBhLmFzc2VydGlvbnMvYzJwYS5oYXNoLmRhdGFkaGFzaFggf8Afow6C1wTZKyv1dRL7tdVexYExVfTNL4LQ/OYqMeF0Y2xhaW1fZ2VuZXJhdG9yX2luZm+jZG5hbWVvQW50aHJvcGljIEZpbGVzZ3ZlcnNpb25lMS4wLjBrc3BlY1ZlcnNpb25lMi40LjAAABA4anVtYgAAAChqdW1kYzJjcwARABCAAACqADibcQNjMnBhLnNpZ25hdHVyZQAAABAIY2JvctKEWQISogEmGCFZAgowggIGMIIBjaADAgECAhRA5aAK7sI50L64g/oGQgU9Z1UTADAKBggqhkjOPQQDAzBJMRcwFQYDVQQKEw5BbnRocm9waWMsIFBCQzEuMCwGA1UEAxMlQW50aHJvcGljIENvbnRlbnQgQ3JlZGVudGlhbHMgUm9vdCBDQTAeFw0yNjA4MDcxODQzNTZaFw0yODA4MDYxOTQzNTZaMEQxFzAVBgNVBAoTDkFudGhyb3BpYywgUEJDMSkwJwYDVQQDEyBBbnRocm9waWMgQ2xhdWRlIENvbnRlbnQgU2lnbmluZzBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABJh6CmvLUBgFFNU0vUKlOVtE6djd17L5SuwX0LemFisBM3dkd/3cyjxFA3Qo5S46fX0/ihY0VZ7mfb9KF703t5OjWDBWMA4GA1UdDwEB/wQEAwIHgDAVBgNVHSUEDjAMBgorBgEEAYPoXgIBMAwGA1UdEwEB/wQCMAAwHwYDVR0jBBgwFoAUzlHiBIFOZFsj+OPEz5o+nMHXXMIwCgYIKoZIzj0EAwMDZwAwZAIwMXMdFJ4BetLLVY7ORuE9noqbbAZOZn/aArXyTwFAZfKrPzxF2vPoJNf1+UCdg1XGAjBwX1zd9WGqYkqmL5SFqw1QySjr1zJfpJM9+1rdDwSPLMOPOjKuiXjoU/pUUeG9RwmhY3BhZFkNngAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPZYQM4v5nE1WEGdYsniJhgHmg8dRVBa07JdOIPeB+pnUf35lCghkXGBukgKYrIALUiNA9AmEPPLznOhQHmtkcC1erg=</c2pa:manifest></metadata></svg>
