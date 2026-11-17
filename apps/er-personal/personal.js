@@ -28,7 +28,7 @@ export function gate() {
   let body;
   if (recoveryToShow) {
     body = '<h1>Save your recovery code</h1><p class="lede">If you ever forget your passphrase, this code is the only way back to your data. Nobody else can open it, not even the people who made this tool.</p>' +
-      '<p class="p-code" aria-label="Recovery code">' + esc(recoveryToShow) + '</p>' +
+      '<p class="p-code" aria-label="Recovery code">' + recoveryToShow.split('-').map(g => '<span>' + esc(g) + '</span>').join('-<wbr>') + '</p>' +
       '<div class="row"><button type="button" class="btn ghost" data-act="p-code-file">Download it as a text file</button></div>' +
       '<p class="small muted">Write it on paper or keep it in your password manager. Do not keep it only on this phone.</p>' +
       '<form data-form="p-code-done" class="p-form"><label class="check"><input type="checkbox" name="saved" required> I have saved the recovery code somewhere safe.</label><button type="submit" class="btn">Open my Expense Radar</button></form>';
@@ -122,7 +122,7 @@ export async function act(name, el) {
     case 'p-pass': dialog('Change the passphrase', field('p-opass', 'Current passphrase', passInput('p-opass', 'old', 'current-password')) + field('p-cpass', 'New passphrase', passInput('p-cpass', 'pass', 'new-password'), H.esc(PASS_HINT)) + field('p-cpass2', 'Type it again', passInput('p-cpass2', 'pass2', 'new-password')), 'p-changepass', 'Change'); break;
     case 'p-signout': dialog('Sign out of this phone?', '<p>' + (V.status().dirty ? '<b>Some changes are not synced yet.</b> Sync first, or they are lost. ' : '') + 'Your data stays in the safe copy. This phone forgets it until you sign in again.</p>', 'p-signout', 'Sign out'); break;
     case 'p-signout-all': dialog('Sign out everywhere?', '<p>Every phone and browser that is signed in must sign in again to sync. Data already on them stays there.</p>', 'p-signout-all', 'Sign out everywhere'); break;
-    case 'p-delete': dialog('Delete everything?', '<p>This removes your data, every earlier version and the safe copy online, and then this phone. Backup files you downloaded are not touched. <b>This cannot be undone.</b></p>' + field('p-dpass', 'Passphrase', passInput('p-dpass', 'pass', 'current-password')), 'p-delete', 'Delete everything', true); break;
+    case 'p-delete': dialog('Delete everything?', '<p>This removes your data, every earlier version and the safe copy online, and then this phone. Backup files you downloaded are not touched. Another phone or computer keeps its own copy until you sign out there. <b>This cannot be undone.</b></p>' + field('p-dpass', 'Passphrase', passInput('p-dpass', 'pass', 'current-password')), 'p-delete', 'Delete everything', true); break;
   }
 }
 
