@@ -73,7 +73,7 @@ function isoDate(v) {
 export function readInvoices(src, opts = {}) {
   const out = { ok: false, error: null, problems: [], headers: [], mapping: null, needsMapping: false, decimal: null, decimalSource: null, sep: null, invoices: [] };
   const bytes = new TextEncoder().encode(src).length;
-  if (bytes > MAX_INVOICE_BYTES) return { ...out, error: `The invoice list is ${(bytes / 1048576).toFixed(1)} MB. The limit is 2 MB.` };
+  if (bytes > MAX_INVOICE_BYTES) { const mb = (bytes / 1048576).toFixed(1); return { ...out, error: Number(mb) <= 2 ? 'The invoice list is just over the 2 MB limit.' : `The invoice list is ${mb} MB. The limit is 2 MB.` }; }
   const text = src.replace(/^﻿/, '');
   if (!text.trim()) return { ...out, error: 'The invoice list is empty.' };
   if (/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/.test(text)) return { ...out, error: 'The invoice list contains control characters. Save it as a plain CSV text file in UTF-8.' };

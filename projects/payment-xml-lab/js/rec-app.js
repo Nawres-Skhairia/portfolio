@@ -6,7 +6,7 @@ import { trailCsv, trailJsonl, openInvoicesCsv, recHtml, recJUnit, parseTrail } 
 import { REC_SAMPLES, SAMPLE_ACCOUNT } from './rec-samples.js';
 import { validate, loadSchema } from './schema.js';
 import { sha256 } from './sha256.js';
-import { MAX_BYTES } from './engine.js';
+import { MAX_BYTES, sizeWords } from './engine.js';
 import { euro, groupIban, money } from './rules.js';
 
 const $ = (id) => document.getElementById(id);
@@ -314,7 +314,7 @@ async function readText(f, limit) {
 }
 $('stmtIn').addEventListener('change', async (e) => {
   const f = e.target.files[0]; e.target.value = ''; if (!f) return;
-  if (f.size > MAX_BYTES) { state.statement = { status: 'refused', reason: `The statement is ${(f.size / 1048576).toFixed(1)} MB. The limit is 10 MB.`, findings: [], reconcilable: false }; state.session = null; state.sample = false; sel.value = ''; render(); return; }
+  if (f.size > MAX_BYTES) { state.statement = { status: 'refused', reason: sizeWords(f.size, MAX_BYTES, 'The statement'), findings: [], reconcilable: false }; state.session = null; state.sample = false; sel.value = ''; render(); return; }
   state.stmtSrc = await readText(f, MAX_BYTES); state.stmtName = f.name; state.sample = false; sel.value = ''; run();
 });
 $('invIn').addEventListener('change', async (e) => {

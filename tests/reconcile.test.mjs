@@ -318,6 +318,7 @@ for (const t of ['', 'abc', 'a'.repeat(55), 'a'.repeat(56), 'a'.repeat(64), 'Zo√
   const r2 = E.readyToReconcile(statement, E.mappingCancelled(odd));
   ok(!r2.ok && /columns were not chosen/.test(r2.message), 'not ready: column dialog cancelled', r2.message);
   ok(!E.readyToReconcile({ reconcilable: false }, readInvoices(invoiceCsv())).ok && !E.readyToReconcile(null, null).ok, 'not ready: no statement or refused statement');
+  ok(readInvoices('x'.repeat(2 * 1048576 + 10)).error === 'The invoice list is just over the 2 MB limit.', 'size: just over the 2 MB limit');
   const app = readFileSync(new URL('js/rec-app.js', base), 'utf8');
   const startFn = app.slice(app.indexOf('function start('), app.indexOf('// ---------- tolerance'));
   ok(/clearRun\(\);[\s\S]*readyToReconcile\(/.test(startFn), 'start() clears the old run before checking the inputs');
