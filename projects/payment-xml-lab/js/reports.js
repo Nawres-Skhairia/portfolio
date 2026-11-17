@@ -47,6 +47,6 @@ export function toHtml(r) {
 <table class="meta"><tr><td>File</td><td>${x(m.fileName)}</td></tr><tr><td>SHA-256</td><td><code>${x(m.sha256)}</code></td></tr><tr><td>Checked</td><td>${x(m.checkedAt)}</td></tr><tr><td>Processing date</td><td>${x(m.processingDate)}</td></tr><tr><td>Versions</td><td>tool ${x(m.toolVersion)} · schema ${x(m.schema)} · rule catalogue ${x(m.ruleCatalogue)}</td></tr>${r.summary ? `<tr><td>Message</td><td>${x(r.summary.msgId || '')} · ${x(r.summary.payments)} payment(s) in ${x(r.summary.batches)} batch(es) · total ${x(r.summary.total || '')}</td></tr>` : ''}</table>
 <p class="v">${x(r.verdictLine)}</p>
 ${r.findings.length ? `<table><thead><tr><th>Line</th><th>Layer</th><th>ID</th><th>Severity</th><th>Finding</th></tr></thead><tbody>${rows}</tbody></table>` : '<p>No findings.</p>'}
-<p class="n">Not a certified validator: it checks the official ISO 20022 schema and the rules in its catalogue; a bank may apply more. Rules: ${RULES.length} (${[...new Set(RULES.map((ru) => SOURCES[ru.source].name))].map(x).join('; ')}). Created on the device; the file was not uploaded.</p>
+<p class="n">Not a certified validator: it checks the ISO 20022 schema (a public copy, see NOTICE) and the rules in its catalogue; a bank may apply more. Rules: ${RULES.length} (${[...new Set(RULES.map((ru) => SOURCES[ru.source].name))].map(x).join('; ')}). Created on the device; the file was not uploaded.</p>
 </body></html>`;
 }

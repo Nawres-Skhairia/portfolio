@@ -4,27 +4,26 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
-  <title>MT to MX Migration Lab · Nawres Skhairia</title>
+  <title>MT to MX Converter · Nawres Skhairia</title>
   <meta name="description" content="Turn a made-up MT103 into an ISO 20022 pacs.008, field by field, and see what is mapped, changed, defaulted, cut or lost. Runs in your browser.">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="preload" href="/assets/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/assets/fonts/instrument-serif-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/assets/fonts/site-fonts.css">
-  <link rel="stylesheet" href="../style.css">
-  <link rel="stylesheet" href="../mt.css">
+  <link rel="stylesheet" href="/projects/payment-xml-lab/style.css">
+  <link rel="stylesheet" href="/projects/payment-xml-lab/mt.css">
   <link rel="stylesheet" href="/assets/tool-theme.css">
-  <link rel="stylesheet" href="../theme.css">
-  <link rel="modulepreload" href="../js/mt-app.js">
+  <link rel="stylesheet" href="/projects/payment-xml-lab/theme.css">
+  <link rel="modulepreload" href="/projects/payment-xml-lab/js/mt-app.js">
 </head>
 <body>
   <header class="bar">
     <div class="bar-in">
       <a class="home back" href="/#work" aria-label="Back to Nawres Skhairia's portfolio">Nawres Skhairia</a>
       <div class="brand">
-        <span class="brand-name">MT to MX Migration Lab</span>
+        <span class="brand-name">MT to MX Converter</span>
         <span class="brand-sub">MT103 → ISO 20022 pacs.008.001.08 · simplified mapping</span>
       </div>
-      <nav class="suite" aria-label="Payments suite"><a href="../">Payment file check</a><a href="./" aria-current="page">MT to MX</a><a href="../reconcile/">Reconciliation</a></nav>
       <p class="device"><span class="dot" aria-hidden="true"></span>Runs on your device. Nothing is uploaded or stored.</p>
     </div>
   </header>
@@ -116,9 +115,9 @@
 
       <h2>Sources and licences</h2>
       <ul class="sources">
-        <li>Schema: ISO 20022 pacs.008.001.08, served unchanged from this site. ISO 20022 message schemas are published free of charge by the ISO 20022 Registration Authority at <a href="https://www.iso20022.org/" rel="noopener">iso20022.org</a>. This is not the official ISO 20022 site. See <a href="../schemas/NOTICE.md">NOTICE</a>.</li>
+        <li>Schema: ISO 20022 pacs.008.001.08, a public copy taken unchanged from a public source, not yet compared byte for byte with the file on iso20022.org (see <a href="/projects/payment-xml-lab/schemas/NOTICE.md">NOTICE</a>). ISO 20022 message schemas are published free of charge at <a href="https://www.iso20022.org/" rel="noopener">iso20022.org</a>, which is not this site.</li>
         <li>Public sources, linked and not copied: <a href="https://www.swift.com/standards/iso-20022/iso-20022-faqs/iso-20022-removal-unstructured-address" rel="noopener">Swift FAQ on the removal of unstructured addresses</a> (S1). No SWIFT handbook, usage guideline or official translation rule was used.</li>
-        <li>Engine: libxml2 via <a href="https://github.com/noppa/xmllint-wasm" rel="noopener">xmllint-wasm</a> (MIT licence), the same as the <a href="../">Payment file check</a>.</li>
+        <li>Engine: libxml2 via <a href="https://github.com/noppa/xmllint-wasm" rel="noopener">xmllint-wasm</a> (MIT licence), the same as the <a href="/projects/payment-file-check/">Payment file check</a>.</li>
         <li>Samples: made-up companies, published example IBANs, made-up BICs (bank code XMPL) and made-up UETRs. Never real messages.</li>
       </ul>
     </section>
@@ -135,7 +134,7 @@
     </form>
   </dialog>
 
-  <script type="module" src="../js/mt-app.js"></script>
+  <script type="module" src="/projects/payment-xml-lab/js/mt-app.js"></script>
   <script src="/assets/page-fx.js" defer></script>
 </body>
 </html>

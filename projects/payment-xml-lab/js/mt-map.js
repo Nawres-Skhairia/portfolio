@@ -5,7 +5,7 @@ import { readMt, FIELDS, date6, amountToIso, isValidDate6, bicFromLT } from './m
 import { ibanIsValid, COUNTRIES } from './rules.js';
 
 export const MX = { ns: 'urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08', id: 'pacs.008.001.08', xsd: 'pacs.008.001.08.xsd' };
-export const MAP_TOOL = { name: 'MT to MX Migration Lab', version: '0.1.0' };
+export const MAP_TOOL = { name: 'MT to MX Converter', version: '0.1.0' };
 export const MAP_CATALOGUE_VERSION = '2026.11-mvp1';
 
 export const MAP_SOURCES = {

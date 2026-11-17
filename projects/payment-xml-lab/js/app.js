@@ -1,5 +1,5 @@
 // Payment XML Lab: the workbench. Everything happens in this tab; nothing is uploaded or stored.
-import { RULES, SOURCES, CATALOGUE_VERSION, nextBusinessDay } from './rules.js';
+import { RULES, SOURCES, CATALOGUE_VERSION } from './rules.js';
 import { SCENARIOS, generate, sample } from './factory.js';
 import { SUPPORTED, TOOL, MAX_BYTES, sizeWords } from './engine.js';
 import { toHtml, toJson, toJUnit } from './reports.js';
@@ -138,7 +138,7 @@ function renderStatus() {
   const parts = [];
   if (r.status === 'not-wellformed') parts.push('Layers 2 and 3 were not run: the file must be well-formed XML first.');
   if (r.unreadable && r.unreadable.length) parts.push('Could not read: ' + r.unreadable.join(', ') + '.');
-  if (state.isSample) parts.unshift('Made-up sample file: 1 payment batch, 3 payments, 5 findings on purpose. Fix them in your own copy, or open the Test-data factory to try other cases.');
+  if (state.isSample) parts.unshift('Made-up sample file: 1 payment batch, 3 payments, 5 findings on purpose. Fix them in your own copy, or make other test files with the Test File Maker.');
   $('hint').textContent = parts.length ? parts.join(' ') : 'Use J and K (or the arrow keys) to move between findings. Click a finding to see its line.';
 }
 
@@ -284,19 +284,14 @@ $('pasteDlg').addEventListener('close', () => {
 // ---------- sample and factory ----------
 function loadSample() { state.isSample = true; load(sample(procDate()), 'sample-pain001.xml'); }
 $('sampleBtn').addEventListener('click', loadSample);
-const sel = $('fScenario');
-const groups = [['Valid', (s) => s.expect === null], ['Broken: SEPA rules', (s) => /^SCT/.test(s.expect || '')], ['Broken: schema (XSD)', (s) => s.expect === 'XSD'], ['Broken: XML', (s) => s.expect === 'XML']];
-for (const [label, test] of groups) {
-  const og = document.createElement('optgroup'); og.label = label;
-  for (const s of SCENARIOS.filter(test)) { const o = document.createElement('option'); o.value = s.id; o.textContent = (s.expect && s.expect.startsWith('SCT') ? s.expect + ' · ' : '') + s.label; og.append(o); }
-  sel.append(og);
-}
-$('factoryBtn').addEventListener('click', () => { if (!$('fDate').value) $('fDate').value = nextBusinessDay(procDate()); $('factDlg').showModal(); });
-$('factDlg').addEventListener('close', () => { if ($('factDlg').returnValue === 'ok') runFactory(sel.value); });
-function runFactory(id) {
-  const count = Math.min(10000, Math.max(1, Number($('fCount').value) || 25));
-  const g = generate({ scenario: id, count, seed: Number($('fSeed').value) || 2026, execDate: id === 'date-past' || id === 'date-closed' ? undefined : $('fDate').value || undefined, procDate: procDate() });
-  state.isSample = false; load(g.xml, g.fileName);
+// a file from the Test File Maker arrives as its recipe in the address; the same file is rebuilt here, nothing is stored
+function fromRecipe() {
+  const q = new URLSearchParams(location.search), id = q.get('scenario');
+  if (!id || !SCENARIOS.some((x) => x.id === id)) return false;
+  const count = Math.min(10000, Math.max(1, Number(q.get('count')) || 25));
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : undefined;
+  const g = generate({ scenario: id, count, seed: Number(q.get('seed')) || 2026, execDate: id === 'date-past' || id === 'date-closed' ? undefined : date, procDate: procDate() });
+  state.isSample = false; load(g.xml, g.fileName); return true;
 }
 
 // ---------- downloads (built in the browser) ----------
@@ -336,4 +331,4 @@ for (const r of RULES) {
 
 // ---------- start: the sample, already checked ----------
 setupCode();
-loadSample();
+if (!fromRecipe()) loadSample();

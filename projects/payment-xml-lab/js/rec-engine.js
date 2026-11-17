@@ -4,7 +4,7 @@
 import { euro, ibanIsValid } from './rules.js';
 import { sha256 } from './sha256.js';
 
-export const REC_TOOL = { name: 'Reconciliation Workbench', version: '0.1.0' };
+export const REC_TOOL = { name: 'Payment Matcher', version: '0.1.0' };
 export const REC_CATALOGUE_VERSION = '2026.11-mvp1';
 export const ENGINE = `Rules engine ${REC_TOOL.version}`;
 export const DEFAULT_SETTINGS = Object.freeze({ tolAbs: 500000n, tolBp: 50 }); // 5.00 and 0.5 %

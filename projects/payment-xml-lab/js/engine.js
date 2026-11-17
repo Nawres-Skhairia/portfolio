@@ -4,7 +4,7 @@ import { parseTree, kid, path, text } from './tree.js';
 import { runRules, CATALOGUE_VERSION, money, euro } from './rules.js';
 import { explain } from './messages.js';
 
-export const TOOL = { name: 'Payment XML Lab (ISO 20022)', version: '0.1.0' };
+export const TOOL = { name: 'Payment File Check', version: '0.1.0' };
 export const SUPPORTED = { ns: 'urn:iso:std:iso:20022:tech:xsd:pain.001.001.09', id: 'pain.001.001.09', xsd: 'pain.001.001.09.xsd' };
 export const MAX_BYTES = 10 * 1024 * 1024;
 

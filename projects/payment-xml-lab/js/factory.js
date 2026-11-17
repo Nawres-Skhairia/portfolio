@@ -178,7 +178,7 @@ export function generate({ scenario = 'valid', count = 3, seed = 2026, execDate,
   const m = makeModel({ count: Math.max(count, sc.min || 1), seed, execDate: exec, created: procDate + 'T09:00:00' });
   if (sc.apply) sc.apply(m, { procDate });
   const what = sc.expect === null ? 'none (valid file)' : sc.expect === 'XSD' ? 'one schema (XSD) error' : sc.expect === 'XML' ? 'not well-formed XML' : 'rule ' + sc.expect;
-  const head = `Payment XML Lab test file. Made-up data. Scenario: ${sc.id} (${sc.label}). Expected finding: ${what}` + (sc.at ? `, on <${sc.at[0]}> at line @@LINE@@.` : '.');
+  const head = `Test File Maker file. Made-up data. Scenario: ${sc.id} (${sc.label}). Expected finding: ${what}` + (sc.at ? `, on <${sc.at[0]}> at line @@LINE@@.` : '.');
   let xml = toXml(m, head);
   if (sc.at) {
     const t = parseTree(xml); const el = all(t.root, sc.at[0])[sc.at[1]];
@@ -200,5 +200,5 @@ export function sample(procDate) {
   t[2].cdtr = { name: 'Cedar Example Foods', iban: 'DE89370400440532013001', bic: 'XMPLDEFFXXX' };
   t[0].ustrd = ['Invoice 2026-118']; t[1].ustrd = ['Order 5521']; t[2].ustrd = ['Facture 77 - café et thé'];
   m.header.sum = '1250.00';
-  return toXml(m, 'Payment XML Lab sample. Made-up data: 1 payment batch, 3 payments, 5 findings on purpose.');
+  return toXml(m, 'Payment File Check sample. Made-up data: 1 payment batch, 3 payments, 5 findings on purpose.');
 }
