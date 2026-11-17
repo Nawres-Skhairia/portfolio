@@ -147,8 +147,6 @@
       ticking = false;
       var y = window.scrollY, hgt = hero.offsetHeight || 1;
       if (y > hgt * 1.5) return;
-      hero.style.setProperty('--py', (y * 0.22).toFixed(1) + 'px');
-      hero.style.setProperty('--pf', clamp(1 - y / (hgt * 1.1), 0, 1).toFixed(3));
       stage.style.setProperty('--sy', (y * 0.45).toFixed(1) + 'px');
     }
     addEventListener('scroll', function () { if (!ticking) { ticking = true; requestAnimationFrame(para); } }, { passive: true });
