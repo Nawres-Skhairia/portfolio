@@ -199,53 +199,6 @@
     var io2 = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { whens.forEach(function (w) { if (w.el.parentNode === e.target) rollIt(w); }); io2.unobserve(e.target); } }); }, { threshold: 0.6 });
     whens.forEach(function (w) { io2.observe(w.el.parentNode); });
 
-    /* 10. Signature moment (wide screens only): the career path. The page holds while one line draws through
-           every role, oldest to today, and the current role lands as the large final point. It repeats only words
-           already on the page (years and employers), is hidden from screen readers, and is never printed. */
-    var jl = document.querySelector('.cv-jobs');
-    if (jl && matchMedia('(min-width: 768px)').matches) {
-      var roles = Array.prototype.map.call(jl.querySelectorAll('.cv-job'), function (j) {
-        var org = j.querySelector('.cv-org'), when = j.querySelector('.cv-when');
-        return { org: org ? org.textContent.replace(/^[\s·]+/, '').trim() : '', when: when ? ((when.querySelector('.cv-sr') || when).textContent).trim() : '', now: j.classList.contains('is-now') };
-      }).reverse();
-      var NS = 'http://www.w3.org/2000/svg';
-      var story = document.createElement('div'); story.className = 'cv-story'; story.setAttribute('aria-hidden', 'true');
-      var pin = document.createElement('div'); pin.className = 'cv-story-pin'; story.appendChild(pin);
-      var svg = document.createElementNS(NS, 'svg'); svg.setAttribute('viewBox', '0 0 1000 360'); svg.setAttribute('preserveAspectRatio', 'none'); pin.appendChild(svg);
-      var d = 'M 20 300 C 180 300, 220 220, 330 210 S 520 250, 600 170 S 820 70, 960 70';
-      var base = document.createElementNS(NS, 'path'); base.setAttribute('d', d); base.setAttribute('class', 'cv-story-base'); svg.appendChild(base);
-      var line = document.createElementNS(NS, 'path'); line.setAttribute('d', d); line.setAttribute('class', 'cv-story-line'); svg.appendChild(line);
-      var L = line.getTotalLength();
-      line.style.strokeDasharray = L; line.style.strokeDashoffset = L;
-      var n = roles.length, nodes = [];
-      roles.forEach(function (r, i) {
-        var f = n > 1 ? 0.04 + 0.96 * i / (n - 1) : 1, pt = line.getPointAtLength(L * f);
-        var el = document.createElement('div'); el.className = 'cv-story-node' + (r.now ? ' is-now' : '');
-        el.style.setProperty('--x', (pt.x / 1000).toFixed(4)); el.style.setProperty('--y', (pt.y / 360).toFixed(4));
-        var dot = document.createElement('i'); el.appendChild(dot);
-        var lab = document.createElement('span'); lab.className = 'cv-story-label';
-        var y = document.createElement('b'); y.textContent = r.when; lab.appendChild(y);
-        var o = document.createElement('em'); o.textContent = r.org; lab.appendChild(o);
-        el.appendChild(lab); pin.appendChild(el);
-        nodes.push({ el: el, f: f });
-      });
-      jl.parentNode.insertBefore(story, jl);
-      var st = false;
-      var run = function () {
-        st = false;
-        var r = story.getBoundingClientRect(), pinned = getComputedStyle(pin).position === 'sticky';
-        var span = pinned ? r.height - pin.offsetHeight : r.height + innerHeight * 0.3;
-        var p = pinned ? clamp((pin.getBoundingClientRect().top - r.top) / (span || 1), 0, 1) : clamp((innerHeight * 0.9 - r.top) / (span || 1), 0, 1);
-        var q = clamp(p / 0.7, 0, 1);
-        line.style.strokeDashoffset = (L * (1 - q)).toFixed(1);
-        nodes.forEach(function (nd) { nd.el.classList.toggle('on', q >= nd.f - 0.01); });
-        story.style.setProperty('--sp', p.toFixed(3));
-      };
-      addEventListener('scroll', function () { if (!st) { st = true; requestAnimationFrame(run); } }, { passive: true });
-      addEventListener('resize', run);
-      run();
-    }
-
     if (!fine) return;
 
     /* 9. A wide soft glow follows the pointer across the whole page background. */
