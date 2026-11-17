@@ -7,7 +7,7 @@
   <title>Command Center · Nawres Skhairia</title>
   <meta name="description" content="A calm place for a team's projects and tasks: today's work, the week ahead, a board with drag and drop, paused work with its reason, comments and history, project health, dependencies, risks and reports.">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="preload" href="fonts/figtree-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="style.css">
   <script src="cc-theme.js"></script>
   <link rel="modulepreload" href="engine.js">
@@ -45,37 +45,47 @@
     <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"/></symbol>
     <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></symbol>
     <symbol id="i-people" viewBox="0 0 24 24"><circle cx="9" cy="9" r="3.2"/><path d="M3.5 19c.8-3 3-4.6 5.5-4.6s4.7 1.6 5.5 4.6M15.5 6.2a3 3 0 0 1 0 5.6M17 14.6c1.8.5 3 1.9 3.5 4.4"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.5a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.6M12 17h.01"/></symbol>
+    <symbol id="i-summary" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></symbol>
     <symbol id="i-more" viewBox="0 0 24 24"><path d="M5 7h14M5 12h14M5 17h14"/></symbol>
   </svg>
   <a class="skip" href="#main">Skip to content</a>
 
+  <div class="strip" id="band" role="region" aria-label="About this workspace"></div>
+  <header class="topbar">
+    <h1 class="sr">Command Center</h1>
+    <button type="button" class="ws-btn" id="wsBtn" data-menu="ws" aria-haspopup="menu" aria-expanded="false"><span class="ws-mark" aria-hidden="true"><i></i></span><span class="ws-name" id="wsBox">Orbis Studio</span><svg class="i chev" aria-hidden="true"><use href="#i-down"/></svg></button>
+    <button type="button" class="gsearch" data-act="palette" aria-label="Search work, projects and people (Ctrl K)"><svg class="i" aria-hidden="true"><use href="#i-search"/></svg><span>Search work, projects and people</span><kbd>Ctrl K</kbd></button>
+    <span class="grow"></span>
+    <span class="save-state top-save" id="topSave" aria-live="polite"></span>
+    <button type="button" class="btn create" data-act="new-task" title="Create · C"><svg class="i" aria-hidden="true"><use href="#i-plus"/></svg>Create</button>
+    <button type="button" class="ib" data-act="shortcuts" aria-label="Keyboard shortcuts" title="Keyboard shortcuts · ?"><svg class="i" aria-hidden="true"><use href="#i-help"/></svg></button>
+    <button type="button" class="ib me-btn" id="meBtn" data-menu="me" aria-haspopup="menu" aria-expanded="false" aria-label="Your menu"></button>
+    <div class="menu-pop" id="menuPop" role="menu" hidden></div>
+  </header>
   <div class="app" id="app">
     <aside class="side" aria-label="Command Center">
-      <div class="ws"><span class="ws-mark" aria-hidden="true"><i></i></span><span class="ws-txt" id="wsBox"><b>Orbis Studio</b><small>Sample workspace</small></span></div>
-      <button type="button" class="srch" data-act="palette" aria-label="Search and commands"><svg class="i"><use href="#i-search"/></svg><span>Search</span><kbd>Ctrl K</kbd></button>
       <nav class="nav" aria-label="Pages">
-        <a class="nv" href="#/overview" data-nav="overview" title="Home"><svg class="i"><use href="#i-home"/></svg>Home</a>
-        <a class="nv" href="#/mytasks" data-nav="mytasks" title="My tasks"><svg class="i"><use href="#i-check"/></svg>My tasks<i class="ct" id="myCount"></i></a>
-        <a class="nv" href="#/board" data-nav="board" title="Board"><svg class="i"><use href="#i-board"/></svg>Board</a>
-        <a class="nv" href="#/calendar" data-nav="calendar" title="Calendar"><svg class="i"><use href="#i-cal"/></svg>Calendar</a>
-        <a class="nv" href="#/lists" data-nav="lists" title="Lists"><svg class="i"><use href="#i-list"/></svg>Lists</a>
-        <a class="nv" href="#/reports" data-nav="reports" title="Reports"><svg class="i"><use href="#i-chart"/></svg>Reports</a>
-        <a class="nv" href="#/workspace" data-nav="workspace" title="People"><svg class="i"><use href="#i-people"/></svg>People<i class="ct" id="pplCount"></i></a>
-        <a class="nv" href="#/admin" data-nav="admin" title="Admin" id="adminNav" hidden><svg class="i"><use href="#i-shield"/></svg>Admin</a>
-        <p class="grp">Plan</p>
-        <a class="nv" href="#/projects" data-nav="projects" title="Projects"><svg class="i"><use href="#i-folder"/></svg>Projects</a>
-        <a class="nv" href="#/dependencies" data-nav="dependencies" title="Dependencies"><svg class="i"><use href="#i-graph"/></svg>Dependencies</a>
-        <a class="nv" href="#/risks" data-nav="risks" title="Risks"><svg class="i"><use href="#i-shield"/></svg>Risks</a>
-        <a class="nv" href="#/insights" data-nav="insights" title="Insights"><svg class="i"><use href="#i-bulb"/></svg>Insights<i class="ins-count" hidden></i></a>
-        <p class="grp" id="projGrp">Projects</p>
+        <a class="nv" href="#/overview" data-nav="overview"><svg class="i"><use href="#i-home"/></svg>For you</a>
+        <a class="nv" href="#/mytasks" data-nav="mytasks"><svg class="i"><use href="#i-check"/></svg>My work<i class="ct" id="myCount"></i></a>
+        <a class="nv" href="#/lists" data-nav="lists"><svg class="i"><use href="#i-list"/></svg>Saved views</a>
+        <a class="nv" href="#/projects" data-nav="projects"><svg class="i"><use href="#i-folder"/></svg>Portfolio</a>
+        <a class="nv" href="#/calendar" data-nav="calendar"><svg class="i"><use href="#i-cal"/></svg>Calendar</a>
+        <a class="nv" href="#/reports" data-nav="reports"><svg class="i"><use href="#i-chart"/></svg>Reports</a>
+        <a class="nv" href="#/insights" data-nav="insights"><svg class="i"><use href="#i-bulb"/></svg>Insights<i class="ins-count" hidden></i></a>
+        <p class="grp" id="projGrp"><span>Projects</span><button type="button" class="grp-add" data-act="new-project" aria-label="New project" title="New project"><svg class="i"><use href="#i-plus"/></svg></button></p>
         <div id="projNav" class="nav"></div>
+        <p class="grp"><span>Team</span></p>
+        <a class="nv" href="#/workspace" data-nav="workspace"><svg class="i"><use href="#i-people"/></svg>People<i class="ct" id="pplCount"></i></a>
       </nav>
-      <div class="foot" id="sideFoot"></div>
+      <div class="foot" id="sideFoot">
+        <a class="nv" href="#/admin" data-nav="admin" id="adminNav" hidden><svg class="i"><use href="#i-shield"/></svg>Admin</a>
+        <a class="home-link" href="/#work">← Nawres Skhairia</a>
+      </div>
     </aside>
 
     <div class="content">
-      <header class="sr"><h1>Command Center</h1></header>
-      <div class="band" id="band" role="region" aria-label="About this workspace"></div>
       <main id="main" class="main" tabindex="-1"></main>
     </div>
   </div>

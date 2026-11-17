@@ -146,12 +146,18 @@ function render() {
   const main = $('#main');
   if (!view) { location.replace('#/overview'); return; }
   if (r.name === 'dependencies' && r.params.get('p')) ui.deps.project = r.params.get('p');
+  if (lastHash !== location.hash) {
+    if (['board', 'backlog'].includes(r.name)) ui.q.project = r.params.get('p') && proj(r.params.get('p')) ? r.params.get('p') : (lastHash && /[?&]p=/.test(lastHash) ? '' : ui.q.project);
+    if (r.name === 'risks' && r.params.get('p')) ui.risks.project = r.params.get('p');
+  }
   if (r.name === 'reports') { if (r.params.get('type')) ui.reports.type = r.params.get('type'); if (r.params.get('p')) ui.reports.project = r.params.get('p'); }
   if (r.name === 'task' && lastHash && !lastHash.startsWith('#/task/')) ui.fullFrom = lastHash;
   if (r.name !== 'task' && lastHash && lastHash.startsWith('#/task/')) ui.panel = null;
   const linked = r.params.get('task');
   if (linked && task(linked)) { ui.panel = linked; history.replaceState(null, '', '#/' + r.name + (r.id ? '/' + encodeURIComponent(r.id) : '')); }
-  main.innerHTML = view(r);
+  const ctx = projCtx(r);
+  main.innerHTML = (ctx ? projHeader(ctx, r.name) : '') + view(r);
+  main.classList.toggle('has-ph', !!ctx);
   main.dataset.view = r.name;
   document.body.classList.toggle('task-full', r.name === 'task' && !!ui.panel);
   document.body.classList.toggle('on-board', r.name === 'board');
@@ -332,28 +338,99 @@ function boardHead(active) {
     '<button class="btn" data-act="new-task"' + (active === 'backlog' ? ' data-status="Backlog"' : '') + '>' + ic('plus') + 'Create task</button></div>';
 }
 
-// ---------- the sidebar and the phone sheet ----------
+// ---------- the shell: top bar, sidebar with project views, menus ----------
+const pletter = p => esc((p.code || p.name || '?').replace(/[^A-Za-z]/g, '').slice(0, 1).toUpperCase() || '?');
+const PVIEWS = [['summary', 'Summary', 'summary'], ['board', 'Board', 'board'], ['backlog', 'List', 'list'], ['dependencies', 'Dependencies', 'graph'], ['risks', 'Risks', 'shield']];
+const pviewHref = (pid, v) => v === 'summary' ? '#/project/' + encodeURIComponent(pid) : '#/' + v + '?p=' + encodeURIComponent(pid);
+// The project this screen is about: the project page itself, or a board, list, map or register narrowed to one project.
+function projCtx(r) {
+  if (r.name === 'project') return proj(r.id) ? r.id : '';
+  if (['board', 'backlog'].includes(r.name)) return ui.q.project && proj(ui.q.project) ? ui.q.project : '';
+  if (r.name === 'dependencies') return ui.deps.project && proj(ui.deps.project) ? ui.deps.project : '';
+  if (r.name === 'risks') return ui.risks.project && proj(ui.risks.project) ? ui.risks.project : '';
+  return '';
+}
+function projHeader(pid, view) {
+  const p = proj(pid); const h = E.health(data, p, TODAY);
+  const tone = healthTone(h.label); const lz = { ok: 'done', warn: 'pause', bad: 'pause', done: 'done', idle: 'todo' }[tone] || 'todo';
+  const who = [...new Set([p.owner, ...E.projectTasks(data, p.id).map(t => t.owner)].filter(Boolean))];
+  const stack = '<span class="avstack" title="' + esc(who.join(', ')) + '">' + who.slice(0, 4).map(n => avatar(n, 'xs')).join('') + (who.length > 4 ? '<span class="av xs more">+' + (who.length - 4) + '</span>' : '') + '</span>';
+  return '<div class="phead"' + pcs(p.id) + '><nav class="crumbs" aria-label="Breadcrumb"><a href="#/projects">Projects</a><span aria-hidden="true">›</span><span>' + esc(p.name) + '</span></nav>' +
+    '<div class="ph-title"><span class="pdot lg" aria-hidden="true">' + pletter(p) + '</span><p class="ph-name">' + esc(p.name) + '</p><span class="lz lz-' + lz + '"><i></i>' + esc(h.label === 'Critical' ? 'Needs a look' : h.label) + '</span><span class="grow"></span>' + stack +
+      '<a class="btn2" href="' + esc('#/reports?type=project&p=' + encodeURIComponent(p.id)) + '">' + ic('chart') + 'Report</a></div>' +
+    '<nav class="ptabs" aria-label="Project views">' + PVIEWS.map(([v, l, icn]) => '<a href="' + pviewHref(p.id, v) + '"' + ((view === 'project' ? 'summary' : view) === v ? ' aria-current="page"' : '') + '>' + ic(icn) + l + '</a>').join('') + '</nav></div>';
+}
 function renderSide() {
-  const many = acct && acct.workspaces.length > 1;
   const name = acct ? acct.wsName || 'My workspace' : 'Orbis Studio';
-  $('#wsBox').innerHTML = (many ? '<label><span class="sr">Workspace</span><select data-act="ws-switch">' + opts(acct.workspaces.map(w => [w.id, w.name]), acct.wsId) + '</select></label>' : '<b title="' + esc(name) + '">' + esc(name) + '</b>') + '<small>' + (acct ? (wsInfo && wsInfo._for === acct.wsId ? (wsInfo.members.length > 1 ? 'Shared · ' + wsInfo.members.length + ' people' : 'Only you') : 'Your workspace') : 'Sample, in this browser') + '</small>';
-  const my = data.tasks.filter(t => t.owner === data.me && isOpen(t)).length;
+  $('#wsBox').textContent = name;
+  const my = data.tasks.filter(t => t.owner === data.me && isOpen(t) && !t.archivedAt).length;
   const wsRow = acct && acct.workspaces.find(w => w.id === acct.wsId);
-  $('#pplCount').textContent = wsRow && wsRow.members > 1 ? wsRow.members : '';
+  const nPeople = wsInfo && acct && wsInfo._for === acct.wsId ? wsInfo.members.length : wsRow ? wsRow.members : 0;
+  if (wsRow && nPeople) wsRow.members = nPeople;
+  $('#pplCount').textContent = nPeople > 1 ? nPeople : '';
   $('#myCount').textContent = my || '';
-  $('#projNav').innerHTML = data.projects.filter(p => p.status !== 'Completed').slice(0, 8).map(p => '<a class="nv" href="#/project/' + esc(p.id) + '" data-nav="p-' + esc(p.id) + '" title="' + esc(p.name) + '"' + pcs(p.id) + '><span class="pd"></span><span class="nv-t">' + esc(p.name) + '</span></a>').join('');
-  $('#projGrp').hidden = !data.projects.some(p => p.status !== 'Completed');
+  const r = route(); const ctx = projCtx(r); const view = r.name === 'project' ? 'summary' : r.name;
+  $('#projNav').innerHTML = data.projects.filter(p => !p.archivedAt && (p.status !== 'Completed' || p.id === ctx)).slice(0, 12).map(p => {
+    const open = p.id === ctx;
+    return '<a class="nv pj' + (open ? ' open' : '') + '" href="#/project/' + esc(p.id) + '"' + pcs(p.id) + '><span class="pdot" aria-hidden="true">' + pletter(p) + '</span><span class="nv-t">' + esc(p.name) + '</span></a>' +
+      (open ? '<div class="pviews">' + PVIEWS.map(([v, l, icn]) => '<a class="nv sub" href="' + pviewHref(p.id, v) + '"' + (view === v ? ' aria-current="page"' : '') + '>' + ic(icn) + l + '</a>').join('') + '</div>' : '');
+  }).join('');
   $('#adminNav').hidden = !(acct && acct.user.admin);
-  const theme = '<button class="theme-switch" type="button" aria-label="Dark theme" aria-pressed="false" title="Light or dark">' + ic('sun', 'i-sun') + ic('moon', 'i-moon') + '</button>';
-  const home = '<a class="home-link" href="/#work">← Nawres Skhairia</a>';
-  $('#sideFoot').innerHTML = acct
-    ? '<a class="who-row" href="#/account" title="Your account">' + avatar(acct.user.displayName, 'sm') + '<span><b>' + esc(acct.user.displayName) + '</b><small class="save-state" aria-live="polite">' + esc(acct.saveState || 'Saved to your account') + '</small></span></a><div class="foot-acts"><button type="button" class="lnk" data-act="signout">Sign out</button>' + theme + '</div>' + home
-    : '<div class="who-row">' + avatar(data.me, 'sm') + '<label class="me"><span>Viewing as</span><select id="meSel" aria-label="Viewing as">' + opts(people(), data.me) + '</select></label></div><div class="foot-acts">' + (serverOn ? '<button type="button" class="lnk" data-act="signin">Sign in</button>' : '') + theme + '</div>' + home;
+  $('#meBtn').innerHTML = avatar(acct ? acct.user.displayName : data.me, 'sm');
+  $('#meBtn').setAttribute('aria-label', 'Your menu: ' + (acct ? acct.user.displayName : data.me));
+  $('#topSave').textContent = acct ? (acct.saveState || 'Saved') : '';
   const high = E.insights(data, TODAY).filter(i => i.level === 'high').length;
-  $('#moreSheet').innerHTML = [['calendar', 'Calendar'], ['backlog', 'List of all tasks'], ['projects', 'Projects'], ['dependencies', 'Dependencies'], ['risks', 'Risks'], ['insights', 'Insights' + (high ? ' · ' + high : '')], ['reports', 'Reports'], ['workspace', acct ? 'People' : 'Share'], ...(acct ? [['account', 'Your account']] : []), ...(acct && acct.user.admin ? [['admin', 'Admin']] : [])].map(([k, l]) => '<a href="#/' + k + '" data-nav="' + k + '">' + esc(l) + '</a>').join('') +
-    '<div class="wide">' + (acct ? '<span>' + esc(acct.user.displayName) + '</span><button type="button" class="lnk" data-act="signout">Sign out</button>' : '<label class="me"><span>Viewing as</span><select data-act="me-pick" aria-label="Viewing as">' + opts(people(), data.me) + '</select></label>') + theme + '</div><a class="wide" href="/#work">← Nawres Skhairia</a>';
+  const theme = '<button class="theme-switch" type="button" aria-label="Dark theme" aria-pressed="false" title="Light or dark">' + ic('sun', 'i-sun') + ic('moon', 'i-moon') + '</button>';
+  $('#moreSheet').innerHTML = [['projects', 'Portfolio'], ['lists', 'Saved views'], ['calendar', 'Calendar'], ['backlog', 'List of all tasks'], ['dependencies', 'Dependencies'], ['risks', 'Risks'], ['insights', 'Insights' + (high ? ' · ' + high : '')], ['reports', 'Reports'], ['workspace', acct ? 'People' : 'Share'], ...(acct ? [['account', 'Your account']] : []), ...(acct && acct.user.admin ? [['admin', 'Admin']] : [])].map(([k, l]) => '<a href="#/' + k + '" data-nav="' + k + '">' + esc(l) + '</a>').join('') +
+    '<div class="wide">' + (acct ? '<span>' + esc(acct.user.displayName) + '</span><button type="button" class="lnk" data-act="signout">Sign out</button>' : '<button type="button" class="lnk" data-menu="me" aria-haspopup="menu" aria-expanded="false">Viewing as ' + esc(data.me) + '</button>') + theme + '</div><a class="wide" href="/#work">← Nawres Skhairia</a>';
   if (window.ccThemeSync) window.ccThemeSync();
 }
+// Our own menus: a button with data-menu opens a list of actions; arrows move, Esc closes and returns focus.
+let menuFrom = null;
+// On a shared workspace only the owner and admins may replace or empty it (the server enforces the same rule).
+const myRole = () => { const w = acct && acct.workspaces.find(x => x.id === acct.wsId); return w ? w.role : 'owner'; };
+const canWipe = () => !acct || ['owner', 'admin'].includes(myRole());
+function menuItems(kind) {
+  const item = (label, attrs, extra = '') => '<button type="button" role="menuitem" ' + attrs + '>' + label + extra + '</button>';
+  const tick = on => on ? '<svg class="i tick" aria-hidden="true"><use href="#i-check"/></svg>' : '';
+  if (kind === 'ws') {
+    const list = acct ? acct.workspaces.map(w => item(esc(w.name), 'data-act="ws-go" data-id="' + esc(w.id) + '"' + (w.id === acct.wsId ? ' aria-current="true"' : ''), tick(w.id === acct.wsId))) : [item('Orbis Studio', 'aria-current="true"', tick(true))];
+    return '<p class="m-h">Workspaces</p>' + list.join('') + '<hr>' + item('People and sharing', 'data-href="#/workspace"') +
+      (acct ? (canWipe() ? item('Load sample data', 'data-act="reset"') + item('Empty workspace', 'data-act="start-empty"') : '') : item('Reset sample', 'data-act="reset"') + item('Start empty', 'data-act="start-empty"'));
+  }
+  const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const themeItem = '<button type="button" role="menuitemcheckbox" aria-checked="' + dark + '" data-act="theme-toggle">' + ic('moon') + 'Dark theme' + tick(dark) + '</button>';
+  if (acct) return '<p class="m-h">' + esc(acct.user.displayName) + '<small>' + esc(acct.user.email || '') + '</small></p>' + item(ic('user') + 'Your account', 'data-href="#/account"') + themeItem + '<hr>' + item('Sign out', 'data-act="signout"');
+  return '<p class="m-h">Switch person<small>The sample has made-up people.</small></p>' + people().map(n => '<button type="button" role="menuitemradio" aria-checked="' + (n === data.me) + '" data-act="me-go" data-name="' + esc(n) + '">' + avatar(n, 'xs') + esc(n) + tick(n === data.me) + '</button>').join('') + '<hr>' + themeItem + (serverOn ? item('Sign in', 'data-act="signin"') : '');
+}
+function openMenu(btn) {
+  const pop = $('#menuPop'); if (menuFrom === btn && !pop.hidden) { closeMenu(); return; }
+  closeMenu(); menuFrom = btn; btn.setAttribute('aria-expanded', 'true');
+  pop.innerHTML = menuItems(btn.dataset.menu); pop.hidden = false;
+  pop.setAttribute('aria-label', btn.dataset.menu === 'ws' ? 'Workspace' : 'Your menu');
+  const b = btn.getBoundingClientRect(); const w = pop.offsetWidth;
+  pop.style.top = Math.max(8, Math.min(innerHeight - pop.offsetHeight - 8, b.bottom + 4)) + 'px';
+  pop.style.left = Math.max(8, Math.min(innerWidth - w - 8, btn.dataset.menu === 'ws' ? b.left : b.right - w)) + 'px';
+  if (window.ccThemeSync) window.ccThemeSync();
+  const first = pop.querySelector('[role^="menuitem"]'); if (first) first.focus();
+}
+function closeMenu(back) { const pop = $('#menuPop'); if (pop.hidden) return; pop.hidden = true; if (menuFrom) { menuFrom.setAttribute('aria-expanded', 'false'); if (back) menuFrom.focus(); } menuFrom = null; }
+document.addEventListener('click', e => {
+  const btn = e.target.closest('[data-menu]'); if (btn) { e.preventDefault(); openMenu(btn); return; }
+  const it = e.target.closest('#menuPop [role^="menuitem"]');
+  if (it) { if (it.dataset.href) { closeMenu(); location.hash = it.dataset.href; } else setTimeout(() => closeMenu(), 0); return; }
+  if (!e.target.closest('#menuPop')) closeMenu();
+}, true);
+document.addEventListener('keydown', e => {
+  const pop = $('#menuPop'); if (pop.hidden) return;
+  const items = $$('[role^="menuitem"]', pop); const i = items.indexOf(document.activeElement);
+  if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeMenu(true); }
+  else if (e.key === 'ArrowDown') { e.preventDefault(); items[(i + 1) % items.length].focus(); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); items[(i - 1 + items.length) % items.length].focus(); }
+  else if (e.key === 'Home') { e.preventDefault(); items[0].focus(); }
+  else if (e.key === 'End') { e.preventDefault(); items[items.length - 1].focus(); }
+  else if (e.key === 'Tab') closeMenu();
+}, true);
 
 function board() {
   const list = E.applyFilter(data.tasks.filter(t => t.status !== 'Backlog'), ui.q, data.me, TODAY);
@@ -418,8 +495,7 @@ function projectView(r) {
   const span = Math.max(1, E.daysBetween(p.start, p.deadline));
   const posOf = iso => Math.max(0, Math.min(100, E.daysBetween(p.start, iso) / span * 100));
   const counts = E.TASK_STATUSES.map(s => [s, tasks.filter(t => t.status === s).length]).filter(x => x[1]);
-  return '<nav class="crumbs" aria-label="Breadcrumb"><a href="#/projects">Projects</a><span>/</span><span>' + esc(p.name) + '</span></nav>' +
-    '<div class="vh"><div><p class="eyebrow">' + esc(p.code) + ' · ' + esc(p.priority) + ' priority · ' + esc(stLabel(p.status)) + '</p><h2>' + esc(p.name) + '</h2><p class="lede">' + esc(p.objective) + '</p></div><div class="row"><button class="btn ghost" data-act="edit-project" data-id="' + esc(p.id) + '">Edit</button>' + (p.archivedAt ? '<button class="btn ghost" data-act="restore-project" data-id="' + esc(p.id) + '">Restore</button>' : p.status === 'Completed' ? '<button class="btn ghost" data-act="archive-project" data-id="' + esc(p.id) + '">Archive</button>' : '') + '<a class="btn ghost" href="#/reports?type=project&p=' + esc(p.id) + '">Report</a><button class="btn ghost danger" data-act="del-project" data-id="' + esc(p.id) + '">Delete</button></div></div>' +
+  return '<div class="vh"><div><p class="eyebrow">' + esc(p.code) + ' · ' + esc(p.priority) + ' priority · ' + esc(stLabel(p.status)) + '</p><h2>' + esc(p.name) + '</h2><p class="lede">' + esc(p.objective) + '</p></div><div class="row"><button class="btn ghost" data-act="edit-project" data-id="' + esc(p.id) + '">Edit</button>' + (p.archivedAt ? '<button class="btn ghost" data-act="restore-project" data-id="' + esc(p.id) + '">Restore</button>' : p.status === 'Completed' ? '<button class="btn ghost" data-act="archive-project" data-id="' + esc(p.id) + '">Archive</button>' : '') + '<a class="btn ghost" href="#/reports?type=project&p=' + esc(p.id) + '">Report</a><button class="btn ghost danger" data-act="del-project" data-id="' + esc(p.id) + '">Delete</button></div></div>' +
     '<div class="grid g21">' +
       '<section class="panel"><div class="ph"><h3>Timeline</h3><span class="muted small">' + esc(fmtDate(p.start)) + ' → ' + esc(fmtDate(p.deadline)) + '</span></div>' +
         '<div class="ptl"><div class="ptl-track"><span class="ptl-done grow-in" style="--w:' + (h.progress * 100).toFixed(1) + '%"></span>' + (TODAY >= p.start && TODAY <= p.deadline ? '<span class="ptl-today" style="left:' + posOf(TODAY) + '%"><i>Today</i></span>' : '') + ms.map(m => '<button type="button" class="ptl-ms' + (m.done ? ' done' : E.isMilestoneOverdue(m, TODAY) ? ' late' : '') + '" style="left:' + posOf(m.target) + '%" data-act="edit-milestone" data-id="' + esc(m.id) + '" title="' + esc(m.name + ' · ' + fmtDate(m.target)) + '"><span class="sr">' + esc(m.name) + '</span></button>').join('') + '</div></div>' +
@@ -871,6 +947,9 @@ document.addEventListener('click', e => {
   switch (act) {
     case 'toggle-ms': commit({ ...data, milestones: data.milestones.map(x => x.id === id ? { ...x, done: el.checked } : x) }, el.checked ? 'Milestone reached.' : 'Milestone reopened.', { undo: true }); break;
     case 'new-project': projectForm(); break;
+    case 'theme-toggle': { const root = document.documentElement; const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'; root.setAttribute('data-theme', next); try { sessionStorage.setItem('cc-theme', next); } catch (err) { /* this visit only */ } if (window.ccThemeSync) window.ccThemeSync(); break; }
+    case 'ws-go': if (acct && el.dataset.id !== acct.wsId) openWorkspace(el.dataset.id); break;
+    case 'me-go': if (el.dataset.name !== data.me) commit({ ...data, me: el.dataset.name }, 'You are now viewing as ' + el.dataset.name + '.'); break;
     case 'edit-project': projectForm(proj(id)); break;
     case 'del-project': { const p = proj(id); const n = [E.projectMilestones(data, id).length, E.projectTasks(data, id).length, E.projectRisks(data, id).length]; confirmBox('Delete ' + p.name + '?', 'This also deletes its ' + n[0] + ' milestones, ' + n[1] + ' tasks and ' + n[2] + ' risks.', 'Delete project', () => { location.hash = '#/projects'; commit(E.deleteProject(data, id), p.name + ' deleted.', { undo: true }); }); break; }
     case 'new-milestone': milestoneForm(null, el.dataset.project); break;
@@ -918,8 +997,8 @@ document.addEventListener('click', e => {
     case 'print': window.print(); break;
     case 'csv': downloadCsv(); break;
     case 'copy-summary': { const txt = $('#sumText').textContent; (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast('Status summary copied.'), () => toast('Copy is not allowed here. Select the text instead.', 'error')); break; }
-    case 'reset': resetDemo(); break;
-    case 'start-empty': startEmpty(); break;
+    case 'reset': if (!canWipe()) { toast('Only the owner or an admin can replace this shared workspace.', 'error'); break; } resetDemo(); break;
+    case 'start-empty': if (!canWipe()) { toast('Only the owner or an admin can empty this shared workspace.', 'error'); break; } startEmpty(); break;
     case 'signin': signInForm(el.dataset.email || ''); break;
     case 'join-accept': acceptInvite(el.dataset.token); break;
     case 'ws-open': openWorkspace(id).then(ok => { if (ok) location.hash = '#/overview'; }); break;
@@ -1079,19 +1158,13 @@ window.addEventListener('hashchange', () => { $('#moreSheet').hidden = true; nav
 window.addEventListener('storage', e => { if (e.key === KEY && !acct) { data = load(); render(); } });
 
 // ---------- accounts: sign up, sign in, saved on the server ----------
-const BAND_LOCAL = '<span><b>Demo workspace.</b> Made-up sample data for a fictional company, saved only in this browser. Please use made-up names: real ones would stay saved in this browser.</span>';
+const BAND_LOCAL = '<span class="strip-t"><b>Sample workspace</b> · Made-up data, saved in this browser only. Please use made-up names.</span>';
 function renderBand() {
   const band = $('#band'); if (!band) return;
-  if (!acct) {
-    band.classList.remove('acct');
-    band.innerHTML = BAND_LOCAL + '<span class="band-actions"><button type="button" class="lnk" data-act="reset">Reset demo</button><button type="button" class="lnk" data-act="start-empty">Start empty</button>' +
-      (serverOn ? '<span class="band-sep" aria-hidden="true"></span><button type="button" class="lnk" data-act="signin">Sign in</button><button type="button" class="btn sm" data-act="signup">Keep my work: create an account</button>' : '') + '</span>';
-    return;
-  }
-  band.classList.add('acct');
-  const many = acct.workspaces.length > 1;
-  band.innerHTML = '<span class="acct-who">' + avatar(acct.user.displayName, 'sm') + '<span><b>' + esc(acct.user.displayName) + '</b> · ' + (many ? '<label class="ws-pick"><span class="sr">Workspace</span><select data-act="ws-switch">' + opts(acct.workspaces.map(w => [w.id, w.name]), acct.wsId) + '</select></label>' : esc(acct.wsName)) + ' · <span class="save-state" aria-live="polite">' + esc(acct.saveState || 'Saved to your account') + '</span></span></span>' +
-    '<span class="band-actions"><button type="button" class="lnk" data-act="reset">Load sample data</button><button type="button" class="lnk" data-act="start-empty">Empty workspace</button><button type="button" class="lnk" data-act="signout">Sign out</button></span>';
+  band.hidden = !!acct; band.classList.toggle('acct', !!acct);
+  if (acct) { band.innerHTML = ''; return; }
+  band.innerHTML = BAND_LOCAL + '<span class="band-actions"><button type="button" class="lnk" data-act="reset">Reset sample</button><button type="button" class="lnk" data-act="start-empty">Start empty</button>' +
+    (serverOn ? '<button type="button" class="lnk" data-act="signin">Sign in</button><button type="button" class="lnk strong" data-act="signup">Create an account<span class="ph-hide"> to keep your work</span></button>' : '') + '</span>';
 }
 function setSaveState(t) { if (!acct) return; acct.saveState = t; $$('.save-state').forEach(el => { el.textContent = t || 'Saved to your account'; }); }
 const busyTyping = () => { const a = document.activeElement; return a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.closest('#panel, #main'); };

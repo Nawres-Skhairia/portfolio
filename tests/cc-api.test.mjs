@@ -276,6 +276,14 @@ test('Command Center server', { skip }, async t => {
     assert.equal((await call('POST', '/workspaces/' + A.ws + '/members/' + ids.Member + '/role', { cookie: B.cookie, body: { role: 'admin' } })).status, 403, 'only the owner changes roles');
     assert.equal((await call('POST', '/workspaces/' + A.ws + '/delete', { cookie: B.cookie, body: { confirm: 'Team space' } })).status, 403);
     assert.equal((await call('POST', '/workspaces/' + A.ws + '/leave', { cookie: A.cookie })).status, 422, 'the owner cannot leave');
+    // A member cannot empty a shared workspace: removing a project is for the owner and admins.
+    await call('POST', '/workspaces/' + A.ws + '/sync', { cookie: A.cookie, body: { version: (await call('GET', '/workspaces/' + A.ws, { cookie: A.cookie })).body.version, ops: ops(seed('2026-11-17')) } });
+    const wsM = (await call('GET', '/workspaces/' + A.ws, { cookie: M.cookie })).body;
+    const wipe = wsM.data.projects.map(x => ({ type: 'project', op: 'del', id: x.id }));
+    assert.equal((await call('POST', '/workspaces/' + A.ws + '/sync', { cookie: M.cookie, body: { version: wsM.version, ops: wipe } })).status, 403, 'a member cannot delete projects');
+    assert.equal((await call('GET', '/workspaces/' + A.ws, { cookie: A.cookie })).body.data.projects.length, wsM.data.projects.length, 'nothing was removed');
+    const wsB2 = (await call('GET', '/workspaces/' + A.ws, { cookie: B.cookie })).body;
+    assert.equal((await call('POST', '/workspaces/' + A.ws + '/sync', { cookie: B.cookie, body: { version: wsB2.version, ops: (pid => [...['task', 'milestone', 'risk'].flatMap(ty => wsB2.data[ty + 's'].filter(x => x.projectId === pid).map(x => ({ type: ty, op: 'del', id: x.id }))), { type: 'project', op: 'del', id: pid }])(wsB2.data.projects.at(-1).id) } })).status, 200, 'an admin can');
     assert.equal((await call('POST', '/workspaces/' + A.ws + '/members/' + ids.Member + '/remove', { cookie: B.cookie })).status, 200);
     assert.equal((await call('GET', '/workspaces/' + A.ws, { cookie: M.cookie })).status, 404, 'removed means no access');
     assert.equal((await call('POST', '/workspaces/' + A.ws + '/leave', { cookie: B.cookie })).status, 200);

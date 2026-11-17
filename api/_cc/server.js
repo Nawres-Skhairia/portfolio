@@ -687,6 +687,11 @@ export async function handle(req) {
         const [lock] = await tx`select version from cc_workspace where id = ${wsId} for update`;
         if (!lock) return fail(404, 'This workspace does not exist or is not yours.');
         if (lock.version !== base) return json(409, { error: 'This workspace changed somewhere else. The latest version is shown.', workspace: await loadWorkspace(tx, wsId) });
+        // Removing a whole project (and with it its tasks) is for the owner and admins of a shared workspace.
+        if (Array.isArray(body.ops) && body.ops.some(o => o && o.type === 'project' && o.op === 'del')) {
+          const role = await roleIn(tx, wsId, user.id);
+          if (role !== 'owner' && role !== 'admin') return fail(403, 'Only the owner or an admin of this workspace can delete a project.');
+        }
         const current = (await loadWorkspace(tx, wsId)).data;
         const at = stamp();
         const r = applyOps(current, body.ops, user.display_name, at);
