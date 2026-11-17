@@ -38,137 +38,185 @@
   </header>
 
   <!-- CV page: Leo's words v15, layout after Olivia. Preview only until Nawres's yes. No phone or home address. -->
-  <main id="main" class="wrap cv">
+  <main id="main" class="wrap cv cv3">
     <header class="cv-hero">
-      <p class="kicker">CV</p>
-      <h1>Nawres Skhairia</h1>
-      <p class="cv-role"><span class="cv-role-main">Functional QA &amp; Business Analyst, iMX Factoring Solutions</span></p>
-      <p class="cv-subline">Functional and technical QA · Factoring, banking interfaces and AI testing</p>
-      <ul class="cv-contact" aria-label="Contact">
-        <li>Bulgaria</li>
-        <li><a href="mailto:skhairiyanawres@gmail.com">skhairiyanawres@gmail.com</a></li>
-        <li><a href="https://www.linkedin.com/in/nawres-skhairia-440a59143/" target="_blank" rel="noopener noreferrer"><span class="cv-screen">LinkedIn <span aria-hidden="true">↗</span></span><span class="cv-printonly">linkedin.com/in/nawres-skhairia-440a59143</span></a></li>
-        <li class="cv-print-item"><button class="cv-print" type="button">Print or save as PDF</button></li>
-      </ul>
-      <section class="cv-profile-block" aria-labelledby="cv-profile">
-        <h2 id="cv-profile" class="cv-h">Profile</h2>
-        <p class="cv-profile">Functional QA &amp; Business Analyst with nearly five years' experience at Codix on iMX, an enterprise receivables finance platform used by banks and factoring companies. Functional and technical QA across the full factoring lifecycle: onboarding, individuals and roles with compliance screening, contracts and credit limits, invoicing and funding, payments and banking interfaces (SEPA, cross-border, ISO 20022, MT940, CAMT.053), cash allocation, collections, accounting and night jobs. Combines business analysis of requirements and software specifications with hands-on technical validation through SQL, REST APIs, XML payment files and application logs, across DEV, VAL and UAT environments. Dedicated tester of an AI solution, covering answer accuracy, consistency and high-risk cases.</p>
-      </section>
+      <div class="cv-hero-text">
+        <p class="kicker">CV</p>
+        <h1>Nawres Skhairia</h1>
+        <p class="cv-role">Functional QA &amp; Business Analyst, iMX Factoring Solutions</p>
+        <p class="cv-subline">Functional and technical QA · Factoring, banking interfaces and AI testing</p>
+        <ul class="cv-contact" aria-label="Contact">
+          <li class="cv-loc">Bulgaria</li>
+          <li><a class="cv-btn" href="mailto:skhairiyanawres@gmail.com"><span class="cv-screen">Email</span><span class="cv-printonly">skhairiyanawres@gmail.com</span></a></li>
+          <li><a class="cv-btn" href="https://www.linkedin.com/in/nawres-skhairia-440a59143/" target="_blank" rel="noopener noreferrer"><span class="cv-screen">LinkedIn <span aria-hidden="true">↗</span></span><span class="cv-printonly">linkedin.com/in/nawres-skhairia-440a59143</span></a></li>
+          <li class="cv-print-item"><button class="cv-btn cv-btn-dark cv-print" type="button">Print or save as PDF</button></li>
+        </ul>
+      </div>
+      <aside class="proof cv-glance" aria-label="At a glance">
+        <p class="proof-bar"><i></i><i></i><i></i><span>At a glance</span></p>
+        <dl class="proof-body">
+          <div class="ln"><dt>Now</dt><dd>Codix, iMX factoring platform</dd></div>
+          <div class="ln"><dt>Domain</dt><dd>Factoring and receivables finance</dd></div>
+          <div class="ln"><dt>Interfaces</dt><dd>SEPA · ISO 20022 · MT940 · CAMT.053</dd></div>
+          <div class="ln"><dt>Tools</dt><dd>SQL · Jira · Xray · Postman</dd></div>
+          <div class="ln"><dt>Also</dt><dd>Dedicated AI tester</dd></div>
+          <div class="ln"><dt>Languages</dt><dd>Arabic · English · French</dd></div>
+        </dl>
+      </aside>
     </header>
 
-    <div class="cv-grid">
+    <div class="cv-layout">
       <div class="cv-main">
-        <section class="cv-block" aria-labelledby="cv-exp">
+        <section id="cv-profile-sec" class="cv-block cv-lead" aria-labelledby="cv-profile">
+          <h2 id="cv-profile" class="cv-h">Profile</h2>
+          <p class="cv-profile">Functional QA &amp; Business Analyst with nearly five years' experience at Codix on iMX, an enterprise receivables finance platform used by banks and factoring companies. Functional and technical QA across the full factoring lifecycle: onboarding, individuals and roles with compliance screening, contracts and credit limits, invoicing and funding, payments and banking interfaces (SEPA, cross-border, ISO 20022, MT940, CAMT.053), cash allocation, collections, accounting and night jobs. Combines business analysis of requirements and software specifications with hands-on technical validation through SQL, REST APIs, XML payment files and application logs, across DEV, VAL and UAT environments. Dedicated tester of an AI solution, covering answer accuracy, consistency and high-risk cases.</p>
+        </section>
+
+        <section id="cv-current" class="cv-block" aria-labelledby="cv-exp">
           <h2 id="cv-exp" class="cv-h">Experience</h2>
-          <ol class="cv-jobs">
-            <li class="cv-job is-now">
-              <p class="cv-pill-now">Current</p>
-              <div class="cv-job-head">
-                <h3>Functional QA &amp; Business Analyst, iMX Factoring Solutions <span class="cv-org"><span class="cv-sep" aria-hidden="true">· </span>Codix</span></h3>
-                <p class="cv-when">2025–today</p>
+          <article class="cv-job is-now">
+            <p class="cv-pill-now">Current</p>
+            <div class="cv-job-head">
+              <h3>Functional QA &amp; Business Analyst, iMX Factoring Solutions <span class="cv-org"><span class="cv-sep" aria-hidden="true">· </span>Codix</span></h3>
+              <p class="cv-when">2025–today</p>
+            </div>
+            <p class="cv-context">iMX, enterprise factoring and receivables finance platform for banks and factoring companies</p>
+            <h4 class="cv-sub">Functional QA: factoring lifecycle</h4>
+            <div class="cv-map">
+              <div class="cv-cluster">
+                <p class="cv-cluster-name">Parties &amp; contracts</p>
+                <ul class="cv-tiles">
+                  <li class="cv-tile"><details><summary><span class="cv-tile-name">Onboarding, individuals and roles</span><span class="cv-tile-sum">creation of individuals and legal entities and assignment of their roles (client, debtor, guarantor)…</span><span class="cv-printonly cv-tile-full">creation of individuals and legal entities and assignment of their roles (client, debtor, guarantor), with sanctions and compliance screening.</span></summary><p>creation of individuals and legal entities and assignment of their roles (client, debtor, guarantor), with sanctions and compliance screening.</p></details></li>
+                  <li class="cv-tile"><details><summary><span class="cv-tile-name">Contracts</span><span class="cv-tile-sum">set-up of each factoring product (recourse and non-recourse, disclosed and undisclosed, reverse factoring)…</span><span class="cv-printonly cv-tile-full">set-up of each factoring product (recourse and non-recourse, disclosed and undisclosed, reverse factoring), amendments, renewals and termination.</span></summary><p>set-up of each factoring product (recourse and non-recourse, disclosed and undisclosed, reverse factoring), amendments, renewals and termination.</p></details></li>
+                  <li class="cv-tile"><details><summary><span class="cv-tile-name">Limits and credit risk</span><span class="cv-tile-sum">debtor limit requests through the approval workflow (approval, partial approval, refusal, expiry, renewal)…</span><span class="cv-printonly cv-tile-full">debtor limit requests through the approval workflow (approval, partial approval, refusal, expiry, renewal), limit consumption, over-limit and concentration scenarios, and their impact on funding.</span></summary><p>debtor limit requests through the approval workflow (approval, partial approval, refusal, expiry, renewal), limit consumption, over-limit and concentration scenarios, and their impact on funding.</p></details></li>
+                  <li class="cv-tile"><details><summary><span class="cv-tile-name">Portfolio management</span><span class="cv-tile-sum">client and debtor portfolios…</span><span class="cv-printonly cv-tile-full">client and debtor portfolios, outstanding balances, risk exposure and portfolio transfers.</span></summary><p>client and debtor portfolios, outstanding balances, risk exposure and portfolio transfers.</p></details></li>
+                </ul>
               </div>
-              <p class="cv-context">iMX, enterprise factoring and receivables finance platform for banks and factoring companies</p>
-              <h4 class="cv-sub">Functional QA: factoring lifecycle</h4>
-              <ul class="cv-points">
-                <li>Onboarding, individuals and roles: creation of individuals and legal entities and assignment of their roles (client, debtor, guarantor), with sanctions and compliance screening.</li>
-                <li>Contracts: set-up of each factoring product (recourse and non-recourse, disclosed and undisclosed, reverse factoring), amendments, renewals and termination.</li>
-                <li>Limits and credit risk: debtor limit requests through the approval workflow (approval, partial approval, refusal, expiry, renewal), limit consumption, over-limit and concentration scenarios, and their impact on funding.</li>
-                <li>Portfolio management: client and debtor portfolios, outstanding balances, risk exposure and portfolio transfers.</li>
-                <li>Invoicing and assignment: intake of invoices and credit notes by screen and file import, eligibility rules, rejections, and invoicing of the factor's fees and commissions.</li>
-                <li>Funding: availability, advance rate and reserve, funding requests, payment orders and cut-off times; fee and interest calculations validated against contract terms, including period-end, rate-change and minimum-fee scenarios.</li>
-                <li>Multi-currency: invoicing, funding and payments across currencies, exchange rates and currency conversion of balances.</li>
-                <li>Financial items: creation, life cycle and balances of the financial items generated by invoices, payments, fees and adjustments.</li>
-                <li>Cash allocation: allocation of debtor payments to invoices, covering partial, over- and underpayments, splits, unidentified payments, reallocations, reversals and write-offs.</li>
-                <li>Collections and disputes: dunning cycles, overdue tracking and ageing, recourse on unpaid items, and dispute handling from opening to resolution, with impact on eligibility and funding.</li>
-                <li>Accounting: accounting impact of each business event (assignment, funding, allocation, fees, write-off) and reconciliation of client and debtor balances.</li>
-                <li>Reporting and statements: client and debtor statements, notices, letters and operational reports, reconciled against the database.</li>
-                <li>User rights: roles, permissions, four-eyes approval and audit trail.</li>
-                <li>Configuration: validation of business flows under client- and country-specific parameters.</li>
-              </ul>
-              <h4 class="cv-sub">Technical QA</h4>
-              <ul class="cv-points">
-                <li>Payments and banking interfaces: validation of outgoing SEPA and cross-border payment files (ISO 20022 XML) and incoming MT940 and CAMT.053 bank statements, end to end from bank file to client account.</li>
-                <li>Night jobs: interest accrual, ageing, limit expiry, dunning and file processing, verified in the database and logs, including month-end, value-date and rerun-after-failure scenarios.</li>
-                <li>APIs and web services: REST API and web service testing with Postman, including consistency of records and accounting between API and user interface.</li>
-                <li>Data validation: SQL queries to verify balances, accounting entries and processing results against expected outcomes.</li>
-                <li>Investigation: root-cause analysis using SQL and application logs.</li>
-              </ul>
-              <h4 class="cv-sub">Business analysis and test management</h4>
-              <ul class="cv-points">
-                <li>Requirements analysis: review of business requirements and software specifications to detect gaps and inconsistencies before development; definition of test scenarios and acceptance criteria with business experts and client teams.</li>
-                <li>Test design: positive, negative and boundary test cases, end-to-end scenarios across the factoring lifecycle, and supporting test data.</li>
-                <li>Execution and release validation: test execution across DEV, VAL and UAT; smoke testing, retesting, and full regression and non-regression campaigns ahead of each release.</li>
-                <li>Test and defect management: test cases and campaigns in Jira and Xray; evidence-based defect reports (reproduction steps, expected and actual results, SQL results, log extracts) followed through to closure with development.</li>
-              </ul>
-              <h4 class="cv-sub">AI testing</h4>
+              <div class="cv-cluster">
+                <p class="cv-cluster-name">Invoices &amp; funding</p>
+                <ul class="cv-tiles">
+                  <li class="cv-tile"><details><summary><span class="cv-tile-name">Invoicing and assignment</span><span class="cv-tile-sum">intake of invoices and credit notes by screen and file import…</span><span class="cv-printonly cv-tile-full">intake of invoices and credit notes by screen and file import, eligibility rules, rejections, and invoicing of the factor's fees and commissions.</span></summary><p>intake of invoices and credit notes by screen and file import, eligibility rules, rejections, and invoicing of the factor's fees and commissions.</p></details></li>
+                  <li class="cv-tile"><details><summary><span class="cv-tile-name">Funding</span><span class="cv-tile-sum">availability, advance rate and reserve…</span><span class="cv-printonly cv-tile-full">availability, advance rate and reserve, funding requests, payment orders and cut-off times; fee and interest calculations validated against contract terms, including period-end, rate-change and minimum-fee scenarios.</span></summary><p>availability, advance rate and reserve, funding requests, payment orders and cut-off times; fee and interest calculations validated against contract terms, including period-end, rate-change and minimum-fee scenarios.</p></details></li>
+                  <li class="cv-tile"><details><summary><span class="cv-tile-name">Multi-currency</span><span class="cv-tile-sum">invoicing, funding and payments across currencies…</span><span class="cv-printonly cv-tile-full">invoicing, funding and payments across currencies, exchange rates and currency conversion of balances.</span></summary><p>invoicing, funding and payments across currencies, exchange rates and currency conversion of balances.</p></details></li>
+                  <li class="cv-tile"><details><summary><span class="cv-tile-name">Financial items</span><span class="cv-tile-sum">creation, life cycle and balances of the financial items generated by invoices…</span><span class="cv-printonly cv-tile-full">creation, life cycle and balances of the financial items generated by invoices, payments, fees and adjustments.</span></summary><p>creation, life cycle and balances of the financial items generated by invoices, payments, fees and adjustments.</p></details></li>
+                </ul>
+              </div>
+              <div class="cv-cluster">
+                <p class="cv-cluster-name">Payments &amp; cash</p>
+                <ul class="cv-tiles">
+                  <li class="cv-tile"><details><summary><span class="cv-tile-name">Cash allocation</span><span class="cv-tile-sum">allocation of debtor payments to invoices…</span><span class="cv-printonly cv-tile-full">allocation of debtor payments to invoices, covering partial, over- and underpayments, splits, unidentified payments, reallocations, reversals and write-offs.</span></summary><p>allocation of debtor payments to invoices, covering partial, over- and underpayments, splits, unidentified payments, reallocations, reversals and write-offs.</p></details></li>
+                  <li class="cv-tile"><details><summary><span class="cv-tile-name">Collections and disputes</span><span class="cv-tile-sum">dunning cycles…</span><span class="cv-printonly cv-tile-full">dunning cycles, overdue tracking and ageing, recourse on unpaid items, and dispute handling from opening to resolution, with impact on eligibility and funding.</span></summary><p>dunning cycles, overdue tracking and ageing, recourse on unpaid items, and dispute handling from opening to resolution, with impact on eligibility and funding.</p></details></li>
+                  <li class="cv-tile"><details><summary><span class="cv-tile-name">Accounting</span><span class="cv-tile-sum">accounting impact of each business event (assignment, funding, allocation, fees, write-off) and reconciliation of client and debtor balances.</span><span class="cv-printonly cv-tile-full">accounting impact of each business event (assignment, funding, allocation, fees, write-off) and reconciliation of client and debtor balances.</span></summary><p>accounting impact of each business event (assignment, funding, allocation, fees, write-off) and reconciliation of client and debtor balances.</p></details></li>
+                </ul>
+              </div>
+              <div class="cv-cluster">
+                <p class="cv-cluster-name">Control &amp; reporting</p>
+                <ul class="cv-tiles">
+                  <li class="cv-tile"><details><summary><span class="cv-tile-name">Reporting and statements</span><span class="cv-tile-sum">client and debtor statements…</span><span class="cv-printonly cv-tile-full">client and debtor statements, notices, letters and operational reports, reconciled against the database.</span></summary><p>client and debtor statements, notices, letters and operational reports, reconciled against the database.</p></details></li>
+                  <li class="cv-tile"><details><summary><span class="cv-tile-name">User rights</span><span class="cv-tile-sum">roles, permissions…</span><span class="cv-printonly cv-tile-full">roles, permissions, four-eyes approval and audit trail.</span></summary><p>roles, permissions, four-eyes approval and audit trail.</p></details></li>
+                  <li class="cv-tile"><details><summary><span class="cv-tile-name">Configuration</span><span class="cv-tile-sum">validation of business flows under client- and country-specific parameters.</span><span class="cv-printonly cv-tile-full">validation of business flows under client- and country-specific parameters.</span></summary><p>validation of business flows under client- and country-specific parameters.</p></details></li>
+                </ul>
+              </div>
+            </div>
+            <h4 class="cv-sub">Technical QA</h4>
+            <dl class="cv-rows">
+              <div><dt>Payments and banking interfaces</dt><dd>validation of outgoing SEPA and cross-border payment files (ISO 20022 XML) and incoming MT940 and CAMT.053 bank statements, end to end from bank file to client account.</dd></div>
+              <div><dt>Night jobs</dt><dd>interest accrual, ageing, limit expiry, dunning and file processing, verified in the database and logs, including month-end, value-date and rerun-after-failure scenarios.</dd></div>
+              <div><dt>APIs and web services</dt><dd>REST API and web service testing with Postman, including consistency of records and accounting between API and user interface.</dd></div>
+              <div><dt>Data validation</dt><dd>SQL queries to verify balances, accounting entries and processing results against expected outcomes.</dd></div>
+              <div><dt>Investigation</dt><dd>root-cause analysis using SQL and application logs.</dd></div>
+            </dl>
+            <h4 class="cv-sub">Business analysis and test management</h4>
+            <dl class="cv-rows">
+              <div><dt>Requirements analysis</dt><dd>review of business requirements and software specifications to detect gaps and inconsistencies before development; definition of test scenarios and acceptance criteria with business experts and client teams.</dd></div>
+              <div><dt>Test design</dt><dd>positive, negative and boundary test cases, end-to-end scenarios across the factoring lifecycle, and supporting test data.</dd></div>
+              <div><dt>Execution and release validation</dt><dd>test execution across DEV, VAL and UAT; smoke testing, retesting, and full regression and non-regression campaigns ahead of each release.</dd></div>
+              <div><dt>Test and defect management</dt><dd>test cases and campaigns in Jira and Xray; evidence-based defect reports (reproduction steps, expected and actual results, SQL results, log extracts) followed through to closure with development.</dd></div>
+            </dl>
+            <div class="cv-ai">
+              <h4 class="cv-sub"><span class="cv-ai-pill" aria-hidden="true">AI</span>AI testing</h4>
               <ul class="cv-points">
                 <li>Dedicated tester of an AI solution: evaluation of answers for accuracy, consistency, hallucinations and high-risk cases.</li>
                 <li>Design of test question sets with expected answers; reporting of quality issues to the product team.</li>
               </ul>
-            </li>
-            <li class="cv-job">
-              <div class="cv-job-head">
+            </div>
+          </article>
+        </section>
+
+        <section id="cv-earlier" class="cv-block" aria-labelledby="cv-earlier-h">
+          <h2 id="cv-earlier-h" class="cv-h">Earlier roles</h2>
+          <ol class="cv-past">
+            <li class="cv-past-job">
+              <p class="cv-when">2022–2025</p>
+              <div>
                 <h3>Technical Editor <span class="cv-org"><span class="cv-sep" aria-hidden="true">· </span>Codix</span></h3>
-                <p class="cv-when">2022–2025</p>
+                <p class="cv-context">iMX software specifications and localization</p>
+                <ul class="cv-points">
+                  <li>Maintenance of iMX software specifications, kept accurate and consistent across releases.</li>
+                  <li>Contribution to iMX software localization for international clients.</li>
+                  <li>Unit testing: verification of compliance with specifications and database requirements; issue reporting.</li>
+                  <li>Training of business users on the specification management system.</li>
+                </ul>
               </div>
-              <p class="cv-context">iMX software specifications and localization</p>
-              <ul class="cv-points">
-                <li>Maintenance of iMX software specifications, kept accurate and consistent across releases.</li>
-                <li>Contribution to iMX software localization for international clients.</li>
-                <li>Unit testing: verification of compliance with specifications and database requirements; issue reporting.</li>
-                <li>Training of business users on the specification management system.</li>
-              </ul>
             </li>
-            <li class="cv-job">
-              <div class="cv-job-head">
+            <li class="cv-past-job">
+              <p class="cv-when">2020–2021</p>
+              <div>
                 <h3>Player Support Specialist <span class="cv-org"><span class="cv-sep" aria-hidden="true">· </span>Telus International Europe</span></h3>
-                <p class="cv-when">2020–2021</p>
+                <p class="cv-context">Player support for a major online game</p>
+                <ul class="cv-points">
+                  <li>Multilingual customer support.</li>
+                  <li>Technical troubleshooting and escalation of complex cases to internal teams.</li>
+                </ul>
               </div>
-              <p class="cv-context">Player support for a major online game</p>
-              <ul class="cv-points">
-                <li>Multilingual customer support.</li>
-                <li>Technical troubleshooting and escalation of complex cases to internal teams.</li>
-              </ul>
             </li>
-            <li class="cv-job">
-              <div class="cv-job-head">
+            <li class="cv-past-job">
+              <p class="cv-when">2019</p>
+              <div>
                 <h3>Insurance Sales Advisor <span class="cv-org"><span class="cv-sep" aria-hidden="true">· </span>Filiassur</span></h3>
-                <p class="cv-when">2019</p>
+                <ul class="cv-points">
+                  <li>Client needs assessment and recommendation of insurance products.</li>
+                </ul>
               </div>
-              <ul class="cv-points">
-                <li>Client needs assessment and recommendation of insurance products.</li>
-              </ul>
             </li>
           </ol>
         </section>
 
-        <section class="cv-block cv-noprint" aria-labelledby="cv-side-projects">
-          <h2 id="cv-side-projects" class="cv-h">Side projects</h2>
-          <p class="cv-profile">Web tools created through vibe coding: Test Pilot, payment tools, Loan simulator, Hiring Desk, Spreadsheet X-ray.</p>
-          <a class="cv-more" href="/#work">See the tools <span aria-hidden="true">→</span></a>
-        </section>
-      </div>
-
-      <aside class="cv-side" aria-label="Skills, languages, education and certifications">
-        <section class="cv-block" aria-labelledby="cv-skills">
+        <section id="cv-core" class="cv-block" aria-labelledby="cv-skills">
           <h2 id="cv-skills" class="cv-h">Core skills</h2>
-          <dl class="cv-skills">
+          <dl class="cv-skillgrid">
             <div><dt>Functional QA</dt><dd><ul class="cv-tags"><li>Functional testing</li><li>End-to-end testing</li><li>Regression &amp; non-regression</li><li>Smoke testing &amp; retesting</li><li>User acceptance testing</li><li>User rights testing</li><li>Configuration testing</li><li>Test case design</li><li>Boundary &amp; negative testing</li><li>Test data preparation</li><li>AI answer evaluation</li></ul></dd></div>
             <div><dt>Technical QA</dt><dd><ul class="cv-tags"><li>Interface testing</li><li>ISO 20022 &amp; XML file validation</li><li>API testing</li><li>Night job testing</li><li>SQL data validation</li><li>Log analysis</li><li>Root-cause analysis</li></ul></dd></div>
             <div><dt>Business analysis</dt><dd><ul class="cv-tags"><li>Requirements analysis</li><li>Software specifications</li><li>Acceptance criteria</li><li>Business process analysis</li><li>Collaboration with business experts, developers and client teams</li></ul></dd></div>
-            <div><dt>Factoring domain</dt><dd><ul class="cv-tags"><li>Classical &amp; reverse factoring</li><li>Individuals, roles &amp; screening</li><li>Portfolio management</li><li>Contracts</li><li>Limits &amp; credit risk</li><li>Invoicing &amp; assignment</li><li>Funding, advance rate &amp; reserve</li><li>Cash allocation &amp; write-offs</li><li>Collections, dunning &amp; disputes</li><li>Accounting</li><li>Fees &amp; interest</li><li>Financial items</li><li>Multi-currency</li></ul></dd></div>
             <div><dt>Banking interfaces</dt><dd><ul class="cv-tags"><li>SEPA</li><li>Cross-border payments</li><li>ISO 20022</li><li>MT940</li><li>CAMT.053</li><li>Bank statements</li></ul></dd></div>
           </dl>
         </section>
 
+        <section class="cv-block cv-noprint" aria-labelledby="cv-side-projects">
+          <h2 id="cv-side-projects" class="cv-h">Side projects</h2>
+          <p class="cv-text">Web tools created through vibe coding: Test Pilot, payment tools, Loan simulator, Hiring Desk, Spreadsheet X-ray.</p>
+          <a class="cv-more" href="/#work">See the tools <span aria-hidden="true">→</span></a>
+        </section>
+      </div>
+
+      <aside class="cv-side" aria-label="Tools, languages, education and certifications">
+        <nav class="cv-toc cv-noprint" aria-label="On this page">
+          <p class="cv-h">On this page</p>
+          <ul>
+            <li><a href="#cv-profile-sec">Profile</a></li>
+            <li><a href="#cv-current">Current role</a></li>
+            <li><a href="#cv-earlier">Earlier roles</a></li>
+            <li><a href="#cv-core">Skills</a></li>
+            <li><a href="#cv-edu-sec">Education</a></li>
+          </ul>
+        </nav>
         <section class="cv-block" aria-labelledby="cv-tools">
           <h2 id="cv-tools" class="cv-h">Technologies &amp; tools</h2>
           <ul class="cv-tags cv-tags-mono"><li>iMX</li><li>SQL</li><li>Jira</li><li>Xray</li><li>Postman</li><li>REST APIs &amp; web services</li><li>XML</li><li>Application logs</li><li>DEV / VAL / UAT environments</li><li>HTML &amp; CSS</li><li>Microsoft Office</li><li>Vibe coding</li></ul>
-          <dl class="cv-skills cv-also">
+          <dl class="cv-also">
             <div><dt>Also</dt><dd><ul class="cv-tags"><li>Specification writing</li><li>Training</li><li>Localization</li></ul></dd></div>
           </dl>
         </section>
-
         <section class="cv-block" aria-labelledby="cv-lang">
           <h2 id="cv-lang" class="cv-h">Languages</h2>
           <ul class="cv-langs">
@@ -177,15 +225,13 @@
             <li><span>French</span><span>fluent</span></li>
           </ul>
         </section>
-
-        <section class="cv-block" aria-labelledby="cv-edu">
+        <section id="cv-edu-sec" class="cv-block" aria-labelledby="cv-edu">
           <h2 id="cv-edu" class="cv-h">Education</h2>
           <ul class="cv-edu">
             <li><strong>Bachelor's degree in Biomedical Engineering, embedded electronic systems</strong><span>Higher Institute of Medical Technologies of Tunis · 2015–2018</span></li>
           </ul>
         </section>
-
-        <section class="cv-block" aria-labelledby="cv-cert">
+        <section id="cv-cert-sec" class="cv-block" aria-labelledby="cv-cert">
           <h2 id="cv-cert" class="cv-h">Certifications &amp; training</h2>
           <ul class="cv-edu">
             <li><strong>DELF B2 (French)</strong></li>
