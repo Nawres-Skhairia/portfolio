@@ -37,11 +37,11 @@
       pts = [];
       for (var y = gap / 2; y < H; y += gap) for (var x = gap / 2; x < W; x += gap) pts.push(x, y);
       packets = [];
-      var n = W < 600 ? 0 : 11; // no moving lines on phones: the text there spans the full width
+      var n = W < 600 ? 5 : 11; // fewer moving lines on phones, so the text stays readable
       for (var i = 0; i < n; i++) packets.push(newPacket(true));
     }
     function newPacket(anywhere) {
-      var horiz = Math.random() < 0.6;
+      var horiz = W < 600 || Math.random() < 0.6; // phones: horizontal lines only, so nothing cuts across the words
       var line = Math.floor(Math.random() * Math.max(1, (horiz ? H : W) / gap)) * gap + gap / 2;
       return { h: horiz, line: line, pos: anywhere ? Math.random() * (horiz ? W : H) : -40, v: 40 + Math.random() * 70, len: 40 + Math.random() * 60 };
     }
@@ -56,8 +56,8 @@
         var dx = x - mx, dy = y - my, d = Math.sqrt(dx * dx + dy * dy), push = 0;
         if (d < 170) push = (1 - d / 170);
         var ox = d ? dx / d * push * 14 : 0, oy = (d ? dy / d * push * 14 : 0) + w * 2.2;
-        ctx.globalAlpha = 0.26 + 0.2 * (w + 1) / 2 + push * 0.6;
-        var s = 1 + push * 1.8;
+        ctx.globalAlpha = (fine ? 0.26 : 0.4) + 0.2 * (w + 1) / 2 + push * 0.6;
+        var s = (fine ? 1 : 1.5) + push * 1.8;
         ctx.fillRect(x + ox - s / 2, y + oy - s / 2, s, s);
       }
       ctx.globalAlpha = 1;
@@ -70,7 +70,7 @@
           var g = p.h ? ctx.createLinearGradient(p.pos - p.len, 0, p.pos, 0) : ctx.createLinearGradient(0, p.pos - p.len, 0, p.pos);
           g.addColorStop(0, 'rgba(0,0,0,0)');
           g.addColorStop(1, col.acc);
-          ctx.strokeStyle = g; ctx.lineWidth = 1.4;
+          ctx.strokeStyle = g; ctx.lineWidth = 1.4; ctx.globalAlpha = W < 600 ? 0.55 : 1;
           ctx.beginPath();
           if (p.h) { ctx.moveTo(p.pos - p.len, p.line); ctx.lineTo(p.pos, p.line); } else { ctx.moveTo(p.line, p.pos - p.len); ctx.lineTo(p.line, p.pos); }
           ctx.stroke();
@@ -81,7 +81,14 @@
         }
       }
     }
-    function loop(now) { raf = 0; if (!on) return; draw(now); raf = requestAnimationFrame(loop); }
+    // touch screens have no pointer to follow: the ripple wanders slowly on its own, and jumps to where a finger touches
+    var touchAt = 0;
+    function wander(now) {
+      if (fine || calm || now - touchAt < 2500) return;
+      var t = now / 1000;
+      mx = W * (0.5 + 0.38 * Math.sin(t * 0.45)); my = H * (0.35 + 0.25 * Math.sin(t * 0.7 + 1));
+    }
+    function loop(now) { raf = 0; if (!on) return; wander(now); draw(now); raf = requestAnimationFrame(loop); }
     function start() { if (!raf && on && !calm) raf = requestAnimationFrame(loop); }
     colours(); size(); draw(performance.now());
     new MutationObserver(function () { colours(); if (calm) draw(performance.now()); }).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
@@ -93,6 +100,8 @@
       if (fine) {
         hero.addEventListener('pointermove', function (e) { var r = stage.getBoundingClientRect(); mx = e.clientX - r.left; my = e.clientY - r.top; });
         hero.addEventListener('pointerleave', function () { mx = my = -9999; });
+      } else {
+        hero.addEventListener('touchstart', function (e) { var r = stage.getBoundingClientRect(), p = e.touches[0]; touchAt = performance.now(); mx = p.clientX - r.left; my = p.clientY - r.top; }, { passive: true });
       }
       start();
     }
@@ -197,11 +206,11 @@
     var io2 = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { whens.forEach(function (w) { if (w.el.parentNode === e.target) rollIt(w); }); io2.unobserve(e.target); } }); }, { threshold: 0.6 });
     whens.forEach(function (w) { io2.observe(w.el.parentNode); });
 
-    if (!fine) return;
-
-    /* 9. A wide soft glow follows the pointer across the whole page background. */
+    /* 9. A wide soft glow in the corner of the page background (it drifts slowly on phones). */
     var glow = document.createElement('div'); glow.className = 'cv-glow'; glow.setAttribute('aria-hidden', 'true');
     document.body.appendChild(glow);
+
+    if (!fine) return;
 
     /* 6. Current role card: tilts in 3D toward the pointer, with the light that follows it. */
     var card = document.querySelector('.cv-job.is-now');
