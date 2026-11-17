@@ -47,6 +47,8 @@ export function readMt(src) {
   const lines = text.split('\n');
   const out = { blocks: { b1: null, b2: null, b3: [], b5: [] }, fields: [], errors: [], lineCount: lines.length, hasBlock4: false };
   if (text.length > MAX_CHARS) { out.errors.push(err(1, null, `The message has ${text.length} characters. An MT message has at most ${MAX_CHARS}.`, 'Paste a single MT103.')); out.refused = true; return out; }
+  const ctl = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/.exec(text);
+  if (ctl) { const ln = text.slice(0, ctl.index).split('\n').length; out.errors.push(err(ln, null, `The message contains a control character (code ${ctl[0].charCodeAt(0)}) on line ${ln}. An MT message is plain text.`, 'Remove it, or paste the message again from its source.')); out.refused = true; return out; }
   if (!text.trim()) { out.errors.push(err(1, null, 'The message is empty.', 'Paste an MT103 or load a sample.')); out.refused = true; return out; }
 
   // where block 4 starts and ends

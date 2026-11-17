@@ -101,6 +101,7 @@ ok(MAP_RULES.every((r) => r.source.length && r.source.every((s) => MAP_SOURCES[s
   ok(convert(S.charges.replace(':33B:EUR', ':33B:USD')).errors.some((e) => e.rule === 'MAP-11'), '33B in another currency needs 36');
   const esc = convert(S.clean.replace('INVOICE 2026-118', "O'NEIL + SONS"));
   ok(/O'NEIL \+ SONS/.test(esc.xml) && (await valid(esc.xml)) === true, 'Text is escaped and stays valid');
+  { const c = convert(S.clean.replace('INVOICE 2026-118', 'INVOICE\u0000 2026-118')); ok(c.refused && c.errors.length === 1 && /control character/.test(c.errors[0].message), 'Control characters refused up front (Noah)'); }
   ok(convert('x'.repeat(10001)).errors.length === 1 && convert('').errors.length === 1, 'Too long or empty input is refused');
 }
 console.log(`${passed} passed, ${failed} failed`);
