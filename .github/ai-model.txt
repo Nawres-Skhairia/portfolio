@@ -1,6 +1,0 @@
-# Test Pilot AI model (PORT-30 step 3). Changing this file on the Test Pilot
-# branch makes the "Fetch AI model" workflow download these files from
-# Hugging Face once, check their SHA-256, and commit them under
-# projects/test-pilot/ai/model/ so the site serves them itself.
-repo=mlc-ai/Qwen2.5-0.5B-Instruct-q4f32_1-MLC
-revision=main
