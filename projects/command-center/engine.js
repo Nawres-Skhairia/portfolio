@@ -50,8 +50,10 @@ export function validateMilestone(m, project) {
   return e;
 }
 
+export const WORK_TYPES = ['Task', 'Bug', 'Story'];
 export function validateTask(t, data) {
   const e = {};
+  if (t.type !== undefined && t.type !== '' && !WORK_TYPES.includes(t.type)) e.type = 'Choose a type.';
   req(e, 'title', t.title, 'Title'); maxLen(e, 'title', t.title, 100, 'Title');
   req(e, 'owner', t.owner, 'Owner'); maxLen(e, 'owner', t.owner, 40, 'Owner');
   if (!t.projectId) e.projectId = 'Choose a project.';
@@ -345,7 +347,7 @@ export function nextKey(data, projectId) {
   return p.code + '-' + ((nums.length ? Math.max(...nums) : 0) + 1);
 }
 
-const TRACKED = { title: 'Title', owner: 'Assignee', priority: 'Priority', status: 'Status', due: 'Due date', estimate: 'Estimate', labels: 'Labels', milestoneId: 'Milestone', deps: 'Waits for', holdReason: 'Hold reason', checklist: 'Checklist', archivedAt: 'Archived' };
+const TRACKED = { title: 'Title', owner: 'Assignee', priority: 'Priority', status: 'Status', due: 'Due date', estimate: 'Estimate', labels: 'Labels', milestoneId: 'Milestone', deps: 'Waits for', holdReason: 'Hold reason', checklist: 'Checklist', archivedAt: 'Archived', type: 'Type' };
 const same = (a, b) => JSON.stringify(a ?? '') === JSON.stringify(b ?? '');
 
 // One change to one task, validated, with its history. Returns { data, errors }.

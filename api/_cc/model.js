@@ -8,12 +8,12 @@ const LIST = { project: 'projects', milestone: 'milestones', task: 'tasks', risk
 const FIELDS = {
   project: ['id', 'code', 'name', 'owner', 'objective', 'description', 'start', 'deadline', 'status', 'priority', 'archivedAt'],
   milestone: ['id', 'projectId', 'name', 'target', 'done'],
-  task: ['id', 'key', 'projectId', 'title', 'owner', 'priority', 'status', 'due', 'estimate', 'labels', 'deps', 'milestoneId', 'holdReason', 'heldFrom', 'remindOn', 'rank', 'comments', 'checklist', 'archivedAt'],
+  task: ['id', 'key', 'projectId', 'title', 'owner', 'priority', 'status', 'due', 'estimate', 'labels', 'deps', 'milestoneId', 'holdReason', 'heldFrom', 'remindOn', 'rank', 'comments', 'checklist', 'archivedAt', 'type'],
   risk: ['id', 'projectId', 'title', 'impact', 'probability', 'status', 'mitigation', 'owner'],
 };
 export const LIMITS = { ops: 2000, projects: 100, tasks: 3000, milestones: 1000, risks: 1000, comments: 200, filters: 20, docBytes: 64 * 1024 };
 const ID = /^[A-Za-z0-9_-]{1,48}$/;
-const TRACKED = { title: 'Title', owner: 'Assignee', priority: 'Priority', status: 'Status', due: 'Due date', estimate: 'Estimate', labels: 'Labels', milestoneId: 'Milestone', deps: 'Waits for', holdReason: 'Hold reason', checklist: 'Checklist', archivedAt: 'Archived' };
+const TRACKED = { title: 'Title', owner: 'Assignee', priority: 'Priority', status: 'Status', due: 'Due date', estimate: 'Estimate', labels: 'Labels', milestoneId: 'Milestone', deps: 'Waits for', holdReason: 'Hold reason', checklist: 'Checklist', archivedAt: 'Archived', type: 'Type' };
 
 export const emptyData = () => ({ projects: [], milestones: [], tasks: [], risks: [], filters: [] });
 
@@ -42,6 +42,7 @@ function shapeError(type, d) {
     if (d.heldFrom && !E.TASK_STATUSES.includes(d.heldFrom)) return 'A task is not valid.';
     if (d.remindOn !== undefined && d.remindOn !== '' && !(typeof d.remindOn === 'string' && E.isIso(d.remindOn))) return 'A reminder date is not valid.';
     if (d.checklist !== undefined && (!Array.isArray(d.checklist) || d.checklist.length > 30)) return 'A checklist is not valid.';
+    if (d.type !== undefined && d.type !== '' && !E.WORK_TYPES.includes(d.type)) return 'A task type is not valid.';
   }
   if (type === 'risk') { if (!str(d.title, 120) || !str(d.status, 20)) return 'A risk is not valid.'; if (d.owner !== undefined && !str(d.owner, 40)) return 'A risk is not valid.'; if (d.mitigation !== undefined && !str(d.mitigation, 400)) return 'A risk is not valid.'; }
   return '';

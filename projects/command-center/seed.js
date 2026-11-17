@@ -79,6 +79,8 @@ export function seed(today) {
     t.holdReason = ''; t.heldFrom = '';
   });
   const tk = id => tasks.find(t => t.id === id);
+  const TYPES = { 't-f2': 'Bug', 't-b2': 'Bug', 't-a3': 'Story', 't-a4': 'Story', 't-b3': 'Story', 't-c4': 'Story', 't-e1': 'Story' };
+  tasks.forEach(t => { t.type = TYPES[t.id] || 'Task'; });
   Object.assign(tk('t-c2'), { holdReason: 'Waiting for finance to grant read access to the feed.', heldFrom: 'In progress' });
   tk('t-c2').history.push({ at: d(-9) + 'T14:20', by: 'Priya Nair', field: 'Status', from: 'In progress', to: 'On hold' });
   tk('t-c2').comments.push({ id: 'c-1', by: 'Priya Nair', at: d(-9) + 'T14:22', text: 'Access request sent to the finance team. No answer yet.' }, { id: 'c-2', by: 'Lina Haddad', at: d(-3) + 'T10:05', text: 'I will raise it at Thursday\'s steering meeting.' });
