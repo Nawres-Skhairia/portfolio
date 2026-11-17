@@ -10,6 +10,7 @@ const URL_ = process.env.CC_DATABASE_URL;
 const skip = !URL_ && 'set CC_DATABASE_URL to a throwaway database to run these tests';
 process.env.CC_SESSION_SECRET ||= 'test-secret-'.padEnd(48, 'x');
 process.env.CC_PREVIEW_MAILBOX = '1';
+process.env.CC_ENV = 'preview';
 
 const HOST = 'cc.test';
 let handle, closeForTests, admin;
@@ -409,8 +410,47 @@ test('Command Center server', { skip }, async t => {
   });
 
   await t.test('the test mailbox is closed on the live site', async () => {
-    process.env.VERCEL_ENV = 'production';
+    process.env.VERCEL_ENV = 'production'; process.env.CC_PUBLIC_ORIGIN = 'https://' + HOST;
     assert.equal((await call('GET', '/dev/mailbox', { query: { email: 'a@b.cd' } })).status, 404);
-    delete process.env.VERCEL_ENV;
+    delete process.env.VERCEL_ENV; delete process.env.CC_PUBLIC_ORIGIN;
+  });
+
+  await t.test('another host: production unless marked; fails closed without its public address or a long secret', async () => {
+    const savedEnv = process.env.CC_ENV; delete process.env.CC_ENV;
+    assert.equal((await call('GET', '/me')).status, 503, 'no CC_ENV and no public address: closed');
+    process.env.CC_PUBLIC_ORIGIN = 'https://' + HOST;
+    assert.equal((await call('GET', '/dev/mailbox', { query: { email: 'x@example.test' } })).status, 404, 'no mailbox when not marked as a preview');
+    const saved = process.env.CC_SESSION_SECRET; delete process.env.CC_SESSION_SECRET;
+    assert.equal((await call('GET', '/me')).status, 503, 'no secret: closed');
+    process.env.CC_SESSION_SECRET = 'short';
+    assert.equal((await call('GET', '/me')).status, 503, 'a short secret is refused');
+    process.env.CC_SESSION_SECRET = saved;
+    const before = (await admin`select count(*)::int as c from cc_setting where key = 'admin'`)[0].c;
+    await account('Prod Person').catch(() => null);
+    assert.equal((await admin`select count(*)::int as c from cc_setting where key = 'admin'`)[0].c, before, 'nobody becomes admin by signing in first');
+    process.env.CC_ENV = savedEnv; delete process.env.CC_PUBLIC_ORIGIN;
+  });
+
+  await t.test('with a public address set, only that exact origin may change things, and no email goes out for a forged one', async () => {
+    const A = await account('Origin Test');
+    process.env.CC_PUBLIC_ORIGIN = 'https://tools.example';
+    const mails = async () => (await admin`select count(*)::int as c from cc_outbox where to_email = ${A.email}`)[0].c;
+    const n0 = await mails();
+    assert.equal((await call('POST', '/auth/forgot', { body: { email: A.email } })).status, 403, 'the request host is not trusted');
+    assert.equal((await call('POST', '/auth/forgot', { body: { email: A.email }, origin: 'https://evil.test' })).status, 403);
+    assert.equal(await mails(), n0, 'no email for a refused request');
+    assert.equal((await call('POST', '/auth/forgot', { body: { email: A.email }, origin: 'https://tools.example' })).status, 200);
+    const last = (await admin`select body from cc_outbox where to_email = ${A.email} order by id desc limit 1`)[0].body;
+    assert.ok(last.includes('https://tools.example/'), 'email links use the public address');
+    delete process.env.CC_PUBLIC_ORIGIN;
+  });
+
+  await t.test('off a Vercel preview, the mailbox only shows reserved test addresses', async () => {
+    process.env.CC_ENV = 'preview';
+    await admin`insert into cc_outbox (to_email, subject, body) values ('real@gmail.com', 'S', 'B')`;
+    assert.deepEqual((await call('GET', '/dev/mailbox', { query: { email: 'real@gmail.com' } })).body.mails, []);
+    process.env.VERCEL_ENV = 'preview'; delete process.env.CC_ENV; process.env.CC_PUBLIC_ORIGIN = 'https://' + HOST;
+    assert.equal((await call('GET', '/dev/mailbox', { query: { email: 'x@example.test' } })).status, 404, 'Vercel preview alone does not open it: CC_ENV=preview is needed');
+    process.env.CC_ENV = 'preview'; delete process.env.VERCEL_ENV; delete process.env.CC_PUBLIC_ORIGIN;
   });
 });

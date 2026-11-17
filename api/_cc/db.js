@@ -15,13 +15,12 @@ function connect(url, max) {
 
 export function configured() { return Boolean(dbUrl()); }
 
-// Key for the stored token hashes. CC_SESSION_SECRET when set; otherwise derived from the database address,
-// which is itself secret and Preview-only, so no extra secret has to be created or handled by anyone.
-import { createHash } from 'node:crypto';
+// Key for the stored token hashes: CC_SESSION_SECRET, its own Sensitive variable (32+ characters).
+// The server refuses to start accounts without it, so there is no fallback key.
 export function hashKey() {
   const s = process.env.CC_SESSION_SECRET;
-  if (s && s.length >= 32) return s;
-  return createHash('sha256').update('command-center-session-key|' + dbUrl()).digest('hex');
+  if (!s || s.length < 32) throw new Error('CC_SESSION_SECRET is missing or too short');
+  return s;
 }
 
 export async function db() {

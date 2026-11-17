@@ -1,6 +1,8 @@
 // Local test server for Command Center with accounts: static files plus /api/cc on one address.
 // CC_DATABASE_URL=... CC_DATABASE_SSL=off CC_SESSION_SECRET=... CC_PREVIEW_MAILBOX=1 node tests/cc-dev-server.mjs 8770
 import http from 'node:http';
+process.env.CC_ENV ||= 'preview';
+process.env.CC_SESSION_SECRET ||= 'local-dev-only-secret-'.padEnd(48, 'x');
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import handler from '../api/cc/handler.js';

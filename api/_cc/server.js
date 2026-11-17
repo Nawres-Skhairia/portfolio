@@ -13,7 +13,17 @@ const VERIFY_HOURS = 24;
 const INVITE_DAYS = 7;
 const RESET_MINUTES = 60;
 const EVENT_DAYS = 90;
-const DEFAULTS = { signup: 'open', maxOwned: 20, maxPeople: 25 };
+// Where this runs. Fails closed: anything not marked as a preview or local copy counts as production.
+// Only an explicit CC_ENV of 'preview' or 'dev' opens the test helpers; Vercel's production flag always wins.
+function env() {
+  if (process.env.VERCEL_ENV === 'production') return 'production';
+  return ['preview', 'dev'].includes(process.env.CC_ENV) ? process.env.CC_ENV : 'production';
+}
+const isProd = () => env() === 'production';
+// The one public address of the tools (for example https://tools.example). Required on production: email links
+// and the same-site check use it, never the request's own headers.
+const publicOrigin = () => String(process.env.CC_PUBLIC_ORIGIN || '').replace(/\/+$/, '');
+const defaults = () => ({ signup: isProd() ? 'closed' : 'open', maxOwned: 20, maxPeople: 25 });
 const json = (status, body, extra = {}) => ({ status, body, ...extra });
 const fail = (status, error, extra = {}) => json(status, { error }, extra);
 
@@ -84,7 +94,7 @@ async function currentUser(sql, headers) {
 // ---------- settings, the admin, and the account event log ----------
 async function settings(sql) {
   const [r] = await sql`select value from cc_setting where key = 'limits'`;
-  return { ...DEFAULTS, ...(r ? r.value : {}) };
+  return { ...defaults(), ...(r ? r.value : {}) };
 }
 // Who runs this Command Center. On the live site only the addresses in CC_ADMIN_EMAILS.
 // On a preview without that list, the first person to confirm or sign in after this was added is recorded once.
@@ -93,12 +103,12 @@ async function isAdmin(sql, user) {
   if (!user) return false;
   const list = adminList();
   if (list.length) return list.includes(user.email);
-  if (process.env.VERCEL_ENV === 'production') return false;
+  if (isProd()) return false;
   const [r] = await sql`select value from cc_setting where key = 'admin'`;
   return Boolean(r && r.value.userId === user.id);
 }
 async function claimAdmin(sql, userId) {
-  if (adminList().length || process.env.VERCEL_ENV === 'production') return;
+  if (adminList().length || isProd()) return;
   await sql`insert into cc_setting (key, value) values ('admin', ${sql.json({ userId })}) on conflict (key) do nothing`;
 }
 // Facts only (what happened, when, to which account): never workspace content. Kept 90 days.
@@ -183,19 +193,22 @@ async function createWorkspace(sql, user, name, isSample) {
 export async function handle(req) {
   const { method, path, headers = {}, body = {}, ip = '' } = req;
   const route = method + ' /' + path.join('/');
-  if (!configured()) return fail(503, 'Accounts are not available here yet.');
+  // Production needs its fixed address and its own secret key; a preview may derive the key from its database address.
+  if (!configured() || String(process.env.CC_SESSION_SECRET || '').length < 32 || (isProd() && !publicOrigin())) return fail(503, 'Accounts are not available here yet.');
   if (method === 'POST') {
     // Changes are accepted only from this site's own pages (no cross-site requests).
     const origin = headers.origin || '';
     const host = headers['x-forwarded-host'] || headers.host || '';
-    if (!origin || origin.replace(/^https?:\/\//, '') !== host) return fail(403, 'This request did not come from Command Center.');
+    const ok = publicOrigin() ? origin === publicOrigin() : (origin && origin.replace(/^https?:\/\//, '') === host);
+    if (!ok) return fail(403, 'This request did not come from Command Center.');
     if (!String(headers['content-type'] || '').startsWith('application/json')) return fail(415, 'Send JSON.');
     if (!body || typeof body !== 'object' || Array.isArray(body)) return fail(400, 'The request is not valid.');
   }
   let sql;
   try { sql = await db(); } catch (e) { return fail(503, 'The database is not reachable. Try again in a minute.'); }
   const secure = req.secure !== false;
-  const origin = headers.origin || ((secure ? 'https://' : 'http://') + (headers['x-forwarded-host'] || headers.host || ''));
+  // Links in emails: the fixed public address when set; on a preview without one, the preview's own address.
+  const origin = publicOrigin() || ((secure ? 'https://' : 'http://') + (headers['x-forwarded-host'] || headers.host || ''));
 
   if (route === 'GET /me') {
     const u = await currentUser(sql, headers);
@@ -352,9 +365,11 @@ export async function handle(req) {
 
   // Preview-only test mailbox: never on the live site.
   if (route === 'GET /dev/mailbox') {
-    if (process.env.VERCEL_ENV === 'production' || process.env.CC_PREVIEW_MAILBOX !== '1') return fail(404, 'Not found.');
+    // Test mailbox: only on a preview marked CC_ENV=preview, only when switched on, only for the reserved test domain.
+    if (env() !== 'preview' || process.env.CC_PREVIEW_MAILBOX !== '1') return fail(404, 'Not found.');
     const email = String(req.query?.email || '').trim().toLowerCase();
     if (!EMAIL.test(email)) return json(200, { mails: [] });
+    if (!email.endsWith('@example.test')) return json(200, { mails: [] });
     const mails = await sql`select subject, body, created_at from cc_outbox where to_email = ${email} order by id desc limit 10`;
     return json(200, { mails });
   }
@@ -606,7 +621,7 @@ export async function handle(req) {
         (select count(*)::int from cc_membership m where m.user_id = u.id) as workspaces,
         (select count(*)::int from cc_membership m where m.user_id = u.id and m.role = 'owner') as owns
         from cc_user u order by u.created_at desc limit 500`;
-      const spaces = await sql`select w.id, w.name, w.created_at, w.is_sample, o.display_name as owner,
+      const spaces = await sql`select w.id, w.created_at, w.is_sample, o.display_name as owner,
         (select count(*)::int from cc_membership m where m.workspace_id = w.id) as people,
         (select count(*)::int from cc_project p where p.workspace_id = w.id) as projects,
         (select count(*)::int from cc_task t where t.workspace_id = w.id) as tasks,
@@ -617,7 +632,7 @@ export async function handle(req) {
         counts: c, settings: await settings(sql), you: user.id,
         adminBy: adminList().length ? 'list' : 'first',
         users: users.map(u => ({ id: u.id, email: u.email, name: u.display_name, createdAt: u.created_at, confirmedAt: u.email_verified_at, lastSignInAt: u.last_signin_at, pausedAt: u.disabled_at, workspaces: u.workspaces, owns: u.owns })),
-        workspaces: spaces.map(w => ({ id: w.id, name: w.name, createdAt: w.created_at, sample: w.is_sample, owner: w.owner || 'Nobody', people: w.people, projects: w.projects, tasks: w.tasks, lastChange: w.last_change })),
+        workspaces: spaces.map(w => ({ id: w.id, createdAt: w.created_at, sample: w.is_sample, owner: w.owner || 'Nobody', people: w.people, projects: w.projects, tasks: w.tasks, lastChange: w.last_change })),
       });
     }
     if (route === 'GET /admin/log') {
@@ -697,6 +712,14 @@ async function deleteAccount(sql, userId, email) {
       else await tx`delete from cc_workspace where id = ${ws}`;
     }
     await tx`update cc_activity set actor_name = 'Former member', actor_user_id = null where actor_user_id = ${userId}`;
+    const [me] = await tx`select display_name from cc_user where id = ${userId}`;
+    const spaces = await tx`select m.workspace_id from cc_membership m join cc_workspace w on w.id = m.workspace_id where m.user_id = ${userId}`;
+    for (const { workspace_id: ws } of spaces) {
+      const [twin] = await tx`select 1 from cc_membership m join cc_user u on u.id = m.user_id where m.workspace_id = ${ws} and m.user_id <> ${userId} and u.display_name = ${me.display_name} limit 1`;
+      if (twin) continue;
+      const rows = await tx`select id, doc from cc_task where workspace_id = ${ws} and doc->'comments' @> ${tx.json([{ by: me.display_name }])}`;
+      for (const r of rows) await tx`update cc_task set doc = ${tx.json({ ...r.doc, comments: r.doc.comments.map(c => c.by === me.display_name ? { ...c, by: 'Former member' } : c) })} where workspace_id = ${ws} and id = ${r.id}`;
+    }
     await tx`delete from cc_invite where invited_by = ${userId} and accepted_at is null`;
     await tx`delete from cc_outbox where to_email = ${email}`;
     await tx`delete from cc_setting where key = 'admin' and value->>'userId' = ${userId}`;

@@ -11,7 +11,8 @@ export default async function handler(req, res) {
   for (const [k, v] of Object.entries(req.headers)) headers[k.toLowerCase()] = Array.isArray(v) ? v.join(', ') : String(v);
   let body = {};
   if (req.method === 'POST') { try { body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body ?? {}); } catch { body = null; } }
-  const ip = String(headers['x-real-ip'] || headers['x-forwarded-for'] || '').split(',')[0].trim();
+  // Vercel sets x-real-ip itself; a visitor cannot choose it. (Other hosts use their own trusted header.)
+  const ip = String(headers['x-real-ip'] || '').trim();
   let out;
   try {
     out = await handle({ method: req.method, path, headers, body, ip, query: Object.fromEntries(url.searchParams), secure: headers['x-forwarded-proto'] !== 'http' });
