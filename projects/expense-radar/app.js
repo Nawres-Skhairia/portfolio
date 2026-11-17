@@ -199,7 +199,7 @@ function mainCard(m) {
   const c = E.monthCard(data, m, TODAY); const isNow = m === THIS_MONTH;
   const big = c.plan
     ? (c.left >= 0 ? '<p class="k">Left to spend ' + (isNow ? 'this month' : 'in ' + esc(E.monthName(m).split(' ')[0])) + '</p><p class="big money">' + esc(money(c.left, { round: true })) + '</p>'
-      : '<p class="k">Left to spend ' + (isNow ? 'this month' : 'in ' + esc(E.monthName(m).split(' ')[0])) + '</p><p class="big money">' + esc(money(0)) + '</p><p class="sub">You are ' + esc(money(-c.left, { round: true })) + ' past your plan' + (isNow ? ' so far.' : '.') + '</p>') +
+      : '<p class="k">Left to spend ' + (isNow ? 'this month' : 'in ' + esc(E.monthName(m).split(' ')[0])) + '</p><p class="big money">' + esc(money(0, { round: true })) + '</p><p class="sub">You are ' + esc(money(-c.left, { round: true })) + ' past your plan' + (isNow ? ' so far.' : '.') + '</p>') +
       (isNow && c.left > 0 ? '<p class="sub">About ' + esc(money(c.perDay, { round: true })) + ' a day for the ' + c.daysLeft + (c.daysLeft === 1 ? ' day' : ' days') + ' left.</p>' : '') +
       '<div class="plan" role="progressbar" aria-label="Spending plan used" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + c.planUsed + '" aria-valuetext="' + c.planUsed + ' % of ' + esc(money(c.plan, { round: true })) + '"><span style="width:' + c.planUsed + '%"></span></div>' +
       '<p class="sub">' + c.planUsed + ' % of your ' + esc(money(c.plan, { round: true })) + ' plan used.</p>' +
