@@ -25,6 +25,7 @@ function save() {
   try { localStorage.setItem(KEY, JSON.stringify(data)); return true; }
   catch (e) { toast('This browser did not allow saving. Your changes last until you close the tab.', 'error'); return false; }
 }
+function clearSaved() { try { localStorage.removeItem(KEY); } catch (e) { /* nothing saved */ } }
 function commit(next, message) { data = next; save(); render(); if (message) toast(message); }
 
 // ---------- helpers ----------
@@ -463,10 +464,10 @@ function setFilter(el) {
   render();
   const again = document.querySelector('[data-filter="' + el.dataset.filter + '"]'); if (again && el.type !== 'search') again.focus();
 }
-function resetDemo() { confirmBox('Reset the demo?', 'Your changes in this browser are replaced by the original sample data.', 'Reset demo', () => { data = seed(TODAY); save(); toast('Sample data restored.'); if (!route().name || route().name === 'project') location.hash = '#/dashboard'; render(); }); }
+function resetDemo() { confirmBox('Reset the demo?', 'Your changes in this browser are replaced by the original sample data.', 'Reset demo', () => { clearSaved(); data = seed(TODAY); toast('Sample data restored.'); if (!route().name || route().name === 'project') location.hash = '#/dashboard'; render(); }); }
 $('#resetDemo').addEventListener('click', resetDemo);
 $('#enterDemo').addEventListener('click', e => { e.preventDefault(); if (location.hash !== '#/dashboard') location.hash = '#/dashboard'; else { $('#app').scrollIntoView({ behavior: 'smooth', block: 'start' }); } });
-$('#startEmpty').addEventListener('click', () => confirmBox('Start with an empty workspace?', 'All projects, milestones, tasks and risks in this browser are removed. Reset demo brings the sample data back.', 'Empty the workspace', () => { data = { version: 1, projects: [], milestones: [], tasks: [], risks: [] }; save(); location.hash = '#/dashboard'; render(); toast('The workspace is empty.'); }));
+$('#startEmpty').addEventListener('click', () => confirmBox('Start with an empty workspace?', 'All projects, milestones, tasks and risks in this browser are removed. Reset demo brings the sample data back.', 'Empty the workspace', () => { clearSaved(); data = { version: 1, projects: [], milestones: [], tasks: [], risks: [] }; location.hash = '#/dashboard'; render(); toast('The workspace is empty.'); }));
 window.addEventListener('hashchange', render);
 window.addEventListener('storage', e => { if (e.key === KEY) { data = load(); render(); } });
 
