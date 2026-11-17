@@ -4,7 +4,7 @@
 (function () {
   'use strict';
   var root = document.documentElement;
-  var calm = root.classList.contains('cv-motion-off') || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var calm = root.classList.contains('cv-motion-off');
   var fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 
   function ready(fn) { if (document.readyState !== 'loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
@@ -37,7 +37,7 @@
       pts = [];
       for (var y = gap / 2; y < H; y += gap) for (var x = gap / 2; x < W; x += gap) pts.push(x, y);
       packets = [];
-      var n = W < 600 ? 5 : 11;
+      var n = W < 600 ? 0 : 11; // no moving lines on phones: the text there spans the full width
       for (var i = 0; i < n; i++) packets.push(newPacket(true));
     }
     function newPacket(anywhere) {
@@ -180,7 +180,6 @@
     document.querySelectorAll('.cv-job .cv-when').forEach(function (el) {
       var txt = el.textContent;
       if (!/\d{4}/.test(txt)) return;
-      el.setAttribute('aria-label', txt);
       var real = document.createElement('span'); real.className = 'cv-sr'; real.textContent = txt;
       var roll = document.createElement('span'); roll.className = 'cv-roll'; roll.setAttribute('aria-hidden', 'true'); roll.textContent = txt;
       el.textContent = ''; el.appendChild(real); el.appendChild(roll);
@@ -204,10 +203,10 @@
            every role, oldest to today, and the current role lands as the large final point. It repeats only words
            already on the page (years and employers), is hidden from screen readers, and is never printed. */
     var jl = document.querySelector('.cv-jobs');
-    if (jl && matchMedia('(min-width: 960px)').matches) {
+    if (jl && matchMedia('(min-width: 768px)').matches) {
       var roles = Array.prototype.map.call(jl.querySelectorAll('.cv-job'), function (j) {
         var org = j.querySelector('.cv-org'), when = j.querySelector('.cv-when');
-        return { org: org ? org.textContent.replace(/^[\s·]+/, '').trim() : '', when: when ? (when.getAttribute('aria-label') || when.textContent).trim() : '', now: j.classList.contains('is-now') };
+        return { org: org ? org.textContent.replace(/^[\s·]+/, '').trim() : '', when: when ? ((when.querySelector('.cv-sr') || when).textContent).trim() : '', now: j.classList.contains('is-now') };
       }).reverse();
       var NS = 'http://www.w3.org/2000/svg';
       var story = document.createElement('div'); story.className = 'cv-story'; story.setAttribute('aria-hidden', 'true');
@@ -234,9 +233,10 @@
       var st = false;
       var run = function () {
         st = false;
-        var r = story.getBoundingClientRect(), span = r.height - innerHeight;
-        var p = clamp(-r.top / (span || 1), 0, 1);
-        var q = clamp(p / 0.85, 0, 1);
+        var r = story.getBoundingClientRect(), pinned = getComputedStyle(pin).position === 'sticky';
+        var span = pinned ? r.height - pin.offsetHeight : r.height + innerHeight * 0.3;
+        var p = pinned ? clamp((pin.getBoundingClientRect().top - r.top) / (span || 1), 0, 1) : clamp((innerHeight * 0.9 - r.top) / (span || 1), 0, 1);
+        var q = clamp(p / 0.7, 0, 1);
         line.style.strokeDashoffset = (L * (1 - q)).toFixed(1);
         nodes.forEach(function (nd) { nd.el.classList.toggle('on', q >= nd.f - 0.01); });
         story.style.setProperty('--sp', p.toFixed(3));
@@ -251,13 +251,6 @@
     /* 9. A wide soft glow follows the pointer across the whole page background. */
     var glow = document.createElement('div'); glow.className = 'cv-glow'; glow.setAttribute('aria-hidden', 'true');
     document.body.appendChild(glow);
-    var gx = innerWidth / 2, gy = innerHeight / 3, tx = gx, ty = gy, gr = 0;
-    addEventListener('pointermove', function (e) { tx = e.clientX; ty = e.clientY; if (!gr) gr = requestAnimationFrame(ease); }, { passive: true });
-    function ease() {
-      gr = 0; gx += (tx - gx) * 0.12; gy += (ty - gy) * 0.12;
-      glow.style.translate = (gx - 300).toFixed(0) + 'px ' + (gy - 300).toFixed(0) + 'px';
-      if (Math.abs(tx - gx) + Math.abs(ty - gy) > 0.5) gr = requestAnimationFrame(ease);
-    }
 
     /* 6. Current role card: tilts in 3D toward the pointer, with the light that follows it. */
     var card = document.querySelector('.cv-job.is-now');

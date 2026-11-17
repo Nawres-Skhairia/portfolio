@@ -193,7 +193,7 @@
   .cv-jobs { perspective: 1400px; }
 }
 @media screen {
-  .cv-glow { position: fixed; left: 0; top: 0; width: 600px; height: 600px; border-radius: 50%; pointer-events: none; z-index: -1; background: radial-gradient(circle, color-mix(in srgb, var(--accent) 11%, transparent), transparent 65%); }
+  .cv-glow { position: fixed; right: -200px; top: -160px; width: 760px; height: 760px; border-radius: 50%; pointer-events: none; z-index: -1; background: radial-gradient(circle, color-mix(in srgb, var(--accent) 11%, transparent), transparent 65%); }
   .cv-roll { font-variant-numeric: tabular-nums; }
   .cv-job:not(.is-now) { transition: opacity .7s var(--ease), transform .9s var(--ease), filter .9s var(--ease), translate .4s var(--ease); }
   .cv-job:not(.is-now):hover { translate: 6px 0; }
@@ -218,9 +218,9 @@
 
 /* signature moment: pinned career path (wide screens, motion allowed; never printed) */
 .cv-story { display: none; }
-@media screen and (min-width: 960px) and (prefers-reduced-motion: no-preference) {
-  .cv-story { display: block; position: relative; height: 170vh; margin: 0 0 clamp(24px, 2vw, 40px); }
-  .cv-story-pin { position: sticky; top: calc(50vh - 190px); height: 380px; border: 1px solid var(--line); border-radius: var(--r-2); background: radial-gradient(120% 90% at 85% 10%, var(--accent-soft), transparent 60%), var(--bg-raised); overflow: hidden; opacity: calc(.35 + var(--sp, 0) * 3); }
+@media screen and (min-width: 768px) and (prefers-reduced-motion: no-preference) {
+  .cv-story { display: block; position: relative; margin: 0 0 clamp(24px, 2vw, 40px); }
+  .cv-story-pin { position: relative; height: 380px; border: 1px solid var(--line); border-radius: var(--r-2); background: radial-gradient(120% 90% at 85% 10%, var(--accent-soft), transparent 60%), var(--bg-raised); overflow: hidden; opacity: calc(.35 + var(--sp, 0) * 3); }
   .cv-story svg { position: absolute; inset: 10px 20px; width: calc(100% - 40px); height: calc(100% - 20px); overflow: visible; }
   .cv-story-base { fill: none; stroke: var(--line-strong); stroke-width: 1.5; stroke-dasharray: 4 6; vector-effect: non-scaling-stroke; }
   .cv-story-line { fill: none; stroke: var(--accent); stroke-width: 3; stroke-linecap: round; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 60%, transparent)); }
@@ -239,6 +239,11 @@
   .cv-story-node:first-of-type .cv-story-label { left: -14px; justify-items: start; transform: translateY(10px); }
   .cv-story-node:first-of-type.on .cv-story-label { transform: none; }
 }
+/* pin only on large screens, for at most one screen of scroll; elsewhere it draws in place */
+@media screen and (min-width: 1024px) and (min-height: 700px) and (prefers-reduced-motion: no-preference) {
+  .cv-story { height: calc(380px + 100vh); }
+  .cv-story-pin { position: sticky; top: calc(50vh - 190px); }
+}
 @media print { .cv-story { display: none !important; } }
 
 /* motion switch, next to EN | FR */
@@ -252,8 +257,8 @@
 /* page transitions between site pages (both pages opt in; skipped under reduced motion) */
 @media (prefers-reduced-motion: no-preference) {
   @view-transition { navigation: auto; }
-  ::view-transition-old(root) { animation: cv-vt-out .35s cubic-bezier(.4, 0, 1, 1) both; }
-  ::view-transition-new(root) { animation: cv-vt-in .55s cubic-bezier(0, 0, .2, 1) both; }
+  ::view-transition-old(root) { animation: cv-vt-out .2s cubic-bezier(.4, 0, 1, 1) both; }
+  ::view-transition-new(root) { animation: cv-vt-in .25s cubic-bezier(0, 0, .2, 1) both; }
   @keyframes cv-vt-out { to { opacity: 0; transform: translateY(-14px) scale(.985); filter: blur(4px); } }
   @keyframes cv-vt-in { from { opacity: 0; transform: translateY(18px); filter: blur(6px); } }
 }

@@ -2,10 +2,16 @@
 (function () {
   var root = document.documentElement;
   // Motion switch: a per-visit choice (sessionStorage, erased when the tab closes), like the theme switch. Nothing is sent.
-  var off = false;
-  try { off = sessionStorage.getItem('cv-motion') === 'off'; } catch (e) {}
+  // Starts off when the system asks for reduced motion.
+  var saved = null;
+  try { saved = sessionStorage.getItem('cv-motion'); } catch (e) {}
+  var off = saved ? saved === 'off' : window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // no page transition when motion is off
+  var skipVT = function (e) { if (off && e.viewTransition) e.viewTransition.skipTransition(); };
+  window.addEventListener('pagereveal', skipVT);
+  window.addEventListener('pageswap', skipVT);
   if (off) root.classList.add('cv-motion-off');
-  var still = off || !('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var still = off || !('IntersectionObserver' in window);
   if (!still) {
     root.classList.add('fx');
     // safety: if the reveal script never runs, show everything after 3 s
