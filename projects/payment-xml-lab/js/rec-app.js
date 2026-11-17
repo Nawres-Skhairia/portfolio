@@ -57,6 +57,7 @@ $('tolForm').addEventListener('submit', (e) => {
   const t = readTolerance();
   if (!t) { $('banner').textContent = 'The tolerance must be an amount such as 5.00 and a percent from 0 to 10, such as 0.5. Use 0 to switch small differences off.'; return; }
   const s = state.session; if (!s) return;
+  if (t.tolAbs === s.settings.tolAbs && t.tolBp === s.settings.tolBp) { $('banner').textContent = 'The tolerance is unchanged, so nothing was restarted.'; return; }
   const n = personDecisions(s);
   if (n && !window.confirm(`Changing the tolerance restarts the reconciliation from the files: ${n} decision${n > 1 ? 's' : ''} made by you (accepted, rejected or manual) will be undone. The audit trail keeps them and adds a "settings changed" line. Continue?`)) return;
   changeSettings(s, t); state.sel = null; render();

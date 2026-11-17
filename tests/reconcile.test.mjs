@@ -259,7 +259,7 @@ for (const t of ['', 'abc', 'a'.repeat(55), 'a'.repeat(56), 'a'.repeat(64), 'ZoÃ
 // invoices CSV reader
 {
   const dec5 = readInvoices('invoice,customer,amount,currency\nINV-1,A,10.12345,EUR\nINV-2,B,1000,JPY\nINV-3,C,1.5,JPY\nINV-4,D,1.125,KWD\n');
-  ok(!dec5.ok && dec5.problems.length === 2 && /more decimals than EUR allows \(2\)/.test(dec5.problems[0].message) && /JPY allows \(0\)/.test(dec5.problems[1].message), 'more decimals than the currency allows are refused', dec5.problems.map((p) => p.message).join(' | '));
+  ok(!dec5.ok && dec5.problems.length === 2 && /more decimals than EUR allows \(2\)/.test(dec5.problems[0].message) && /JPY has no decimals/.test(dec5.problems[1].message), 'more decimals than the currency allows are refused', dec5.problems.map((p) => p.message).join(' | '));
   const semi = 'Rechnungsnummer;Kunde;IBAN;Betrag;WÃ¤hrung;FÃ¤lligkeit\nINV-1;Alpha GmbH;;1.250,50;EUR;17.11.2026\nINV-2;Beta;;"2.000,00";EUR;2026-11-18\n';
   const a = readInvoices(semi);
   ok(a.ok && a.sep === ';' && a.decimal === ',' && E.amt(a.invoices[0].amount) === '1,250.50' && a.invoices[0].due === '2026-11-17', 'semicolon CSV with decimal comma and German headers', a.error);
@@ -280,6 +280,8 @@ for (const t of ['', 'abc', 'a'.repeat(55), 'a'.repeat(56), 'a'.repeat(64), 'ZoÃ
   ok(!readInvoices('invoice,customer,amount,currency\nINV-1,A,10.00,EUR\u0007\n').ok, 'control characters refused');
   const neg = readInvoices('invoice,customer,amount,currency\nCN-1,A,-10.00,EUR\n');
   ok(!neg.ok && /Credit notes are not in this version/.test(neg.problems[0].message), 'negative amount: credit notes are not in this version');
+  const jpy = readInvoices('invoice,customer,amount,currency\nINV-1,A,"1,500.50",EUR\nINV-2,B,1.000,JPY\n');
+  ok(!jpy.ok && /JPY has no decimals/.test(jpy.problems.map((p) => p.message).join(' ')), 'JPY "1.000" with a decimal point is refused, not read as 1 yen', jpy.problems.map((p) => p.message).join(' | '));
   ok(parseAmount('1 234,56', ',') === 123456000n && parseAmount('1,23,4.00', '.') === null && parseAmount('12.345.678,9', ',') === 1234567890000n, 'amount reader');
   const big = readInvoices('invoice,customer,amount,currency\n' + 'INV-1,A,1.00,EUR\n'.repeat(5001));
   ok(!big.ok && /limit is 5,000/.test(big.error), 'more than 5,000 invoices refused');
