@@ -111,7 +111,7 @@ function trendChart(tr) {
     const cx = left + col * i + col / 2;
     g += '<rect class="b-in" x="' + (cx - bw - 2) + '" y="' + y(x.income) + '" width="' + bw + '" height="' + (y(0) - y(x.income)) + '" rx="2"><title>Money in ' + esc(money(x.income)) + '</title></rect>';
     g += '<rect class="b-out" x="' + (cx + 2) + '" y="' + y(x.spent) + '" width="' + bw + '" height="' + (y(0) - y(x.spent)) + '" rx="2"><title>Money out ' + esc(money(x.spent)) + '</title></rect>';
-    g += '<text class="lbl" x="' + cx + '" y="' + (H - 6) + '" text-anchor="middle">' + esc(E.monthName(x.month, true).split(' ')[0]) + (x.month === THIS_MONTH ? '*' : '') + '</text>';
+    g += '<text class="lbl" x="' + cx + '" y="' + (H - 6) + '" text-anchor="middle">' + esc(E.monthName(x.month, true).split(' ')[0].slice(0, 3)) + (x.month === THIS_MONTH ? '*' : '') + '</text>';
   });
   const summary = tr.map(x => E.monthName(x.month) + ': in ' + money(x.income) + ', out ' + money(x.spent)).join('; ');
   return '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Money in and out, last six months. ' + esc(summary) + '">' + g + '</svg>' +
@@ -218,8 +218,10 @@ function whereChart(m) {
   if (!total) return '<p class="muted">Nothing spent yet in this month.</p>';
   const top = cats.slice(0, 5); const rest = cats.slice(5).reduce((s, x) => s + x.spent, 0);
   const list = rest ? [...top, { category: 'Other', spent: rest }] : top;
-  const ins = E.insights({ ...data }, m === THIS_MONTH ? TODAY : E.addDays(E.addMonths(m, 1) + '-01', -1)).find(i => /^(over|pace|mom)-/.test(i.id));
-  const say = ins ? ins.text : list[0].category + ' took the most: ' + money(list[0].spent, { round: true }) + ', ' + E.pct(list[0].spent, total) + ' % of your spending.';
+  const bs = E.budgetStatus(data, m, TODAY); const over = bs.find(b => b.state === 'over'); const pace = bs.find(b => b.state === 'pace');
+  const say = over ? over.category + ': ' + money(over.spent, { round: true }) + ' of its ' + money(over.limit, { round: true }) + ' plan.'
+    : pace ? pace.category + ' may end the month near ' + money(pace.projected, { round: true }) + ', for a ' + money(pace.limit, { round: true }) + ' plan.'
+    : list[0].category + ' took the most: ' + money(list[0].spent, { round: true }) + ', ' + E.pct(list[0].spent, total) + ' % of your spending.';
   return catBars(list, total) + '<p class="say">' + esc(say) + '</p>';
 }
 function lineChart(tr) {
@@ -233,7 +235,7 @@ function lineChart(tr) {
   let g = '';
   for (let v = 0; v <= ceil; v += step) g += '<line class="grid-l" x1="' + left + '" x2="' + (W - right) + '" y1="' + y(v) + '" y2="' + y(v) + '"/><text x="' + (left - 8) + '" y="' + (y(v) + 4) + '" text-anchor="end">' + esc(short(v)) + '</text>';
   g += '<path class="ln-in" d="' + path('income') + '"/><path class="ln-out" d="' + path('spent') + '"/>';
-  tr.forEach((d, i) => { g += '<circle class="pt-in" cx="' + x(i) + '" cy="' + y(d.income) + '" r="3"/><circle class="pt-out" cx="' + x(i) + '" cy="' + y(d.spent) + '" r="3"/><text class="lbl" x="' + x(i) + '" y="' + (H - 6) + '" text-anchor="middle">' + esc(E.monthName(d.month, true).split(' ')[0]) + '</text>'; });
+  tr.forEach((d, i) => { g += '<circle class="pt-in" cx="' + x(i) + '" cy="' + y(d.income) + '" r="3"/><circle class="pt-out" cx="' + x(i) + '" cy="' + y(d.spent) + '" r="3"/><text class="lbl" x="' + x(i) + '" y="' + (H - 6) + '" text-anchor="middle">' + esc(E.monthName(d.month, true).split(' ')[0].slice(0, 3)) + '</text>'; });
   const full = tr.filter(d => d.month !== THIS_MONTH);
   const avg = k => full.length ? Math.round(full.reduce((s, d) => s + d[k], 0) / full.length) : 0;
   const say = full.length ? 'In a usual month you earned about ' + money(avg('income'), { round: true }) + ' and spent about ' + money(avg('spent'), { round: true }) + '.' : '';
@@ -278,7 +280,7 @@ function goals() {
         '<button type="button" class="lnk" data-act="goal-edit" data-id="' + esc(g.id) + '">Change</button></td></tr>';
   };
   const table = list => '<div class="tbl-wrap"><table class="tbl goals"><thead><tr><th>Goal</th><th>Progress</th><th class="r">Saved</th><th class="r">Target</th><th class="r">Done</th><th>Date</th><th>Pace</th><th><span class="sr">Actions</span></th></tr></thead><tbody>' + list.map(row).join('') + '</tbody></table></div>';
-  const history = open.filter(g => g.adds.length).map(g => '<details class="hist"><summary>' + esc(g.name) + ': ' + g.adds.length + (g.adds.length === 1 ? ' entry' : ' entries') + '</summary><table class="tbl"><thead><tr><th>Date</th><th class="r">Amount</th><th>Note</th></tr></thead><tbody>' + [...g.adds].reverse().slice(0, 100).map(a => '<tr><td>' + esc(ddate(a.date)) + '</td><td class="r money">' + esc(money(a.amount, { sign: true })) + '</td><td>' + esc(a.note || '') + '</td></tr>').join('') + '</tbody></table></details>').join('');
+  const history = open.filter(g => g.adds.length).map(g => '<details class="hist"><summary><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 6l6 6-6 6"/></svg>' + esc(g.name) + ': ' + g.adds.length + (g.adds.length === 1 ? ' entry' : ' entries') + '</summary><table class="tbl"><thead><tr><th>Date</th><th class="r">Amount</th><th>Note</th></tr></thead><tbody>' + [...g.adds].reverse().slice(0, 100).map(a => '<tr><td>' + esc(ddate(a.date)) + '</td><td class="r money">' + esc(money(a.amount, { sign: true })) + '</td><td>' + esc(a.note || '') + '</td></tr>').join('') + '</tbody></table></details>').join('');
   return head('Savings', 'Goals', open.length ? 'The pinned goal, or the one with the nearest date, shows on the overview. The pace is an estimate, never a promise.' : 'Name what you are saving for, set an amount and, if you like, a date.', '<button type="button" class="btn" data-act="goal-new">New goal</button>') +
     (open.length ? '<section class="card flush">' + table(open) + '</section>' : '<section class="card"><p class="muted">No goal yet. <button type="button" class="lnk" data-act="goal-new">Set your first goal</button>.</p></section>') +
     (history ? '<section class="card" style="margin-top:16px"><div class="ch"><h2>Money added and taken out</h2></div>' + history + '</section>' : '') +

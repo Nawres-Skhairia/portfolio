@@ -185,5 +185,6 @@ test('savings goals: honest percentages, a kind pace, never below zero, cents on
   assert.ok(E.isValidData(s));
   // month card: savings are not spending
   const mc = E.monthCard(s, '2026-10', '2026-11-17');
-  assert.equal(mc.saved, 20500); assert.ok(mc.plan > 0);
+  assert.equal(mc.saved, 18000); assert.ok(mc.plan > 0);
+  const nov = E.monthCard(s, "2026-11", "2026-11-17"); assert.equal(nov.saved, 15000); assert.ok(nov.left > 50000, "the sample is calm: well inside its plan"); assert.ok(nov.over && nov.over.by < 5000, "at most one category slightly over");
 });

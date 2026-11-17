@@ -364,3 +364,23 @@ body[data-view="overview"] .main { padding-top: 14px; }
 .mcard .big { font-size: 42px; }
 .plan { margin-top: 10px; }
 .goal { margin: 12px 0; }
+
+/* Olivia's review, 17 Nov 19:40 */
+.tbl.goals th { text-transform: none; letter-spacing: 0; font-size: 12.5px; font-weight: 550; }
+.tbl.goals td { vertical-align: middle; padding-top: 10px; padding-bottom: 10px; }
+.tbl.goals .g-name > span { padding: 2px 0; line-height: 1.35; }
+.tbl.goals .g-name .chip { vertical-align: 1px; margin-left: 4px; }
+.hist summary { list-style: none; display: flex; align-items: center; gap: 6px; }
+.hist summary::-webkit-details-marker { display: none; }
+.hist .chev { width: 14px; height: 14px; fill: none; stroke: var(--ink2); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform .15s; }
+.hist[open] .chev { transform: rotate(90deg); }
+@media (prefers-reduced-motion: reduce) { .hist .chev { transition: none; } }
+@media (max-width: 700px) {
+  .goal { display: block; position: relative; }
+  .goal .g-ic { position: absolute; left: 18px; top: 16px; width: 32px; height: 32px; border-radius: 9px; }
+  .goal .g-ic .gi { width: 18px; height: 18px; }
+  .goal h2 { padding-left: 44px; line-height: 32px; }
+  .goal .g-top { margin-bottom: 8px; }
+  .goal .g-acts { margin-top: 14px; }
+  .goal.empty .g-body { padding-left: 44px; } .goal.empty h2 { padding-left: 0; } .goal.empty .btn { margin-top: 12px; }
+}
