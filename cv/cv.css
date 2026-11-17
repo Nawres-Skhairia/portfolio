@@ -54,6 +54,10 @@
 .cv-more { display: inline-flex; gap: 6px; margin-top: 12px; font-family: var(--mono); font-size: var(--step--2); letter-spacing: .04em; color: var(--ink-2); text-decoration: none; transition: color .25s; }
 .cv-more:hover, .cv-more:focus-visible { color: var(--accent); }
 
+.cv-closing { margin-top: clamp(48px, 2rem + 3vw, 88px); padding-top: 24px; border-top: 1px solid var(--line); font-family: var(--mono); font-size: var(--step--2); letter-spacing: .03em; color: var(--ink-3); }
+.cv-closing a { color: var(--ink-2); text-decoration: none; background: linear-gradient(currentColor, currentColor) 0 100% / 100% 1px no-repeat; transition: color .25s; }
+.cv-closing a:hover { color: var(--accent); }
+
 /* side column */
 .cv-skills { display: grid; gap: 18px; margin: 0; }
 .cv-skills dt { margin-bottom: 8px; font-size: var(--step--1); font-weight: 600; color: var(--ink); }
@@ -97,7 +101,7 @@
 /* print: A4, light, no navigation or motion, two columns kept, breaks only between jobs */
 @media print {
   @page { size: A4; margin: 14mm 12mm; }
-  .site-head, .footer, .cv-print-item, .cv-more, .kicker, .pt-panel { display: none !important; }
+  .site-head, .footer, .cv-print-item, .cv-more, .cv-closing, .kicker, .pt-panel { display: none !important; }
   :root, :root[data-theme="dark"] { color-scheme: light; background: #fff; }
   body { background: #fff; font-size: 10pt; }
   .wrap.cv { padding-inline: 0; }
