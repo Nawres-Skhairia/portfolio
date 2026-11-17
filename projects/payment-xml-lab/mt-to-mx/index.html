@@ -84,7 +84,7 @@
 
     <section class="block">
       <h2>Mapping table <span class="muted" id="rowMeta"></span></h2>
-      <div class="table-wrap"><table class="cat map" id="mapTable">
+      <div class="table-wrap" tabindex="0" role="region" aria-label="Field-by-field mapping table (scrolls sideways)"><table class="cat map" id="mapTable">
         <thead><tr><th>MT field</th><th>MT value</th><th>Rule</th><th>pacs.008 element</th><th>pacs.008 value</th><th>Status</th><th>Explanation</th></tr></thead>
         <tbody></tbody>
       </table></div>
@@ -94,7 +94,7 @@
       <h2>Reverse check <span class="muted">if this pacs.008 goes back to an MT party</span></h2>
       <p class="muted rv-intro">Lines of 35 characters, a fixed number of lines per field, and the MT character set. <button type="button" class="tb tb-small" id="nativeBtn">Try it on a native pacs.008</button> <button type="button" class="tb tb-small" id="ownBtn" hidden>Back to the converted message</button></p>
       <p class="rv-src" id="rvSrc"></p>
-      <div class="table-wrap"><table class="cat rv" id="rvTable">
+      <div class="table-wrap" tabindex="0" role="region" aria-label="Reverse check table (scrolls sideways)"><table class="cat rv" id="rvTable">
         <thead><tr><th>pacs.008 element</th><th>MT field</th><th>Before</th><th>After</th><th>What happens</th></tr></thead>
         <tbody></tbody>
       </table></div>
@@ -102,7 +102,7 @@
 
     <section class="more">
       <h2 id="catalogue">Mapping rules <span class="muted" id="catVersion"></span></h2>
-      <div class="table-wrap"><table class="cat" id="catTable">
+      <div class="table-wrap" tabindex="0" role="region" aria-label="Rule catalogue table (scrolls sideways)"><table class="cat" id="catTable">
         <thead><tr><th>ID</th><th>MT</th><th>pacs.008</th><th>Can give</th><th>What it does</th><th>Source</th></tr></thead>
         <tbody></tbody>
       </table></div>

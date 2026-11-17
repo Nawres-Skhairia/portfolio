@@ -324,6 +324,8 @@ for (const t of ['', 'abc', 'a'.repeat(55), 'a'.repeat(56), 'a'.repeat(64), 'ZoÃ
   ok(/clearRun\(\);[\s\S]*readyToReconcile\(/.test(startFn), 'start() clears the old run before checking the inputs');
 }
 
+ok((readFileSync(new URL('reconcile/index.html', base), 'utf8').match(/class="table-wrap" tabindex="0" role="region"/g) || []).length === 2, 'scrolling tables reachable by keyboard (Mia)');
+
 // Daniel's measure: 2,000 entries against 3,000 invoices
 {
   const invoices = Array.from({ length: 3000 }, (_, i) => ({ number: `INV-${100000 + i}`, customer: `Customer ${i % 400}`, account: null, amount: BigInt(10000000 + (i % 977) * 100000), currency: 'EUR', due: '2026-11-10', reference: null }));

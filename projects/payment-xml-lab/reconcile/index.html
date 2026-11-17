@@ -107,7 +107,7 @@
       <h2>Audit trail <span class="muted" id="trailMeta"></span></h2>
       <p class="muted trail-intro">Every line carries the fingerprint (SHA-256) of the line before it. A change to an exported trail can be found by comparing it with the final fingerprint printed in the report. <label class="tb tb-small" for="verifyIn">Check this trail<input type="file" id="verifyIn" accept=".csv,.jsonl,.json,.txt,text/csv,application/json,text/plain"></label></p>
       <p class="verify" id="verifyOut" aria-live="polite"></p>
-      <div class="table-wrap"><table class="cat trail" id="trailTable">
+      <div class="table-wrap" tabindex="0" role="region" aria-label="Audit trail table (scrolls sideways)"><table class="cat trail" id="trailTable">
         <thead><tr><th>#</th><th>Time</th><th>Actor</th><th>Action</th><th>Entries</th><th>Invoices</th><th>Rule</th><th>Paid</th><th>Difference</th><th>Reason or detail</th><th>Fingerprint</th></tr></thead>
         <tbody></tbody>
       </table></div>
@@ -122,7 +122,7 @@
     <section class="more">
       <h2 id="catalogue">Rules <span class="muted" id="catVersion"></span></h2>
       <p class="muted small">Run in this order; an entry used by one rule is not reused by a later one, and an invoice is never used twice. Only REC-01 and REC-02 match without a person.</p>
-      <div class="table-wrap"><table class="cat" id="catTable">
+      <div class="table-wrap" tabindex="0" role="region" aria-label="Rule catalogue table (scrolls sideways)"><table class="cat" id="catTable">
         <thead><tr><th>ID</th><th>Rule</th><th>Gives</th><th>What it does</th></tr></thead>
         <tbody></tbody>
       </table></div>

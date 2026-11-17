@@ -10,7 +10,7 @@ function meta({ res, sha, name, when }) {
 const schemaWord = (s) => (s.busy ? 'not finished' : s.failed ? 'not checked' : s.valid ? 'valid' : `${s.errors.length} error(s)`);
 
 export function mapJson(ctx) {
-  return JSON.stringify({ ...meta(ctx), schema: schemaWord(ctx.schema), schemaErrors: (ctx.schema.errors || []).map((e) => ({ line: e.line, message: e.message, technical: e.raw })),
+  return JSON.stringify({ ...meta(ctx), ...(ctx.res.verdict === REJECTED ? { verdictLine: REJECTED_LINE } : {}), schema: schemaWord(ctx.schema), schemaErrors: (ctx.schema.errors || []).map((e) => ({ line: e.line, message: e.message, technical: e.raw })),
     findings: ctx.res.findings.map((f) => ({ severity: f.severity, rule: f.rule, status: f.status || null, mtLine: f.mtLine, xmlLine: f.xmlLine, message: f.message, why: f.why, fix: f.fix })), note: NOTE }, null, 2);
 }
 

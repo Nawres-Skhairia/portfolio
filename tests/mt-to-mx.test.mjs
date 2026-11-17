@@ -166,6 +166,8 @@ ok(MAP_RULES.every((r) => r.source.length && r.source.every((s) => MAP_SOURCES[s
   const used = new Set([...src.matchAll(/fail\('(MAP-\d+)'/g)].map((m) => m[1]));
   ok([...used].every((id) => REJECTING_RULES.includes(id)) && REJECTING_RULES.every((id) => id === 'MT' || MAP_RULES.some((r) => r.id === id)), 'catalogue names every rule that can give the red status', [...used].join(','));
   ok(mapHtml({ res: convert(S.broken), schema: { valid: true }, sha: 'x', name: 'n', when: '2026-11-17T10:00:00Z' }).includes('A bank would refuse it before any conversion.'), 'HTML report carries the red line');
+  ok(JSON.parse(mapJson({ res: convert(S.broken), schema: { valid: true }, sha: 'x', name: 'n', when: '2026-11-17T10:00:00Z' })).verdictLine === REJECTED_LINE && !('verdictLine' in JSON.parse(mapJson({ res: convert(S.clean), schema: { valid: true }, sha: 'x', name: 'n', when: 't' }))), 'JSON export carries the red line only when rejected (Mia)');
+  ok((readFileSync(new URL('mt-to-mx/index.html', base), 'utf8').match(/class="table-wrap" tabindex="0" role="region"/g) || []).length === 3, 'scrolling tables reachable by keyboard (Mia)');
   const page = readFileSync(new URL('mt-to-mx/index.html', base), 'utf8') + readFileSync(new URL('js/mt-app.js', base), 'utf8');
   ok(/id="learnBand"/.test(page) && /For learning only/.test(page) && !/SWIFT rejects/i.test(page + src), 'grey band present; never "SWIFT rejects"');
 }
