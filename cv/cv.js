@@ -2,7 +2,11 @@
 (function () {
   var root = document.documentElement;
   var still = !('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (!still) root.classList.add('fx');
+  if (!still) {
+    root.classList.add('fx');
+    // safety: if the reveal script never runs, show everything after 3 s
+    setTimeout(function () { if (!document.querySelector('.cv-hero.in')) root.classList.remove('fx'); }, 3000);
+  }
   var SEL = '.cv-hero, .cv-job, .cv-side .cv-block, .cv-main > .cv-block > .cv-h, #cv-side-projects ~ *';
   var showAll = function () { document.querySelectorAll(SEL).forEach(function (el) { el.classList.add('in'); }); };
   // The PDF carries no clickable links: hrefs are lifted while printing and put back after.
@@ -15,14 +19,16 @@
     if (btn) btn.addEventListener('click', function () { showAll(); unlink(); window.print(); relink(); });
     if (still) return;
     // staggered lines and tags: each item gets its place in its list
-    document.querySelectorAll('.cv-points, .cv-tags').forEach(function (ul) { Array.prototype.forEach.call(ul.children, function (li, i) { li.style.setProperty('--i', Math.min(i, 14)); }); });
+    // stagger capped per group: 400 ms in total for a list of lines, 500 ms for a group of tags
+    var stagger = function (sel, step, cap) { document.querySelectorAll(sel).forEach(function (ul) { var n = ul.children.length, s = n > 1 ? Math.min(step, cap / (n - 1)) : 0; Array.prototype.forEach.call(ul.children, function (li, i) { li.style.setProperty('--d', Math.round(i * s) + 'ms'); }); }); };
+    stagger('.cv-points', 45, 400); stagger('.cv-tags', 30, 500);
     // reading progress bar
     var bar = document.createElement('div'); bar.className = 'cv-progress'; bar.setAttribute('aria-hidden', 'true'); document.body.appendChild(bar);
     var tick = false, upd = function () { tick = false; var h = document.documentElement.scrollHeight - innerHeight; bar.style.setProperty('--p', h > 0 ? Math.min(1, scrollY / h) : 0); };
     addEventListener('scroll', function () { if (!tick) { tick = true; requestAnimationFrame(upd); } }, { passive: true }); upd();
     // soft light that follows the pointer on the current role (fine pointers only)
     var card = document.querySelector('.cv-job.is-now');
-    if (card && matchMedia('(pointer: fine)').matches) card.addEventListener('pointermove', function (e) { var r = card.getBoundingClientRect(); card.style.setProperty('--mx', (e.clientX - r.left) + 'px'); card.style.setProperty('--my', (e.clientY - r.top) + 'px'); });
+    if (card && matchMedia('(hover: hover) and (pointer: fine)').matches) card.addEventListener('pointermove', function (e) { var r = card.getBoundingClientRect(); card.style.setProperty('--mx', (e.clientX - r.left) + 'px'); card.style.setProperty('--my', (e.clientY - r.top) + 'px'); });
     var nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
     if (nav && nav.type === 'back_forward') { showAll(); return; }
     var io = new IntersectionObserver(function (entries) {
