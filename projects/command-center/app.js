@@ -399,7 +399,7 @@ function renderPanel(focus) {
       : '<ol class="history">' + [...(t.history || [])].reverse().map(h => '<li><span class="h-dot"></span><p>' + avatar(h.by, 'xs') + ' <b>' + esc(h.by) + '</b> ' + (h.field === 'Created' ? 'created the task' : 'changed <b>' + esc(h.field) + '</b>' + (h.from ? ' from <s>' + esc(h.from) + '</s>' : '') + ' to <span class="to">' + esc(h.to) + '</span>') + '</p><small>' + esc(fmtStamp(h.at)) + '</small></li>').join('') + '</ol>') +
     '</div>';
   if (scrollTop) el.querySelector('.pn-body').scrollTop = scrollTop;
-  if (focus) el.querySelector('.pn-title').focus({ preventScroll: true });
+  if (focus) el.querySelector('[data-act="close-panel"]').focus({ preventScroll: true });
 }
 function panelUpdate(patch, message) {
   const r = E.updateTask(data, ui.panel, patch, data.me, stamp());
