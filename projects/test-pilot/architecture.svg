@@ -15,8 +15,8 @@
   <text x="140" y="148" text-anchor="middle" font-size="12" fill="#4a4036">free hosting, files only</text>
   <text x="58" y="178" font-size="12.5" fill="#1f1a15">• the page and the form</text>
   <text x="58" y="198" font-size="12.5" fill="#1f1a15">• the test library</text>
-  <text x="58" y="218" font-size="12.5" fill="#1f1a15">• a small AI model</text>
-  <text x="58" y="238" font-size="12.5" fill="#1f1a15">   (about 300 MB, only on click)</text>
+  <text x="58" y="218" font-size="12.5" fill="#1f1a15">• a pre-made test plan</text>
+  <text x="58" y="238" font-size="12.5" fill="#1f1a15">   (written by hand, no AI)</text>
 
   <!-- other sites blocked -->
   <rect x="40" y="420" width="200" height="90" rx="12" fill="#fff" stroke="#a23b1c" stroke-width="2" stroke-dasharray="6 5"/>
@@ -38,22 +38,22 @@
   <text x="336" y="156" font-size="12" font-weight="700" fill="#a23b1c">1</text>
   <text x="352" y="156" font-size="14.5" font-weight="700" fill="#1f1a15">Story, then build</text>
   <text x="336" y="180" font-size="12.5" fill="#4a4036">the rules the form must</text>
-  <text x="336" y="198" font-size="12.5" fill="#4a4036">follow (editable); A, B or C</text>
+  <text x="336" y="198" font-size="12.5" fill="#4a4036">follow (one fixed story)</text>
 
   <!-- 2 AI -->
   <rect x="540" y="120" width="200" height="116" rx="12" fill="#1e3a2f"/>
   <text x="556" y="146" font-size="12" font-weight="700" fill="#f2c9a8">2</text>
-  <text x="572" y="146" font-size="14.5" font-weight="700" fill="#f3ece0">AI reads and plans</text>
-  <text x="556" y="170" font-size="12.5" fill="#f3ece0">small language model on</text>
-  <text x="556" y="188" font-size="12.5" fill="#f3ece0">your device turns the story</text>
-  <text x="556" y="206" font-size="12.5" fill="#f3ece0">into rules and test cases</text>
+  <text x="572" y="146" font-size="14.5" font-weight="700" fill="#f3ece0">Read and plan</text>
+  <text x="556" y="170" font-size="12.5" fill="#f3ece0">this version: a plan written</text>
+  <text x="556" y="188" font-size="12.5" fill="#f3ece0">by hand for the story, labelled</text>
+  <text x="556" y="206" font-size="12.5" fill="#f3ece0">"no AI"; AI in a later version</text>
   <text x="556" y="224" font-size="11.5" fill="#f2c9a8">then fixed rules check them</text>
   <path d="M500 178 H536" stroke="#1e3a2f" stroke-width="2" marker-end="url(#a)"/>
 
   <!-- library -->
   <rect x="770" y="130" width="140" height="96" rx="12" fill="#fff" stroke="#d9cdb8" stroke-width="2"/>
   <text x="786" y="156" font-size="14.5" font-weight="700" fill="#1f1a15">Test library</text>
-  <text x="786" y="180" font-size="12.5" fill="#4a4036">8 techniques the</text>
+  <text x="786" y="180" font-size="12.5" fill="#4a4036">9 techniques the</text>
   <text x="786" y="198" font-size="12.5" fill="#4a4036">robot may use</text>
   <path d="M770 178 H744" stroke="#1e3a2f" stroke-width="2" marker-end="url(#a)"/>
 
@@ -71,7 +71,7 @@
   <text x="336" y="316" font-size="14.5" font-weight="700" fill="#1f1a15">Booking form</text>
   <text x="336" y="340" font-size="12.5" fill="#1f1a15">pretend, in its own</text>
   <text x="336" y="358" font-size="12.5" fill="#1f1a15">closed frame, with</text>
-  <text x="336" y="376" font-size="12.5" fill="#a23b1c" font-weight="700">a planted bug (A, B)</text>
+  <text x="336" y="376" font-size="12.5" fill="#a23b1c" font-weight="700">a planted bug (1 to 6)</text>
   <path d="M540 342 H504" stroke="#1e3a2f" stroke-width="2" marker-end="url(#a)"/>
 
   <!-- 4 report -->
@@ -79,13 +79,13 @@
   <text x="556" y="470" font-size="12" font-weight="700" fill="#a23b1c">4</text>
   <text x="572" y="470" font-size="14.5" font-weight="700" fill="#1f1a15">Report: green, green, red</text>
   <text x="556" y="494" font-size="12.5" fill="#4a4036">Pass, fail and the verdict come from fixed rules only.</text>
-  <text x="556" y="512" font-size="12.5" fill="#4a4036">The AI only words the explanation, with an "AI" badge.</text>
+  <text x="556" y="512" font-size="12.5" fill="#4a4036">Every line of the report is fixed text. No AI here.</text>
   <text x="556" y="530" font-size="12.5" fill="#4a4036">Same story and build, same result.</text>
   <path d="M640 394 V440" stroke="#1e3a2f" stroke-width="2" marker-end="url(#a)"/>
 
   <!-- fallback note -->
-  <text x="320" y="440" font-family="Caveat, cursive" font-size="20" fill="#1e3a2f">No AI on this device?</text>
-  <text x="320" y="464" font-family="Caveat, cursive" font-size="20" fill="#1e3a2f">Run the pre-made plan,</text>
+  <text x="320" y="440" font-family="Caveat, cursive" font-size="20" fill="#1e3a2f">This version has no AI.</text>
+  <text x="320" y="464" font-family="Caveat, cursive" font-size="20" fill="#1e3a2f">The plan is pre-made,</text>
   <text x="320" y="488" font-family="Caveat, cursive" font-size="20" fill="#1e3a2f">labelled "no AI".</text>
   <text x="320" y="530" font-size="12" fill="#4a4036">Nothing is saved: no account,</text>
   <text x="320" y="547" font-size="12" fill="#4a4036">no cookies, no visitor data.</text>

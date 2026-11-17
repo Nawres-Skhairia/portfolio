@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
   <title>Test Pilot · Can a robot find the bug before your customers do? · Nawres Skhairia</title>
-  <meta name="description" content="A test robot plans and really runs tests on a small booking form, then says whether it is ready to ship and why. Runs in your browser.">
+  <meta name="description" content="A test robot really runs a test plan on a small booking form, then says whether it is ready to ship and why. Runs in your browser.">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/assets/fonts/fonts.css">
   <link rel="stylesheet" href="style.css">
@@ -19,7 +19,7 @@
   <main class="wrap">
     <section class="intro">
       <h1>Can a robot find the bug <em>before</em> your customers do?</h1>
-      <p>A test robot gets a small booking form and the story it was made from. It plans the tests, really runs them on the form in front of you, and tells you whether it is ready to ship, and why.</p>
+      <p>A test robot gets a small booking form and the story it was made from. It takes a test plan made from that story, really runs it on the form in front of you, and tells you whether it is ready to ship, and why.</p>
     </section>
 
     <section aria-label="How a run works">
@@ -58,7 +58,7 @@
         <fieldset class="who">
           <legend class="lbl">Who plans the tests</legend>
           <label><input type="radio" name="planner" value="premade" checked> Pre-made plan <span class="b k-pre">no AI</span></label>
-          <label class="off"><input type="radio" name="planner" value="ai" disabled> AI in your browser <span class="soon">(next step of this preview)</span></label>
+          <label class="off"><input type="radio" name="planner" value="ai" disabled> AI in your browser <span class="soon">(coming in a later version)</span></label>
         </fieldset>
 
         <button type="button" class="btn" id="go">Test it</button>
@@ -81,7 +81,7 @@
       <h2 class="h2">Tests <span class="count" id="testCount"></span></h2>
       <ol class="tests" id="tests"></ol>
       <div class="side" id="wrongBox" hidden>
-        <h3>The AI got this wrong</h3>
+        <h3>Plan items that failed the check</h3>
         <p class="hint">These plan items were not run, because they failed the check.</p>
         <ul id="wrong"></ul>
       </div>
@@ -101,19 +101,19 @@
       <h2 class="h2">Under the hood</h2>
       <details open>
         <summary>The functional map</summary>
-        <p>Every run goes through the six boxes at the top of the page. Each box says who does the work: <span class="b k-you">you</span> write or keep the story, <span class="b k-ai">AI</span> reads it into rules and plans the tests (pre-made in this preview), fixed <span class="b k-rules">rules</span> check the plan and decide pass, fail and the verdict, and the <span class="b k-robot">robot</span> really types and clicks in the form. Click a box after a run to see its real data.</p>
+        <p>Every run goes through the six boxes at the top of the page. Each box says who does the work: <span class="b k-you">you</span> write or keep the story, the Read and Plan steps turn it into rules and tests (in this version a <span class="b k-pre">pre-made</span> plan written by hand; <span class="b k-ai">AI</span> comes in a later version), fixed <span class="b k-rules">rules</span> check the plan and decide pass, fail and the verdict, and the <span class="b k-robot">robot</span> really types and clicks in the form. Click a box after a run to see its real data.</p>
       </details>
       <details>
         <summary>The technical drawing</summary>
-        <img src="architecture.svg" alt="How Test Pilot works: our website sends the page and, only on request, a small AI model; in the browser the AI reads and plans, fixed rules check the plan, the runner clicks through the booking form in its own frame, and the report explains the result. Nothing is sent anywhere." width="960" height="600" loading="lazy">
+        <img src="architecture.svg" alt="How Test Pilot works: our website sends the page and a pre-made test plan written by hand (no AI in this version); in the browser fixed rules check the plan, the runner clicks through the booking form in its own frame, and the report explains the result. Nothing is sent anywhere." width="960" height="600" loading="lazy">
       </details>
       <details>
-        <summary>What the AI does, and what it never does</summary>
+        <summary>Where AI will help, and where it never decides</summary>
         <table>
           <thead><tr><th>Part</th><th>Who</th><th>Real or pre-written</th></tr></thead>
           <tbody>
-            <tr><td>Reading the story into rules</td><td>AI model in your browser</td><td>Real AI (pre-made in this preview)</td></tr>
-            <tr><td>Choosing tests, values and the "why"</td><td>AI model in your browser</td><td>Real AI (pre-made in this preview)</td></tr>
+            <tr><td>Reading the story into rules</td><td>Pre-made plan, written by hand</td><td>Pre-written in this version, labelled "no AI"; AI in a later version</td></tr>
+            <tr><td>Choosing tests, values and the "why"</td><td>Pre-made plan, written by hand</td><td>Pre-written in this version, labelled "no AI"; AI in a later version</td></tr>
             <tr><td>Checking the plan</td><td>Fixed code</td><td>Real, rule-based</td></tr>
             <tr><td>Typing into the form, reading the answer</td><td>Robot (fixed code)</td><td>Real execution</td></tr>
             <tr><td>Pass, fail and the verdict</td><td>Fixed code</td><td>Real, rule-based. Never the AI.</td></tr>

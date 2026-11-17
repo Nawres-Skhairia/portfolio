@@ -33,7 +33,7 @@
   function storyNote() {
     const edited = $('story').value.trim() !== PRE.STORY;
     $('storyNote').hidden = !edited;
-    $('storyNote').textContent = edited ? 'You changed the story. The pre-made plan only fits the original story, so an edited story needs the AI (coming in the next step of this preview).' : '';
+    $('storyNote').textContent = edited ? 'You changed the story. The pre-made plan only fits the original story, so an edited story needs the AI, which comes in a later version.' : '';
     $('go').disabled = edited;
     if (edited) {
       $('storyNote').append(' ');
