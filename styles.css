@@ -24,8 +24,8 @@
   --shadow-1: 0 1px 2px rgba(22, 19, 15, .05), 0 2px 10px rgba(22, 19, 15, .04);
   --shadow-2: 0 2px 6px rgba(22, 19, 15, .05), 0 30px 60px -20px rgba(22, 19, 15, .28);
 
-  --serif: "Instrument Serif", "Iowan Old Style", Georgia, serif;
-  --sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --serif: "Instrument Serif", "Instrument Serif Fallback", "Iowan Old Style", Georgia, serif;
+  --sans: "Inter", "Inter Fallback", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
   /* fluid type, ratio about 1.25; every size mixes rem and vw so browser zoom keeps working */
@@ -233,8 +233,8 @@ h2 { font-size: var(--step-3); line-height: 1; letter-spacing: -.025em; max-widt
 .for { font-family: var(--mono); font-size: var(--step--2); font-weight: 500; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
 .row h3 { font-size: var(--step-3); line-height: 1; letter-spacing: -.025em; }
 .row-p { display: block; font-size: var(--step-0); color: var(--ink-2); max-width: 46ch; }
-.facts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
-.facts span { font-family: var(--mono); font-size: var(--step--2); color: var(--ink-2); padding: 6px 11px; border-radius: 8px; background: var(--bg-sunk); border: 1px solid var(--line); }
+.facts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.facts span { font-family: var(--mono); font-size: .72rem; white-space: nowrap; color: var(--ink-2); padding: 5px 9px; border-radius: 8px; background: var(--bg-sunk); border: 1px solid var(--line); }
 .card-cta { margin-top: auto; padding-top: 8px; display: inline-flex; align-items: center; gap: 12px; font-weight: 600; font-size: var(--step--1); }
 .card-cta .arrow { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line-strong); transition: background-color .35s, color .35s, border-color .35s, transform .5s var(--spring); }
 .row:hover .card-cta .arrow { background: var(--ink); color: var(--bg); border-color: var(--ink); transform: translateX(6px) rotate(-45deg); }
@@ -325,9 +325,12 @@ h2 { font-size: var(--step-3); line-height: 1; letter-spacing: -.025em; max-widt
 @media print { .site-head { position: static; } body::after, .cursor { display: none; } }
 
 /* ---------- phones ---------- */
-@media (max-width: 760px) {
-  .nav .cv-pill { display: none; }
+@media (max-width: 560px) {
+  .logo-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .nav .cv-pill { padding: 0 4px; gap: 6px; }
+  .nav .cv-pill .badge { padding: 2px 7px; }
 }
+@media (max-width: 359px) { .nav .cv-pill .badge { display: none; } }
 @media (max-width: 560px) {
   .logo { font-size: 1.25rem; gap: 10px; }
   .logo-mark { width: 30px; height: 30px; }
@@ -383,3 +386,67 @@ h2 { font-size: var(--step-3); line-height: 1; letter-spacing: -.025em; max-widt
   .proof { border-color: var(--line-strong); }
   .eyebrow, .num, .facts span { background: var(--bg-sunk); }
 }
+
+/* ======================= round 4: finer motion on what is already there ======================= */
+
+/* page change home <-> tools: a short cross-fade where the browser supports it */
+@view-transition { navigation: auto; }
+::view-transition-old(root) { animation: vt-out .28s var(--ease) both; }
+::view-transition-new(root) { animation: vt-in .42s var(--ease) both; }
+@keyframes vt-out { to { opacity: 0; transform: translateY(-8px); } }
+@keyframes vt-in { from { opacity: 0; transform: translateY(12px); } }
+
+/* keyboard focus: the ring closes in instead of appearing */
+@media (prefers-reduced-motion: no-preference) {
+  :focus-visible { animation: focus-in .35s var(--ease); }
+}
+@keyframes focus-in { from { outline-offset: 10px; outline-color: transparent; } }
+
+/* header: once the page moves, the bar gets a soft shadow and the mark gets smaller (scroll driven, no script) */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: scroll()) {
+    .site-head { animation: head-lift linear both; animation-timeline: scroll(root); animation-range: 0 180px; }
+    .logo-mark { animation: mark-shrink linear both; animation-timeline: scroll(root); animation-range: 0 180px; }
+    @keyframes head-lift { to { box-shadow: 0 12px 32px -24px rgba(22, 19, 15, .5); background: color-mix(in srgb, var(--bg) 88%, transparent); } }
+    @keyframes mark-shrink { to { scale: .86; } }
+  }
+}
+
+/* the menu shows where you are on the page (set by the site script) */
+.nav nav a.is-here { color: var(--ink); }
+.nav nav a.is-here:not(.nav-cta)::after { transform: scaleX(1); transform-origin: left; }
+
+/* kicker lines draw in as the section arrives */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .kicker::before { transform-origin: left; animation: line-draw linear both; animation-timeline: view(); animation-range: entry 10% cover 30%; }
+    @keyframes line-draw { from { transform: scaleX(0); } }
+  }
+}
+
+/* proof panel: a scan passes over the report while its lines come in */
+.proof-body { position: relative; }
+@media (prefers-reduced-motion: no-preference) {
+  .proof-body::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 64px; pointer-events: none; background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--accent) 12%, transparent), transparent); opacity: 0; animation: scan 2.2s .3s var(--ease) both; }
+  @keyframes scan { 0% { opacity: 0; transform: translateY(-40px); } 15% { opacity: 1; } 85% { opacity: 1; } 100% { opacity: 0; transform: translateY(340px); } }
+  .proof:hover .ln.ok b { animation: tick .5s var(--spring); }
+  .proof:hover .ln.ok:nth-child(2) b { animation-delay: .05s; }
+  .proof:hover .ln.ok:nth-child(3) b { animation-delay: .1s; }
+  .proof:hover .ln.ok:nth-child(4) b { animation-delay: .15s; }
+  @keyframes tick { 40% { transform: scale(1.35); } }
+}
+.count { font-variant-numeric: tabular-nums; }
+
+/* row pictures: a slight 3D lean towards the pointer, never cut */
+.media { perspective: 1400px; }
+.media img { transform: rotateX(var(--irx, 0deg)) rotateY(var(--iry, 0deg)) translate(var(--ix, 0px), var(--iy, 0px)); }
+.row:hover .media img { transform: rotateX(var(--irx, 0deg)) rotateY(var(--iry, 0deg)) translate(var(--ix, 0px), calc(var(--iy, 0px) - 4px)); }
+
+/* pointer ring over a tool row: it grows into a dark disc with an arrow */
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .has-cursor .cursor::after { content: "→"; position: absolute; inset: 0; display: grid; place-items: center; font-size: 13px; color: var(--bg); opacity: 0; transform: rotate(-45deg) scale(.6); transition: opacity .3s, transform .45s var(--spring); }
+  .has-cursor.cursor-row .cursor { scale: 2; background: var(--ink); border-color: transparent; mix-blend-mode: normal; }
+  .has-cursor.cursor-row .cursor::after { opacity: 1; transform: rotate(-45deg) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) { @view-transition { navigation: none; } }
