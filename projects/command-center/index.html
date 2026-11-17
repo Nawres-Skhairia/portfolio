@@ -20,6 +20,8 @@
     <symbol id="i-cal" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14" rx="2.5"/><path d="M4 10h16M9 3.5v4M15 3.5v4"/></symbol>
     <symbol id="i-chart" viewBox="0 0 24 24"><path d="M5 19V9M10 19V5M15 19v-7M20 19v-4"/></symbol>
     <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.2-4.2"/></symbol>
+    <symbol id="i-expand" viewBox="0 0 24 24"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></symbol>
     <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
     <symbol id="i-filter" viewBox="0 0 24 24"><path d="M5 7h14M8 12h8M11 17h2"/></symbol>
     <symbol id="i-pause" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M10 9.5v5M14 9.5v5"/></symbol>
@@ -56,6 +58,7 @@
         <a class="nv" href="#/mytasks" data-nav="mytasks" title="My tasks"><svg class="i"><use href="#i-check"/></svg>My tasks<i class="ct" id="myCount"></i></a>
         <a class="nv" href="#/board" data-nav="board" title="Board"><svg class="i"><use href="#i-board"/></svg>Board</a>
         <a class="nv" href="#/calendar" data-nav="calendar" title="Calendar"><svg class="i"><use href="#i-cal"/></svg>Calendar</a>
+        <a class="nv" href="#/lists" data-nav="lists" title="Lists"><svg class="i"><use href="#i-list"/></svg>Lists</a>
         <a class="nv" href="#/reports" data-nav="reports" title="Reports"><svg class="i"><use href="#i-chart"/></svg>Reports</a>
         <a class="nv" href="#/workspace" data-nav="workspace" title="People"><svg class="i"><use href="#i-people"/></svg>People<i class="ct" id="pplCount"></i></a>
         <a class="nv" href="#/admin" data-nav="admin" title="Admin" id="adminNav" hidden><svg class="i"><use href="#i-shield"/></svg>Admin</a>
@@ -87,7 +90,7 @@
   <button type="button" class="fab" data-act="new-task" aria-label="Create task"><svg class="i" style="width:22px;height:22px"><use href="#i-plus"/></svg></button>
   <div class="more-sheet" id="moreSheet" hidden></div>
 
-  <aside class="panel-drawer" id="panel" hidden aria-label="Task details"></aside>
+  <div class="panel-drawer" id="panel" role="complementary" hidden aria-label="Task details"></div>
   <div class="palette" id="palette" hidden></div>
   <dialog id="dlg" aria-labelledby="dlgTitle"></dialog>
   <div class="toasts" id="toasts" role="status" aria-live="polite"></div>

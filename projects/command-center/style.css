@@ -861,6 +861,46 @@ a.who-row:hover b { color: var(--accd); }
 .cal .cell.out .num { color: var(--t3); }
 .col header { min-height: 34px; }
 
+/* ---------- full-page task ---------- */
+body.task-full #main, body.task-full #band { visibility: hidden; }
+body.task-full #panel { left: 236px; width: auto; border-left: 0; box-shadow: none; animation: none; background: var(--bg); }
+body.task-full #panel .pn-head { border-bottom: 0; }
+body.task-full #panel .pn-head, body.task-full #panel .pn-body { width: 100%; max-width: 900px; margin: 0 auto; padding-left: 40px; padding-right: 40px; }
+body.task-full #panel .pn-title { font-size: 34px; }
+body.task-full #panel .composer { left: 50%; right: auto; width: min(820px, calc(100% - 80px)); transform: translateX(-50%); }
+@media (max-width: 900px) { body.task-full #panel { left: 0; } body.task-full #panel .pn-head, body.task-full #panel .pn-body { padding-left: 18px; padding-right: 18px; } body.task-full #panel .composer { width: calc(100% - 36px); } }
+
+/* ---------- lists ---------- */
+.lists-pick { display: flex; gap: 6px; flex-wrap: wrap; margin: 18px 0 12px; }
+.lt-tools { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 12px 0; }
+.lt-tools .fsel { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--t2); }
+.lt-card { overflow: hidden; }
+.lt-wrap { overflow-x: auto; position: relative; }
+table.lt { width: 100%; border-collapse: collapse; font-size: 14px; }
+.lt th { text-align: left; font-size: 11.5px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--t3); padding: 12px 14px; border-bottom: 1px solid var(--line); white-space: nowrap; background: var(--surf); }
+.lt th button { all: unset; cursor: pointer; } .lt th button:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; border-radius: 4px; }
+.lt td { padding: 10px 14px; border-bottom: 1px solid var(--divider); vertical-align: middle; }
+.lt tbody tr:not(.lt-g):hover td { background: var(--sunk); }
+.lt tr.sel td { background: var(--accbg); }
+.lt .lt-g th { text-transform: none; letter-spacing: 0; font-size: 13px; color: var(--t1); background: var(--sunk); padding: 8px 14px; }
+.lt .lt-g small { color: var(--t3); font-weight: 500; margin-left: 6px; }
+.lt-title { color: var(--t1); font-weight: 550; text-decoration: none; } .lt-title:hover { text-decoration: underline; }
+.lt-why { display: block; color: var(--t3); font-size: 12.5px; }
+.lc-title { min-width: 220px; }
+.lt .key.lk { border: 0; background: var(--sunk); color: var(--t2); font-size: 12px; padding: 3px 7px; border-radius: 6px; cursor: pointer; white-space: nowrap; }
+.lt-p { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; } .lt-p .pd { width: 8px; height: 8px; border-radius: 3px; background: var(--pc); }
+.lt-o { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+.lt-d { white-space: nowrap; }
+.colpick { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; }
+.pins { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 18px; margin-top: 20px; }
+.pin-tip { margin: 18px 0 0; font-size: 13.5px; } .pin-tip a { display: inline-flex; gap: 6px; align-items: center; color: var(--t2); text-decoration: none; } .pin-tip a:hover { color: var(--acc); } .pin-tip .i { width: 16px; height: 16px; }
+@media (max-width: 900px) {
+  .lt thead { display: none; } .lt, .lt tbody, .lt tr, .lt td { display: block; width: 100%; }
+  .lt tbody tr:not(.lt-g) { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; padding: 12px 14px; border-bottom: 1px solid var(--divider); }
+  .lt td { border: 0; padding: 0; } .lt .lc-title { grid-column: 1 / -1; order: -1; min-width: 0; }
+  .lt td:empty { display: none; } .lt .lt-g { display: block; } .lt .lt-g th { display: block; }
+}
+
 /* ---------- account security, reset, admin ---------- */
 .note-calm { background: var(--pausebg); color: var(--t1); border-radius: 10px; padding: 10px 12px; font-size: 13.5px; margin: 0 0 12px; }
 .card2.narrow { max-width: 460px; margin-top: 22px; padding: 18px; }

@@ -136,7 +136,7 @@ function route() {
   const parts = path.split('/');
   return { name: parts[0] || '', id: decodeURIComponent(parts[1] || ''), params: new URLSearchParams(query || '') };
 }
-const VIEWS = { overview, mytasks: myTasks, calendar: calendarView, workspace: workspaceView, account: accountView, join: joinView, board, backlog, projects, project: projectView, dependencies, risks, insights: insightsView, reports, verify: verifyView, mailbox: mailboxView, reset: resetView, email: emailView, admin: adminView };
+const VIEWS = { overview: r => overview(r) + pinnedLists(), mytasks: myTasks, calendar: calendarView, workspace: workspaceView, account: accountView, join: joinView, board, backlog, projects, project: projectView, dependencies, risks, insights: insightsView, reports, verify: verifyView, mailbox: mailboxView, reset: resetView, email: emailView, admin: adminView, lists: listsView, task: taskPage };
 const NAV_OF = { backlog: 'board' };
 let lastHash = null;
 
@@ -147,10 +147,13 @@ function render() {
   if (!view) { location.replace('#/overview'); return; }
   if (r.name === 'dependencies' && r.params.get('p')) ui.deps.project = r.params.get('p');
   if (r.name === 'reports') { if (r.params.get('type')) ui.reports.type = r.params.get('type'); if (r.params.get('p')) ui.reports.project = r.params.get('p'); }
+  if (r.name === 'task' && lastHash && !lastHash.startsWith('#/task/')) ui.fullFrom = lastHash;
+  if (r.name !== 'task' && lastHash && lastHash.startsWith('#/task/')) ui.panel = null;
   const linked = r.params.get('task');
   if (linked && task(linked)) { ui.panel = linked; history.replaceState(null, '', '#/' + r.name + (r.id ? '/' + encodeURIComponent(r.id) : '')); }
   main.innerHTML = view(r);
   main.dataset.view = r.name;
+  document.body.classList.toggle('task-full', r.name === 'task' && !!ui.panel);
   document.body.classList.toggle('on-board', r.name === 'board');
   renderSide();
   const navKey = r.name === 'project' ? (data.projects.filter(p => p.status !== 'Completed').slice(0, 8).some(p => p.id === r.id) ? 'p-' + r.id : 'projects') : (NAV_OF[r.name] || r.name);
@@ -228,6 +231,14 @@ function card(t) {
 }
 
 // ---------- views ----------
+// Lists pinned to Home: each one shows its first tasks, in its own order.
+function pinnedLists() {
+  const pins = (data.filters || []).filter(f => f.query && f.query.view && f.query.view.pin);
+  const tip = '<p class="pin-tip"><a href="#/lists">' + ic('list') + (pins.length ? 'Change your lists' : 'Make Home yours: pin a list of tasks') + '</a></p>';
+  if (!pins.length) return tip;
+  return '<div class="pins">' + pins.map(f => { const { view, ...q } = f.query; const all = sortTasks(E.applyFilter(data.tasks, { ...Q0, ...q }, data.me, TODAY), view.sort); const rows = all.slice(0, 6);
+    return '<section class="card2 pin"><div class="ch"><h3>' + esc(f.name) + '</h3><span>' + all.length + '</span><span class="grow"></span><button type="button" class="lnk" data-act="list-open" data-id="' + esc(f.id) + '">Open the list</button></div>' + (rows.length ? rows.map(t => taskRow(t, { when: true, proj: true })).join('') : '<p class="soft">Nothing here right now.</p>') + '</section>'; }).join('') + '</div>' + tip;
+}
 function overview() {
   const hour = new Date().getHours();
   const hello = (hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening') + ', ' + esc(firstName(data.me));
@@ -520,8 +531,8 @@ function downloadCsv() {
 }
 
 // ---------- task panel (side drawer, bottom sheet on phones) ----------
-function openTask(id) { if (dlg.open) dlg.close(); ui.panel = id; renderPanel(true); $$('.card').forEach(c => c.classList.toggle('sel', c.dataset.task === id)); }
-function closePanel() { const had = ui.panel; ui.panel = null; renderPanel(); $$('.card.sel').forEach(c => c.classList.remove('sel')); if (had) { const c = document.querySelector('[data-task="' + had + '"]'); if (c) c.focus(); } }
+function openTask(id) { if (dlg.open) dlg.close(); if (route().name === 'task') { location.hash = '#/task/' + encodeURIComponent(id); return; } ui.panel = id; renderPanel(true); $$('.card').forEach(c => c.classList.toggle('sel', c.dataset.task === id)); }
+function closePanel() { if (route().name === 'task') { ui.panel = null; location.hash = ui.fullFrom || '#/board'; return; } const had = ui.panel; ui.panel = null; renderPanel(); $$('.card.sel').forEach(c => c.classList.remove('sel')); if (had) { const c = document.querySelector('[data-task="' + had + '"]'); if (c) c.focus(); } }
 function activityLine(h) {
   const v = x => E.isIso(x) ? fmtDate(x) : x;
   if (h.field === 'Created') return 'created the task';
@@ -534,6 +545,7 @@ function fitText(ta) { if (!ta) return; ta.style.height = 'auto'; ta.style.heigh
 function renderPanel(focus) {
   const el = $('#panel'); const t = ui.panel && task(ui.panel);
   document.body.classList.toggle('panel-open', !!t);
+  if (t && route().name === 'task') el.setAttribute('role', 'main'); else el.setAttribute('role', 'complementary');
   if (!t) { el.hidden = true; el.innerHTML = ''; return; }
   const p = proj(t.projectId); const all = E.projectTasks(data, t.projectId);
   const waitsFor = (t.deps || []).map(task).filter(Boolean); const blocks = E.dependents(all, t.id);
@@ -546,6 +558,7 @@ function renderPanel(focus) {
   const depList = list => '<ul class="deps">' + list.map(d => '<li><button type="button" class="bl-title" data-act="open" data-id="' + esc(d.id) + '"><span class="key">' + esc(d.key) + '</span> ' + esc(d.title) + '</button><span class="st st-' + slug(d.status) + '">' + esc(stLabel(d.status)) + '</span></li>').join('') + '</ul>';
   const statusChip = paused ? pausedChip('Paused' + (since ? ' since ' + fmtDate(since, true) : '')) : t.status === 'Done' ? '<span class="chip2 c-done">' + ic('check') + 'Done</span>' : '<span class="chip2 c-n">' + esc(t.status) + '</span>';
   el.innerHTML = '<div class="pn-head"><nav class="crumb" aria-label="Where this task is"' + pcs(t.projectId) + '><span class="pd"></span><a href="#/project/' + esc(p.id) + '">' + esc(p.name) + '</a><span aria-hidden="true">›</span><span>' + esc(t.key) + '</span></nav><span class="grow"></span>' +
+      (route().name === 'task' ? '' : '<button type="button" class="icon" data-act="full-page" aria-label="Open as a full page" title="Open as a full page">' + ic('expand') + '</button>') +
       '<button type="button" class="icon" data-act="copy-link" aria-label="Copy a link to this task" title="Copy link">' + ic('link') + '</button>' +
       '<button type="button" class="icon" data-act="del-task" data-id="' + esc(t.id) + '" aria-label="Delete task" title="Delete">' + ic('trash') + '</button>' +
       '<button type="button" class="icon" data-act="close-panel" aria-label="Close" title="Close (Esc)">' + ic('x') + '</button></div>' +
@@ -851,6 +864,16 @@ document.addEventListener('click', e => {
     case 'edit-risk': riskForm(data.risks.find(x => x.id === id)); break;
     case 'del-task': { const t = task(id); ui.panel = null; commit(E.deleteTask(data, id), t.key + ' deleted.', { undo: true }); break; }
     case 'close-panel': closePanel(); break;
+    case 'full-page': location.hash = '#/task/' + encodeURIComponent(ui.panel); break;
+    case 'list-pick': applyList(el.dataset.id); break;
+    case 'list-open': applyList(el.dataset.id); location.hash = '#/lists'; break;
+    case 'lsort': { const k = el.dataset.k; ui.list.sort = { k, dir: ui.list.sort.k === k ? -ui.list.sort.dir : 1 }; render(); const b = $('[data-act="lsort"][data-k="' + k + '"]'); if (b) b.focus(); break; }
+    case 'list-cols': openForm('Columns', '<p class="muted small">Choose what the list shows. Task is always shown.</p><div class="colpick">' + LCOLS.filter(c => c[0] !== 'title').map(([k, l]) => '<label class="ckb"><input type="checkbox" name="c" value="' + k + '"' + (ui.list.columns.includes(k) ? ' checked' : '') + '> <span>' + l + '</span></label>').join('') + '</div>', fd => { const chosen = fd.getAll('c'); ui.list.columns = LCOLS.map(c => c[0]).filter(k => k === 'title' || chosen.includes(k)); render(); return {}; }, '', 'Show these columns'); break;
+    case 'list-save': { const cur = savedList(ui.list.id);
+      if (cur && el.dataset.mode === 'update') { commit({ ...data, filters: data.filters.map(f => f.id === cur.id ? { ...f, query: listQuery(cur.query.view && cur.query.view.pin) } : f) }, 'List "' + cur.name + '" saved.'); break; }
+      openForm('Save this list', field('name', 'Name', input('name', '', 'text', 'maxlength="40" required autocomplete="off"'), 'It keeps the filters, columns, grouping and order. You can pin it to Home.') + '<label class="ckb"><input type="checkbox" name="pin" checked> <span>Show it on Home</span></label>', fd => { const name = String(fd.get('name') || '').trim(); const err = E.validateFilterName(name, data.filters); if (err) return { name: err }; const id = E.uid('f'); ui.list.id = id; commit({ ...data, filters: [...(data.filters || []), { id, name, query: listQuery(fd.get('pin') === 'on') }] }, 'List "' + name + '" saved' + (fd.get('pin') === 'on' ? ' and shown on Home.' : '.')); return {}; }, '', 'Save'); break; }
+    case 'list-pin': { const cur = savedList(ui.list.id); if (!cur) break; const pin = !(cur.query.view && cur.query.view.pin); commit({ ...data, filters: data.filters.map(f => f.id === cur.id ? { ...f, query: { ...f.query, view: { ...(f.query.view || listView()), pin } } } : f) }, pin ? '"' + cur.name + '" is on Home now.' : '"' + cur.name + '" was taken off Home.'); break; }
+    case 'list-del': { const cur = savedList(ui.list.id); if (!cur) break; confirmBox('Delete the list "' + cur.name + '"?', 'Only the saved list goes. No task is changed.', 'Delete the list', () => { ui.list.id = 'p-open'; commit({ ...data, filters: data.filters.filter(f => f.id !== cur.id) }, 'List deleted.', { undo: true }); }); break; }
     case 'set-status': { const s = el.dataset.s; const r = E.updateTask(data, ui.panel, { status: s }, data.me, stamp()); if (Object.keys(r.errors).length) { toast(Object.values(r.errors)[0], 'error'); el.animate([{ transform: 'translateX(-4px)' }, { transform: 'translateX(4px)' }, { transform: 'none' }], { duration: 220 }); } else commit(r.data, task(ui.panel).key + ' is now ' + stLabel(s) + '.', { undo: true }); break; }
     case 'ask-hold': askHold(id, reason => { const r = E.hold(data, id, reason, data.me, stamp()); if (Object.keys(r.errors).length) toast(Object.values(r.errors)[0], 'error'); else commit(r.data, task(id).key + ' is paused.', { undo: true }); }); break;
     case 'resume': { const r = E.resume(data, id, data.me, stamp()); if (Object.keys(r.errors).length) toast(Object.values(r.errors)[0], 'error'); else commit(r.data, task(id).key + ' resumed.', { undo: true }); break; }
@@ -918,7 +941,7 @@ document.addEventListener('click', e => {
     case 'qa-me': { const t = task(id); if (t.owner === data.me) { toast('It is already yours.'); break; } const r = E.updateTask(data, id, { owner: data.me }, data.me, stamp()); if (Object.keys(r.errors).length) toast(Object.values(r.errors)[0], 'error'); else commit(r.data, t.key + ' assigned to you.', { undo: true }); break; }
     case 'qa-date': case 'new-date': dateForm(id); break;
     case 'remind': { const t = task(id); const on = t.remindOn && t.remindOn >= TODAY; const r = E.updateTask(data, id, { remindOn: on ? '' : nextRemind() }, data.me, stamp()); if (Object.keys(r.errors).length) toast(Object.values(r.errors)[0], 'error'); else commit(r.data, on ? 'Reminder removed.' : 'It will be in your Today list on ' + weekday(nextRemind()) + '.', { undo: true }); break; }
-    case 'copy-link': { const url = location.origin + location.pathname + '#/' + (route().name || 'board') + '?task=' + encodeURIComponent(ui.panel); (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(() => toast('Link copied. It opens this task for anyone in this workspace.'), () => toast('Copy is not allowed here.', 'error')); break; }
+    case 'copy-link': { const url = location.origin + location.pathname + '#/task/' + encodeURIComponent(ui.panel); (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(() => toast('Link copied. It opens this task for anyone in this workspace.'), () => toast('Copy is not allowed here.', 'error')); break; }
     case 'cal-move': { const [y, m] = (ui.calMonth || TODAY.slice(0, 7)).split('-').map(Number); const d = new Date(Date.UTC(y, m - 1 + Number(el.dataset.n), 1)); ui.calMonth = d.toISOString().slice(0, 7); ui.calDay = ''; render(); break; }
     case 'cal-today': ui.calMonth = TODAY.slice(0, 7); ui.calDay = TODAY; render(); break;
     case 'cal-mine': ui.calMine = !ui.calMine; render(); break;
@@ -936,7 +959,8 @@ document.addEventListener('change', e => {
   }
   const act = el.dataset.act;
   if (el.dataset.q) { const k = el.dataset.q; ui.q[k] = k === 'priority' ? (el.value ? [el.value] : []) : el.value; flipRender(); return; }
-  if (act === 'load-filter') { const f = (data.filters || []).find(x => x.id === el.value); if (f) { ui.q = { text: '', assignee: '', status: [], priority: [], label: '', project: '', overdue: false, onHold: false, ...f.query }; flipRender(); toast('Filter "' + f.name + '" applied.'); } return; }
+  if (act === 'list-group') { ui.list.group = el.value; render(); $('[data-act="list-group"]').focus(); return; }
+  if (act === 'load-filter') { const f = (data.filters || []).find(x => x.id === el.value); if (f) { if (route().name === 'lists') { applyList(f.id); return; } const { view, ...fq } = f.query || {}; ui.q = { text: '', assignee: '', status: [], priority: [], label: '', project: '', overdue: false, onHold: false, ...fq }; flipRender(); toast('Filter "' + f.name + '" applied.'); } return; }
   if (act === 'bulk') {
     const field = el.dataset.field; const v = el.value; if (!v) return;
     const ids = [...ui.sel];
@@ -1328,6 +1352,86 @@ function emailView(r) {
     else el.textContent = res.body.error || 'This link did not work.';
   }, 0);
   return '<div class="vh"><div><h2>Confirming your new email</h2><p class="lede" id="emailMsg" aria-live="polite">One moment…</p></div></div><p><a class="btn ghost" href="#/overview">Go to Home</a></p>';
+}
+
+// ---------- full-page task: #/task/<id>, the same details as the side panel, with room ----------
+function taskPage(r) {
+  if (!task(r.id)) { ui.panel = null; return '<div class="vh"><div><h2>Task not found</h2></div></div>' + calmEmpty('This task does not exist here', 'It may have been deleted, or it is in another workspace.', '<a class="btn" href="#/board">Go to the board</a>'); }
+  ui.panel = r.id; return '';
+}
+
+// ---------- lists: a table of tasks with your filters, columns, grouping and order; save it, pin it to Home ----------
+const Q0 = { text: '', assignee: '', status: [], priority: [], label: '', project: '', overdue: false, onHold: false };
+const LCOLS = [['key', 'Key'], ['title', 'Task'], ['project', 'Project'], ['status', 'Status'], ['owner', 'Assignee'], ['priority', 'Priority'], ['due', 'Due'], ['labels', 'Labels'], ['estimate', 'Estimate'], ['milestone', 'Milestone'], ['deps', 'Waits for']];
+const LDEF = ['key', 'title', 'project', 'status', 'owner', 'priority', 'due'];
+const PRESETS = [
+  { id: 'p-open', name: 'All open tasks', q: { status: E.TASK_STATUSES.filter(x => x !== 'Done') } },
+  { id: 'p-mine', name: 'My tasks', q: { assignee: 'me' } },
+  { id: 'p-past', name: 'Could use a new date', q: { overdue: true } },
+  { id: 'p-paused', name: 'Paused', q: { onHold: true } },
+];
+ui.list = { id: 'p-open', columns: LDEF, group: 'none', sort: { k: 'due', dir: 1 } };
+const PRANK = { Critical: 0, High: 1, Medium: 2, Low: 3 };
+const LSORT = {
+  key: (a, b) => a.key.localeCompare(b.key, 'en', { numeric: true }), title: (a, b) => a.title.localeCompare(b.title),
+  project: (a, b) => (proj(a.projectId)?.name || '').localeCompare(proj(b.projectId)?.name || ''), status: (a, b) => E.TASK_STATUSES.indexOf(a.status) - E.TASK_STATUSES.indexOf(b.status),
+  owner: (a, b) => String(a.owner || '~').localeCompare(String(b.owner || '~')), priority: (a, b) => PRANK[a.priority] - PRANK[b.priority],
+  due: (a, b) => String(a.due).localeCompare(String(b.due)), labels: (a, b) => (a.labels || []).join().localeCompare((b.labels || []).join()),
+  estimate: (a, b) => (a.estimate || 0) - (b.estimate || 0), milestone: (a, b) => msName(a).localeCompare(msName(b)), deps: (a, b) => (a.deps || []).length - (b.deps || []).length,
+};
+const msName = t => (data.milestones.find(m => m.id === t.milestoneId) || {}).name || '';
+function sortTasks(list, sort = { k: 'due', dir: 1 }) { const f = LSORT[sort.k] || LSORT.due; return [...list].sort((a, b) => f(a, b) * sort.dir || LSORT.due(a, b)); }
+const savedList = id => (data.filters || []).find(f => f.id === id);
+const listView = () => ({ columns: ui.list.columns, group: ui.list.group, sort: ui.list.sort });
+const listQuery = pin => ({ ...JSON.parse(JSON.stringify(ui.q)), view: { ...listView(), pin: !!pin } });
+function applyList(id) {
+  const pre = PRESETS.find(p => p.id === id); const f = savedList(id);
+  if (!pre && !f) return;
+  const { view, ...q } = pre ? { q: pre.q } && { ...pre.q } : (f.query || {});
+  ui.q = { ...Q0, ...q };
+  ui.list = { id, columns: view && view.columns ? view.columns.filter(c => LCOLS.some(x => x[0] === c)) : LDEF, group: view && view.group || 'none', sort: view && view.sort || { k: 'due', dir: 1 } };
+  if (!ui.list.columns.includes('title')) ui.list.columns = ['title', ...ui.list.columns];
+  render();
+}
+function listCell(k, t) {
+  const p = proj(t.projectId);
+  switch (k) {
+    case 'key': return '<button type="button" class="key lk" data-act="open" data-id="' + esc(t.id) + '" title="Open beside the list">' + esc(t.key) + '</button>';
+    case 'title': return '<a class="lt-title" href="#/task/' + esc(t.id) + '">' + esc(t.title) + '</a>' + (t.status === 'On hold' && t.holdReason ? '<small class="lt-why">' + esc(t.holdReason) + '</small>' : '');
+    case 'project': return p ? '<span class="lt-p"' + pcs(p.id) + '><span class="pd"></span>' + esc(p.name) + '</span>' : '';
+    case 'status': return '<span class="st st-' + slug(t.status) + '">' + esc(stLabel(t.status)) + '</span>';
+    case 'owner': return t.owner ? '<span class="lt-o">' + avatar(t.owner, 'sm') + esc(t.owner) + '</span>' : '<span class="muted">Nobody yet</span>';
+    case 'priority': return esc(t.priority);
+    case 'due': return '<span class="lt-d">' + esc(fmtDate(t.due, true)) + '</span>' + (isPast(t) ? ' ' + pastChip(t) : '');
+    case 'labels': return (t.labels || []).map(l => '<span class="chip2 c-n">' + esc(l) + '</span>').join(' ');
+    case 'estimate': return t.estimate ? t.estimate + (t.estimate === 1 ? ' day' : ' days') : '';
+    case 'milestone': return esc(msName(t));
+    case 'deps': { const open = (t.deps || []).map(task).filter(d => d && d.status !== 'Done').length; return open ? open + ' open' : ''; }
+  }
+  return '';
+}
+function listsView() {
+  const cols = ui.list.columns; const L = Object.fromEntries(LCOLS);
+  const rows = sortTasks(E.applyFilter(data.tasks, ui.q, data.me, TODAY), ui.list.sort);
+  const cur = savedList(ui.list.id); const pre = PRESETS.find(p => p.id === ui.list.id);
+  const name = cur ? cur.name : pre ? pre.name : 'Custom list';
+  const changed = cur && JSON.stringify(listQuery(cur.query.view && cur.query.view.pin)) !== JSON.stringify({ ...Q0, ...cur.query, view: { columns: cur.query.view?.columns || LDEF, group: cur.query.view?.group || 'none', sort: cur.query.view?.sort || { k: 'due', dir: 1 }, pin: !!(cur.query.view && cur.query.view.pin) } });
+  const pinned = cur && cur.query.view && cur.query.view.pin;
+  const GROUPS = [['none', 'No grouping'], ['project', 'Project'], ['status', 'Status'], ['owner', 'Assignee'], ['priority', 'Priority']];
+  const gkey = t => ui.list.group === 'project' ? (proj(t.projectId)?.name || '') : ui.list.group === 'status' ? stLabel(t.status) : ui.list.group === 'owner' ? (t.owner || 'Nobody yet') : ui.list.group === 'priority' ? t.priority : '';
+  const groups = [];
+  for (const t of rows) { const k = gkey(t); let g = groups.find(x => x.k === k); if (!g) groups.push(g = { k, items: [] }); g.items.push(t); }
+  const th = k => k === 'title' || LSORT[k] ? '<th scope="col" aria-sort="' + (ui.list.sort.k === k ? (ui.list.sort.dir > 0 ? 'ascending' : 'descending') : 'none') + '"><button type="button" data-act="lsort" data-k="' + k + '">' + L[k] + (ui.list.sort.k === k ? (ui.list.sort.dir > 0 ? ' ↑' : ' ↓') : '') + '</button></th>' : '<th scope="col">' + L[k] + '</th>';
+  const tr = t => '<tr class="' + (ui.panel === t.id ? 'sel' : '') + '">' + cols.map(k => '<td class="lc-' + k + '" data-label="' + L[k] + '">' + listCell(k, t) + '</td>').join('') + '</tr>';
+  const chip = (id, label, on) => '<button type="button" class="chip' + (on ? ' on' : '') + '" data-act="list-pick" data-id="' + esc(id) + '" aria-pressed="' + on + '">' + esc(label) + '</button>';
+  return '<div class="vh"><div><p class="eyebrow">Lists</p><h2>' + esc(name) + '</h2><p class="lede">' + rows.length + (rows.length === 1 ? ' task' : ' tasks') + '. Choose the filters, columns, grouping and order, then save it as your own list. A saved list can sit on Home.</p></div>' +
+    '<div class="row">' + (cur ? '<button class="btn ghost" data-act="list-pin">' + (pinned ? 'Take off Home' : 'Show on Home') + '</button><button class="btn ghost" data-act="list-del">Delete</button>' : '') + (cur && changed ? '<button class="btn" data-act="list-save" data-mode="update">Save changes</button>' : '') + '<button class="btn' + (cur && changed ? ' ghost' : '') + '" data-act="list-save">' + ic('plus') + 'Save as a new list</button></div></div>' +
+    '<div class="lists-pick" role="group" aria-label="Lists">' + PRESETS.map(p => chip(p.id, p.name, ui.list.id === p.id)).join('') + (data.filters || []).map(f => chip(f.id, f.name + (f.query && f.query.view && f.query.view.pin ? ' · Home' : ''), ui.list.id === f.id)).join('') + '</div>' +
+    filterBar('lists') +
+    '<div class="lt-tools"><label class="fsel"><span>Group by</span><select data-act="list-group">' + opts(GROUPS, ui.list.group) + '</select></label><button type="button" class="btn ghost sm" data-act="list-cols">' + ic('filter') + 'Columns</button><span class="grow"></span><button type="button" class="btn sm" data-act="new-task">' + ic('plus') + 'Create</button></div>' +
+    (rows.length ? '<section class="card2 lt-card"><div class="lt-wrap"><table class="lt"><caption class="sr">' + esc(name) + ', ' + rows.length + ' tasks</caption><thead><tr>' + cols.map(th).join('') + '</tr></thead>' +
+      groups.map(g => '<tbody>' + (ui.list.group !== 'none' ? '<tr class="lt-g"><th colspan="' + cols.length + '" scope="rowgroup">' + esc(g.k) + ' <small>' + g.items.length + '</small></th></tr>' : '') + g.items.map(tr).join('') + '</tbody>').join('') + '</table></div></section>'
+      : calmEmpty('No task in this list', 'Change a filter, or pick another list.'));
 }
 
 // ---------- the admin area: who has an account, and how much is used. Never what is inside a workspace. ----------
