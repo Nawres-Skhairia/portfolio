@@ -5,16 +5,28 @@ import postgres from 'postgres';
 import { MIGRATIONS } from './migrations.js';
 
 let pooled = null; let migrated = null;
+// Vercel's Neon connection adds its own prefix: CC_DATABASE_DATABASE_URL (pooled) and ..._UNPOOLED (migrations).
+const dbUrl = () => process.env.CC_DATABASE_URL || process.env.CC_DATABASE_DATABASE_URL || '';
+const directUrl = () => process.env.CC_DATABASE_URL_UNPOOLED || process.env.CC_DATABASE_DATABASE_URL_UNPOOLED || '';
 
 function connect(url, max) {
   return postgres(url, { prepare: false, max, idle_timeout: 20, connect_timeout: 10, ssl: process.env.CC_DATABASE_SSL === 'off' ? false : 'require', onnotice: () => {} });
 }
 
-export function configured() { return Boolean(process.env.CC_DATABASE_URL && process.env.CC_SESSION_SECRET && process.env.CC_SESSION_SECRET.length >= 32); }
+export function configured() { return Boolean(dbUrl()); }
+
+// Key for the stored token hashes. CC_SESSION_SECRET when set; otherwise derived from the database address,
+// which is itself secret and Preview-only, so no extra secret has to be created or handled by anyone.
+import { createHash } from 'node:crypto';
+export function hashKey() {
+  const s = process.env.CC_SESSION_SECRET;
+  if (s && s.length >= 32) return s;
+  return createHash('sha256').update('command-center-session-key|' + dbUrl()).digest('hex');
+}
 
 export async function db() {
   if (!configured()) return null;
-  if (!pooled) pooled = connect(process.env.CC_DATABASE_URL, 3);
+  if (!pooled) pooled = connect(dbUrl(), 3);
   if (!migrated) migrated = migrate().catch(e => { migrated = null; throw e; });
   await migrated;
   return pooled;
@@ -22,7 +34,7 @@ export async function db() {
 
 // Numbered migrations, applied once, under a lock, on the direct (unpooled) connection when there is one.
 async function migrate() {
-  const direct = process.env.CC_DATABASE_URL_UNPOOLED ? connect(process.env.CC_DATABASE_URL_UNPOOLED, 1) : null;
+  const direct = directUrl() ? connect(directUrl(), 1) : null;
   const sql = direct || pooled;
   try {
     await sql.begin(async tx => {

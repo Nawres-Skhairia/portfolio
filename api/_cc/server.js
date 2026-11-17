@@ -2,7 +2,7 @@
 // object, so the same code runs on Vercel and in the tests.
 import { createHash, createHmac, randomBytes, scrypt as scryptCb, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
-import { db, asUser, configured } from './db.js';
+import { db, asUser, configured, hashKey } from './db.js';
 import { applyOps, checkImport, emptyData } from './model.js';
 
 const scrypt = promisify(scryptCb);
@@ -29,9 +29,9 @@ async function verifyPassword(pw, stored) {
 const DUMMY_HASH = 'scrypt$16384$8$1$AAAAAAAAAAAAAAAAAAAAAA==$' + Buffer.alloc(64).toString('base64');
 
 // Tokens are random; only a keyed hash is stored, so a copy of the database holds no usable token.
-const tokenHash = t => createHmac('sha256', process.env.CC_SESSION_SECRET).update(String(t)).digest('hex');
+const tokenHash = t => createHmac('sha256', hashKey()).update(String(t)).digest('hex');
 const newToken = () => randomBytes(32).toString('base64url');
-const ipBucket = ip => 'ip:' + createHmac('sha256', process.env.CC_SESSION_SECRET).update(String(ip || '')).digest('hex').slice(0, 24);
+const ipBucket = ip => 'ip:' + createHmac('sha256', hashKey()).update(String(ip || '')).digest('hex').slice(0, 24);
 
 function cookieHeader(value, maxAge, secure) {
   return COOKIE + '=' + value + '; Path=/api/cc; HttpOnly; SameSite=Lax; Max-Age=' + maxAge + (secure ? '; Secure' : '');
