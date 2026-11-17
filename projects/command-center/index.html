@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Command Center · Every project, risk and deadline on one screen · Nawres Skhairia</title>
+  <meta name="description" content="A project portfolio command center: health of every project, milestones, tasks and their dependencies, a risk register and ready-to-send reports. Runs in your browser with made-up sample data.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="/assets/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/assets/fonts/site-fonts.css">
+  <link rel="stylesheet" href="style.css">
+  <script src="/assets/theme.js"></script>
+  <link rel="modulepreload" href="engine.js">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="site">
+    <a class="back" href="/#work">← Nawres Skhairia</a>
+    <span class="tag">Project N°09 · Work in progress</span>
+    <button class="theme-switch" type="button" aria-label="Dark theme" aria-pressed="false"><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 14.6A8.5 8.5 0 0 1 9.4 3.5a8.5 8.5 0 1 0 11.1 11.1z"/></svg></button>
+  </header>
+
+  <section class="hero" aria-labelledby="heroTitle">
+    <div class="hero-in">
+      <p class="brandline"><span class="mark" aria-hidden="true"><svg viewBox="0 0 32 32"><rect x="2" y="2" width="28" height="28" rx="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9 21l5-6 4 3 5-8" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Command Center</p>
+      <h1 id="heroTitle">Every project, risk and deadline on one screen.</h1>
+      <p class="lead">When a team runs many projects at once, the real picture is spread across plans, task boards and status emails. Command Center brings it together and tells you, with figures you can check, which project needs attention and why.</p>
+      <ul class="caps">
+        <li><b>Health score</b> for each project, with the reasons behind it</li>
+        <li><b>Dependencies</b> that show what blocks what, and the critical path</li>
+        <li><b>Risk register</b> with an impact and probability matrix</li>
+        <li><b>Reports</b> ready to print or export, from the live figures</li>
+      </ul>
+      <a class="enter" href="#/dashboard" id="enterDemo">Enter the demo</a>
+    </div>
+  </section>
+
+  <div class="app" id="app">
+    <div class="demo-band" role="note">
+      <span><b>Demo workspace.</b> Made-up sample data for a fictional company, saved only in this browser.</span>
+      <span class="band-actions">
+        <button type="button" class="lnk" id="resetDemo">Reset demo</button>
+        <button type="button" class="lnk" id="startEmpty">Start empty</button>
+      </span>
+    </div>
+    <div class="shell">
+      <nav class="side" aria-label="Command Center">
+        <a href="#/dashboard" data-nav="dashboard"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h6V4H4zM14 20h6v-9h-6zM4 20h6v-3H4zM14 7h6V4h-6z"/></svg>Dashboard</a>
+        <a href="#/projects" data-nav="projects"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h7l2 2h9v10H3z"/></svg>Projects</a>
+        <a href="#/tasks" data-nav="tasks"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/></svg>Tasks</a>
+        <a href="#/dependencies" data-nav="dependencies"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="6" r="2.5"/><circle cx="19" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M7.5 6h9M6.5 8l4.5 8M17.5 8l-4.5 8"/></svg>Dependencies</a>
+        <a href="#/risks" data-nav="risks"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 16H3zM12 10v4M12 17v.5"/></svg>Risks</a>
+        <a href="#/insights" data-nav="insights"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.8.8 1 1.5 1 2.5h6c0-1 .2-1.7 1-2.5A6 6 0 0 0 12 3z"/></svg>Insights<span class="count" id="insCount" hidden></span></a>
+        <a href="#/reports" data-nav="reports"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h7"/></svg>Reports</a>
+      </nav>
+      <main id="main" class="main" tabindex="-1" aria-live="off"></main>
+    </div>
+  </div>
+
+  <dialog id="dlg" aria-labelledby="dlgTitle"></dialog>
+  <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+  <noscript><p class="noscript">Command Center needs JavaScript to run.</p></noscript>
+
+  <script type="module" src="app.js"></script>
+  <script src="/assets/page-fx.js" defer></script>
+</body>
+</html>
