@@ -11,6 +11,9 @@ const COOKIE = 'cc_session';
 const SESSION_DAYS = 30;
 const VERIFY_HOURS = 24;
 const INVITE_DAYS = 7;
+const RESET_MINUTES = 60;
+const EVENT_DAYS = 90;
+const DEFAULTS = { signup: 'open', maxOwned: 20, maxPeople: 25 };
 const json = (status, body, extra = {}) => ({ status, body, ...extra });
 const fail = (status, error, extra = {}) => json(status, { error }, extra);
 
@@ -74,9 +77,32 @@ async function sendMail(sql, to, subject, body) {
 async function currentUser(sql, headers) {
   const token = readCookie(headers);
   if (!token || token.length > 100) return null;
-  const [u] = await sql`select u.id, u.email, u.display_name from cc_session s join cc_user u on u.id = s.user_id where s.id = ${tokenHash(token)} and s.expires_at > now() and u.email_verified_at is not null`;
+  const [u] = await sql`select u.id, u.email, u.display_name from cc_session s join cc_user u on u.id = s.user_id where s.id = ${tokenHash(token)} and s.expires_at > now() and u.email_verified_at is not null and u.disabled_at is null`;
   return u || null;
 }
+
+// ---------- settings, the admin, and the account event log ----------
+async function settings(sql) {
+  const [r] = await sql`select value from cc_setting where key = 'limits'`;
+  return { ...DEFAULTS, ...(r ? r.value : {}) };
+}
+// Who runs this Command Center. On the live site only the addresses in CC_ADMIN_EMAILS.
+// On a preview without that list, the first person to confirm or sign in after this was added is recorded once.
+function adminList() { return String(process.env.CC_ADMIN_EMAILS || '').split(',').map(x => x.trim().toLowerCase()).filter(Boolean); }
+async function isAdmin(sql, user) {
+  if (!user) return false;
+  const list = adminList();
+  if (list.length) return list.includes(user.email);
+  if (process.env.VERCEL_ENV === 'production') return false;
+  const [r] = await sql`select value from cc_setting where key = 'admin'`;
+  return Boolean(r && r.value.userId === user.id);
+}
+async function claimAdmin(sql, userId) {
+  if (adminList().length || process.env.VERCEL_ENV === 'production') return;
+  await sql`insert into cc_setting (key, value) values ('admin', ${sql.json({ userId })}) on conflict (key) do nothing`;
+}
+// Facts only (what happened, when, to which account): never workspace content. Kept 90 days.
+const logEvent = (sql, kind, userId, detail = '', byAdmin = false) => sql`insert into cc_event (kind, user_id, by_admin, detail) values (${kind}, ${userId || null}, ${byAdmin}, ${String(detail).slice(0, 200)})`;
 
 async function startSession(sql, userId, secure) {
   const token = newToken();
@@ -173,9 +199,11 @@ export async function handle(req) {
 
   if (route === 'GET /me') {
     const u = await currentUser(sql, headers);
-    if (!u) return json(200, { user: null });
+    const cfg = await settings(sql);
+    if (!u) return json(200, { user: null, signup: cfg.signup });
     const ws = await asUser(sql, u.id, tx => tx`select w.id, w.name, w.is_sample, m.role, (select count(*)::int from cc_membership x where x.workspace_id = w.id) as members from cc_workspace w join cc_membership m on m.workspace_id = w.id and m.user_id = ${u.id} order by w.created_at`);
-    return json(200, { user: { email: u.email, displayName: u.display_name }, workspaces: ws.map(w => ({ id: w.id, name: w.name, isSample: w.is_sample, role: w.role, members: w.members })) });
+    const [{ devices }] = await sql`select count(*)::int as devices from cc_session where user_id = ${u.id} and expires_at > now()`;
+    return json(200, { signup: cfg.signup, user: { email: u.email, displayName: u.display_name, devices, admin: await isAdmin(sql, u) }, workspaces: ws.map(w => ({ id: w.id, name: w.name, isSample: w.is_sample, role: w.role, members: w.members })) });
   }
 
   if (route === 'POST /auth/signup') {
@@ -184,10 +212,17 @@ export async function handle(req) {
     await note(sql, ipb + ':signup');
     const { e, email, pw, name } = signupErrors(body);
     if (Object.keys(e).length) return json(422, { errors: e });
+    const cfg = await settings(sql);
+    if (cfg.signup === 'closed') return fail(403, 'New accounts are not open right now.');
+    if (cfg.signup === 'invite') {
+      const [inv] = await sql`select 1 from cc_invite where email = ${email} and accepted_at is null and expires_at > now()`;
+      if (!inv) return fail(403, 'New accounts are by invitation only right now. Use the address your invitation was sent to.');
+    }
     // Housekeeping promised on the sign-up screen: unconfirmed sign-ups go after 7 days, old sessions and links after they expire.
     await sql`delete from cc_user where email_verified_at is null and created_at < now() - interval '7 days'`;
     await sql`delete from cc_session where expires_at < now()`;
     await sql`delete from cc_token where expires_at < now() - interval '1 day'`;
+    await sql`delete from cc_event where at < now() - make_interval(days => ${EVENT_DAYS})`;
     const hash = await hashPassword(pw);
     const [existing] = await sql`select id, email_verified_at from cc_user where email = ${email}`;
     if (existing) {
@@ -197,6 +232,7 @@ export async function handle(req) {
       return json(200, { ok: true });
     }
     const [u] = await sql`insert into cc_user (email, password_hash, display_name, privacy_ack_at) values (${email}, ${hash}, ${name}, now()) returning id`;
+    await logEvent(sql, 'Account created', u.id);
     await issueVerify(sql, u.id, email, origin);
     return json(200, { ok: true });
   }
@@ -213,6 +249,9 @@ export async function handle(req) {
     });
     if (!res) return fail(400, 'This link has expired or was already used. Sign in, or ask for a new link.');
     if (res.first) await createWorkspace(sql, res.user, (res.user.display_name.split(' ')[0] + "'s workspace").slice(0, 60), false);
+    await logEvent(sql, 'Email confirmed', res.user.id);
+    await claimAdmin(sql, res.user.id);
+    await sql`update cc_user set last_signin_at = now() where id = ${res.user.id}`;
     return json(200, { ok: true }, { cookies: [await startSession(sql, res.user.id, secure)] });
   }
 
@@ -231,15 +270,78 @@ export async function handle(req) {
     const pw = String(body.password || '').slice(0, 200);
     const ipb = ipBucket(ip);
     if (await tooMany(sql, 'signin:' + email, 5, 15) || await tooMany(sql, ipb + ':signin', 30, 15)) return fail(429, 'Too many wrong attempts. Wait 15 minutes and try again.');
-    const [u] = await sql`select id, password_hash, email_verified_at from cc_user where email = ${email}`;
+    const [u] = await sql`select id, password_hash, email_verified_at, disabled_at from cc_user where email = ${email}`;
     const ok = await verifyPassword(pw, u ? u.password_hash : DUMMY_HASH);
     if (!u || !ok) {
       await note(sql, 'signin:' + email); await note(sql, ipb + ':signin');
+      if (u) await logEvent(sql, 'Wrong password', u.id);
       await sql`delete from cc_attempt where at < now() - interval '1 day'`;
       return fail(401, 'The email or the password is not right.');
     }
     if (!u.email_verified_at) return fail(403, 'Confirm your email first. We can send the link again.', { body: { error: 'Confirm your email first. We can send the link again.', unverified: true } });
+    if (u.disabled_at) return fail(403, 'This account is paused by the person who runs this Command Center.');
+    await sql`update cc_user set last_signin_at = now() where id = ${u.id}`;
+    await logEvent(sql, 'Signed in', u.id);
+    await claimAdmin(sql, u.id);
     return json(200, { ok: true }, { cookies: [await startSession(sql, u.id, secure)] });
+  }
+
+  // ---------- forgot password: a one-hour link by email ----------
+  if (route === 'POST /auth/forgot') {
+    const email = String(body.email || '').trim().toLowerCase();
+    if (!EMAIL.test(email)) return json(422, { errors: { email: 'Enter a valid email address.' } });
+    const ipb = ipBucket(ip);
+    if (await tooMany(sql, 'forgot:' + email, 3, 60) || await tooMany(sql, ipb + ':forgot', 10, 60)) return fail(429, 'Too many links asked for. Try again in an hour.');
+    await note(sql, 'forgot:' + email); await note(sql, ipb + ':forgot');
+    const [u] = await sql`select id, email_verified_at, disabled_at from cc_user where email = ${email}`;
+    // The same answer whether or not the address has an account.
+    if (u && !u.disabled_at) {
+      if (u.email_verified_at) { await issueReset(sql, u.id, email, origin); await logEvent(sql, 'Asked for a new password', u.id); }
+      else await issueVerify(sql, u.id, email, origin);
+    }
+    return json(200, { ok: true });
+  }
+
+  if (route === 'POST /auth/reset') {
+    const token = String(body.token || '');
+    if (!token || token.length > 100) return fail(400, 'This link is not valid.');
+    const pw = String(body.password || '');
+    if (pw.length < 10) return json(422, { errors: { password: 'Use at least 10 characters.' } });
+    if (pw.length > 200) return json(422, { errors: { password: 'Use 200 characters or fewer.' } });
+    const hash = await hashPassword(pw);
+    const u = await sql.begin(async tx => {
+      const [t] = await tx`update cc_token set used_at = now() where id = ${tokenHash(token)} and purpose = 'reset' and used_at is null and expires_at > now() returning user_id`;
+      if (!t) return null;
+      const [u] = await tx`update cc_user set password_hash = ${hash}, last_signin_at = now() where id = ${t.user_id} and disabled_at is null returning id, email`;
+      if (!u) return null;
+      // A new password signs out every device and makes older links useless.
+      await tx`delete from cc_session where user_id = ${u.id}`;
+      await tx`update cc_token set used_at = now() where user_id = ${u.id} and purpose = 'reset' and used_at is null`;
+      return u;
+    });
+    if (!u) return fail(400, 'This link has expired or was already used. Ask for a new one.');
+    await logEvent(sql, 'Password changed with an email link', u.id);
+    await sendMail(sql, u.email, 'Your Command Center password was changed', 'The password of your account was just changed, and every device was signed out.\n\nIf this was not you, ask for a new password link right away from the sign-in screen.');
+    return json(200, { ok: true }, { cookies: [await startSession(sql, u.id, secure)] });
+  }
+
+  // ---------- the link sent to a new email address ----------
+  if (route === 'POST /auth/confirm-email') {
+    const token = String(body.token || '');
+    if (!token || token.length > 100) return fail(400, 'This link is not valid.');
+    const r = await sql.begin(async tx => {
+      const [t] = await tx`update cc_token set used_at = now() where id = ${tokenHash(token)} and purpose = 'email' and used_at is null and expires_at > now() returning user_id, new_email`;
+      if (!t) return { error: 'This link has expired or was already used. Ask for a new one from your account page.' };
+      const [taken] = await tx`select 1 from cc_user where email = ${t.new_email}`;
+      if (taken) return { error: 'This address now belongs to another account, so it was not changed.' };
+      const [old] = await tx`select email from cc_user where id = ${t.user_id}`;
+      await tx`update cc_user set email = ${t.new_email} where id = ${t.user_id}`;
+      return { userId: t.user_id, old: old.email, now: t.new_email };
+    });
+    if (r.error) return fail(400, r.error);
+    await logEvent(sql, 'Email address changed', r.userId);
+    await sendMail(sql, r.old, 'The email of your Command Center account was changed', 'Your account now uses ' + r.now + '. If this was not you, write to the person who runs this Command Center right away.');
+    return json(200, { ok: true });
   }
 
   if (route === 'POST /auth/signout') {
@@ -289,11 +391,12 @@ export async function handle(req) {
     const name = String(body.name || '').trim();
     if (!name || name.length > 60) return json(422, { errors: { name: 'Give it a name of up to 60 characters.' } });
     const [{ n }] = await sql`select count(*)::int as n from cc_membership where user_id = ${user.id} and role = 'owner'`;
-    if (n >= 20) return fail(422, 'You can own up to 20 workspaces.');
+    const cfg = await settings(sql);
+    if (n >= cfg.maxOwned) return fail(422, 'You can own up to ' + cfg.maxOwned + ' workspaces.');
     return json(200, { id: await createWorkspace(sql, user, name, false) });
   }
 
-  const sh = /^(GET|POST) \/workspaces\/([^/]+)\/(members|invites|leave|rename|delete)(?:\/([^/]+))?(?:\/(role|remove|cancel))?$/.exec(route);
+  const sh = /^(GET|POST) \/workspaces\/([^/]+)\/(members|invites|leave|rename|delete)(?:\/([^/]+))?(?:\/(role|remove|cancel|owner))?$/.exec(route);
   if (sh) {
     const [, verb, wsId, what, targetId, action] = sh;
     if (!UUID.test(wsId)) return fail(404, 'This workspace does not exist or is not yours.');
@@ -322,7 +425,8 @@ export async function handle(req) {
       if (await tooMany(sql, 'invite:' + user.id, 30, 60)) return fail(429, 'Too many invitations in one hour. Try again later.');
       const [{ n }] = await sql`select count(*)::int as n from cc_membership where workspace_id = ${wsId}`;
       const [{ p }] = await sql`select count(*)::int as p from cc_invite where workspace_id = ${wsId} and accepted_at is null and expires_at > now()`;
-      if (n + p >= 25) return fail(422, 'A workspace can have up to 25 people, invitations included.');
+      const cfg = await settings(sql);
+      if (n + p >= cfg.maxPeople) return fail(422, 'A workspace can have up to ' + cfg.maxPeople + ' people, invitations included.');
       const [already] = await sql`select 1 from cc_membership m join cc_user u on u.id = m.user_id where m.workspace_id = ${wsId} and u.email = ${email}`;
       if (already) return json(422, { errors: { email: 'This person is already in the workspace.' } });
       await note(sql, 'invite:' + user.id);
@@ -352,6 +456,19 @@ export async function handle(req) {
         if (role !== 'owner') return fail(403, 'Only the owner can change roles.');
         const to = body.role === 'admin' ? 'admin' : 'member';
         await sql`update cc_membership set role = ${to} where workspace_id = ${wsId} and user_id = ${targetId}`;
+        return json(200, { ok: true });
+      }
+      if (action === 'owner') {
+        // Hand the workspace over: the new owner gets every right, the old owner stays as an admin.
+        if (role !== 'owner') return fail(403, 'Only the owner can hand the workspace over.');
+        const [me] = await sql`select password_hash from cc_user where id = ${user.id}`;
+        if (await tooMany(sql, 'owner:' + user.id, 5, 15)) return fail(429, 'Too many attempts. Wait 15 minutes.');
+        if (!(await verifyPassword(String(body.password || '').slice(0, 200), me.password_hash))) { await note(sql, 'owner:' + user.id); return json(422, { errors: { password: 'The password is not right.' } }); }
+        await sql.begin(async tx => {
+          await tx`update cc_membership set role = 'admin' where workspace_id = ${wsId} and user_id = ${user.id}`;
+          await tx`update cc_membership set role = 'owner' where workspace_id = ${wsId} and user_id = ${targetId}`;
+        });
+        await logEvent(sql, 'Handed a workspace over', user.id);
         return json(200, { ok: true });
       }
       if (action === 'remove') {
@@ -412,24 +529,133 @@ export async function handle(req) {
     return json(200, { exportedAt: new Date().toISOString(), account: { email: u.email, name: u.display_name, createdAt: u.created_at, emailConfirmedAt: u.email_verified_at, privacyReadAt: u.privacy_ack_at }, workspaces });
   }
 
-  if (route === 'POST /account/delete') {
+  // Changes that need the current password, with a limit on wrong tries.
+  async function passwordOk() {
     const [u] = await sql`select password_hash from cc_user where id = ${user.id}`;
-    if (await tooMany(sql, 'delete:' + user.id, 5, 15)) return fail(429, 'Too many attempts. Wait 15 minutes.');
-    if (!(await verifyPassword(String(body.password || '').slice(0, 200), u.password_hash))) { await note(sql, 'delete:' + user.id); return json(422, { errors: { password: 'The password is not right.' } }); }
-    await sql.begin(async tx => {
-      const owned = await tx`select workspace_id from cc_membership where user_id = ${user.id} and role = 'owner'`;
-      for (const { workspace_id: ws } of owned) {
-        // Shared workspaces go on with the longest-standing other person as owner; private ones are deleted.
-        const [next] = await tx`select user_id from cc_membership where workspace_id = ${ws} and user_id <> ${user.id} order by case role when 'admin' then 0 else 1 end, joined_at limit 1`;
-        if (next) await tx`update cc_membership set role = 'owner' where workspace_id = ${ws} and user_id = ${next.user_id}`;
-        else await tx`delete from cc_workspace where id = ${ws}`;
-      }
-      await tx`update cc_activity set actor_name = 'Former member', actor_user_id = null where actor_user_id = ${user.id}`;
-      await tx`delete from cc_invite where invited_by = ${user.id} and accepted_at is null`;
-      await tx`delete from cc_outbox where to_email = ${user.email}`;
-      await tx`delete from cc_user where id = ${user.id}`;
-    });
+    if (await tooMany(sql, 'pw:' + user.id, 5, 15)) return fail(429, 'Too many attempts. Wait 15 minutes.');
+    if (!(await verifyPassword(String(body.password || '').slice(0, 200), u.password_hash))) { await note(sql, 'pw:' + user.id); return json(422, { errors: { password: 'The password is not right.' } }); }
+    return null;
+  }
+
+  if (route === 'POST /account/delete') {
+    const no = await passwordOk(); if (no) return no;
+    await deleteAccount(sql, user.id, user.email);
     return json(200, { ok: true }, { cookies: [cookieHeader('', 0, secure)] });
+  }
+
+  if (route === 'POST /account/name') {
+    const name = String(body.displayName || '').trim();
+    if (!name || name.length > 40) return json(422, { errors: { displayName: name ? 'Use 40 characters or fewer.' : 'Enter the name others will see.' } });
+    await sql`update cc_user set display_name = ${name} where id = ${user.id}`;
+    return json(200, { ok: true });
+  }
+
+  if (route === 'POST /account/password') {
+    const next = String(body.next || '');
+    if (next.length < 10) return json(422, { errors: { next: 'Use at least 10 characters.' } });
+    if (next.length > 200) return json(422, { errors: { next: 'Use 200 characters or fewer.' } });
+    const no = await passwordOk(); if (no) return no;
+    await sql`update cc_user set password_hash = ${await hashPassword(next)} where id = ${user.id}`;
+    // Other devices are signed out; this one stays signed in.
+    await sql`delete from cc_session where user_id = ${user.id} and id <> ${tokenHash(readCookie(headers))}`;
+    await logEvent(sql, 'Password changed', user.id);
+    await sendMail(sql, user.email, 'Your Command Center password was changed', 'The password of your account was just changed, and your other devices were signed out.\n\nIf this was not you, ask for a new password link right away from the sign-in screen.');
+    return json(200, { ok: true });
+  }
+
+  if (route === 'POST /account/email') {
+    const email = String(body.email || '').trim().toLowerCase();
+    if (!EMAIL.test(email)) return json(422, { errors: { email: 'Enter a valid email address.' } });
+    if (email === user.email) return json(422, { errors: { email: 'This is already your address.' } });
+    const no = await passwordOk(); if (no) return no;
+    if (await tooMany(sql, 'email:' + user.id, 3, 60)) return fail(429, 'Too many changes asked for. Try again in an hour.');
+    await note(sql, 'email:' + user.id);
+    const [taken] = await sql`select 1 from cc_user where email = ${email}`;
+    // Same answer either way, so this does not reveal who has an account.
+    if (taken) await sendMail(sql, email, 'Someone tried to move a Command Center account to your address', 'Your address already has an account, so nothing was changed. You can ignore this email.');
+    else {
+      const token = newToken();
+      await sql`update cc_token set used_at = now() where user_id = ${user.id} and purpose = 'email' and used_at is null`;
+      await sql`insert into cc_token (id, user_id, purpose, new_email, expires_at) values (${tokenHash(token)}, ${user.id}, 'email', ${email}, now() + make_interval(hours => ${VERIFY_HOURS}))`;
+      await sendMail(sql, email, 'Confirm your new email for Command Center', 'Open this link to use this address for your Command Center account. It works once, for 24 hours.\n\n' + origin + '/projects/command-center/#/email/' + token + '\n\nIf you did not ask for this, ignore this email.');
+    }
+    return json(200, { ok: true });
+  }
+
+  if (route === 'POST /account/signout-all') {
+    await sql`delete from cc_session where user_id = ${user.id}`;
+    await logEvent(sql, 'Signed out everywhere', user.id);
+    return json(200, { ok: true }, { cookies: [cookieHeader('', 0, secure)] });
+  }
+
+  // ---------- the admin area: account facts and numbers, never what is inside a workspace ----------
+  if (path[0] === 'admin') {
+    if (!(await isAdmin(sql, user))) return fail(404, 'Not found.');
+    if (route === 'GET /admin/overview') {
+      const [c] = await sql`select
+        (select count(*)::int from cc_user) as accounts,
+        (select count(*)::int from cc_user where email_verified_at is null) as unconfirmed,
+        (select count(*)::int from cc_user where disabled_at is not null) as paused,
+        (select count(*)::int from cc_user where last_signin_at > now() - interval '7 days') as active7,
+        (select count(*)::int from cc_workspace) as workspaces,
+        (select count(*)::int from (select workspace_id from cc_membership group by workspace_id having count(*) > 1) x) as shared,
+        (select count(*)::int from cc_project) as projects,
+        (select count(*)::int from cc_task) as tasks,
+        (select count(*)::int from cc_invite where accepted_at is null and expires_at > now()) as invites`;
+      const users = await sql`select u.id, u.email, u.display_name, u.created_at, u.email_verified_at, u.last_signin_at, u.disabled_at,
+        (select count(*)::int from cc_membership m where m.user_id = u.id) as workspaces,
+        (select count(*)::int from cc_membership m where m.user_id = u.id and m.role = 'owner') as owns
+        from cc_user u order by u.created_at desc limit 500`;
+      const spaces = await sql`select w.id, w.name, w.created_at, w.is_sample, o.display_name as owner,
+        (select count(*)::int from cc_membership m where m.workspace_id = w.id) as people,
+        (select count(*)::int from cc_project p where p.workspace_id = w.id) as projects,
+        (select count(*)::int from cc_task t where t.workspace_id = w.id) as tasks,
+        (select max(a.created_at) from cc_activity a where a.workspace_id = w.id) as last_change
+        from cc_workspace w left join cc_membership om on om.workspace_id = w.id and om.role = 'owner' left join cc_user o on o.id = om.user_id
+        order by w.created_at desc limit 500`;
+      return json(200, {
+        counts: c, settings: await settings(sql), you: user.id,
+        adminBy: adminList().length ? 'list' : 'first',
+        users: users.map(u => ({ id: u.id, email: u.email, name: u.display_name, createdAt: u.created_at, confirmedAt: u.email_verified_at, lastSignInAt: u.last_signin_at, pausedAt: u.disabled_at, workspaces: u.workspaces, owns: u.owns })),
+        workspaces: spaces.map(w => ({ id: w.id, name: w.name, createdAt: w.created_at, sample: w.is_sample, owner: w.owner || 'Nobody', people: w.people, projects: w.projects, tasks: w.tasks, lastChange: w.last_change })),
+      });
+    }
+    if (route === 'GET /admin/log') {
+      const rows = await sql`select e.at, e.kind, e.by_admin, e.detail, u.display_name, u.email from cc_event e left join cc_user u on u.id = e.user_id order by e.id desc limit 200`;
+      return json(200, { events: rows.map(r => ({ at: r.at, kind: r.kind, byAdmin: r.by_admin, detail: r.detail, name: r.display_name || 'Deleted account', email: r.email || '' })), keptDays: EVENT_DAYS });
+    }
+    if (route === 'POST /admin/settings') {
+      const cur = await settings(sql);
+      const next = { ...cur };
+      if (body.signup !== undefined) { if (!['open', 'invite', 'closed'].includes(body.signup)) return fail(422, 'Choose open, by invitation, or closed.'); next.signup = body.signup; }
+      for (const [k, lo, hi] of [['maxOwned', 1, 100], ['maxPeople', 2, 200]]) if (body[k] !== undefined) {
+        const v = Number(body[k]); if (!Number.isInteger(v) || v < lo || v > hi) return json(422, { errors: { [k]: 'Use a whole number from ' + lo + ' to ' + hi + '.' } }); next[k] = v;
+      }
+      await sql`insert into cc_setting (key, value) values ('limits', ${sql.json(next)}) on conflict (key) do update set value = excluded.value, updated_at = now()`;
+      await logEvent(sql, 'Settings changed', user.id, 'Sign-up ' + next.signup + ', ' + next.maxOwned + ' workspaces each, ' + next.maxPeople + ' people each', true);
+      return json(200, { ok: true, settings: next });
+    }
+    const am = /^POST \/admin\/users\/([^/]+)\/(pause|resume|delete|reset)$/.exec(route);
+    if (am) {
+      const [, id, what] = am;
+      if (!UUID.test(id)) return fail(404, 'This account does not exist.');
+      if (id === user.id) return fail(422, 'Use your own account page for your account.');
+      const [t] = await sql`select id, email, email_verified_at from cc_user where id = ${id}`;
+      if (!t) return fail(404, 'This account does not exist.');
+      if (what === 'pause') { await sql`update cc_user set disabled_at = now() where id = ${id}`; await sql`delete from cc_session where user_id = ${id}`; await logEvent(sql, 'Account paused', id, '', true); }
+      if (what === 'resume') { await sql`update cc_user set disabled_at = null where id = ${id}`; await logEvent(sql, 'Account resumed', id, '', true); }
+      if (what === 'reset') {
+        if (!t.email_verified_at) return fail(422, 'This person has not confirmed their email yet.');
+        await issueReset(sql, id, t.email, origin); await logEvent(sql, 'Password link sent', id, '', true);
+      }
+      if (what === 'delete') {
+        if (String(body.confirm || '').trim().toLowerCase() !== t.email) return json(422, { errors: { confirm: 'Type the email address exactly as shown.' } });
+        await deleteAccount(sql, id, t.email);
+        await logEvent(sql, 'Account deleted', null, '', true);
+      }
+      return json(200, { ok: true });
+    }
+    return fail(404, 'Not found.');
   }
 
   const m = /^(GET|POST) \/workspaces\/([^/]+)(\/sync)?$/.exec(route);
@@ -459,6 +685,30 @@ export async function handle(req) {
     }
   }
   return fail(404, 'Not found.');
+}
+
+// Delete an account: private workspaces go, shared ones pass to the next person, past activity says "Former member".
+async function deleteAccount(sql, userId, email) {
+  await sql.begin(async tx => {
+    const owned = await tx`select workspace_id from cc_membership where user_id = ${userId} and role = 'owner'`;
+    for (const { workspace_id: ws } of owned) {
+      const [next] = await tx`select user_id from cc_membership where workspace_id = ${ws} and user_id <> ${userId} order by case role when 'admin' then 0 else 1 end, joined_at limit 1`;
+      if (next) await tx`update cc_membership set role = 'owner' where workspace_id = ${ws} and user_id = ${next.user_id}`;
+      else await tx`delete from cc_workspace where id = ${ws}`;
+    }
+    await tx`update cc_activity set actor_name = 'Former member', actor_user_id = null where actor_user_id = ${userId}`;
+    await tx`delete from cc_invite where invited_by = ${userId} and accepted_at is null`;
+    await tx`delete from cc_outbox where to_email = ${email}`;
+    await tx`delete from cc_setting where key = 'admin' and value->>'userId' = ${userId}`;
+    await tx`delete from cc_user where id = ${userId}`;
+  });
+}
+
+async function issueReset(sql, userId, email, origin) {
+  const token = newToken();
+  await sql`update cc_token set used_at = now() where user_id = ${userId} and purpose = 'reset' and used_at is null`;
+  await sql`insert into cc_token (id, user_id, purpose, expires_at) values (${tokenHash(token)}, ${userId}, 'reset', now() + make_interval(mins => ${RESET_MINUTES}))`;
+  await sendMail(sql, email, 'Choose a new Command Center password', 'Open this link to choose a new password. It works once, for one hour.\n\n' + origin + '/projects/command-center/#/reset/' + token + '\n\nIf you did not ask for this, ignore this email: your password stays as it is.');
 }
 
 async function issueVerify(sql, userId, email, origin) {

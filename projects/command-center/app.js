@@ -27,7 +27,7 @@ function load() {
 let data = load();
 let undoStack = null;
 // Accounts: acct is null while working in this browser only; otherwise the signed-in person and the open workspace.
-let acct = null; let serverOn = false; let synced = null; let syncing = Promise.resolve(); let offeredCopy = false;
+let acct = null; let serverOn = false; let signupMode = 'open'; let synced = null; let syncing = Promise.resolve(); let offeredCopy = false;
 function save() {
   if (acct) { queueSync(); return; }
   try { localStorage.setItem(KEY, JSON.stringify(data)); }
@@ -136,7 +136,7 @@ function route() {
   const parts = path.split('/');
   return { name: parts[0] || '', id: decodeURIComponent(parts[1] || ''), params: new URLSearchParams(query || '') };
 }
-const VIEWS = { overview, mytasks: myTasks, calendar: calendarView, workspace: workspaceView, account: accountView, join: joinView, board, backlog, projects, project: projectView, dependencies, risks, insights: insightsView, reports, verify: verifyView, mailbox: mailboxView };
+const VIEWS = { overview, mytasks: myTasks, calendar: calendarView, workspace: workspaceView, account: accountView, join: joinView, board, backlog, projects, project: projectView, dependencies, risks, insights: insightsView, reports, verify: verifyView, mailbox: mailboxView, reset: resetView, email: emailView, admin: adminView };
 const NAV_OF = { backlog: 'board' };
 let lastHash = null;
 
@@ -331,13 +331,14 @@ function renderSide() {
   $('#myCount').textContent = my || '';
   $('#projNav').innerHTML = data.projects.filter(p => p.status !== 'Completed').slice(0, 8).map(p => '<a class="nv" href="#/project/' + esc(p.id) + '" data-nav="p-' + esc(p.id) + '" title="' + esc(p.name) + '"' + pcs(p.id) + '><span class="pd"></span><span class="nv-t">' + esc(p.name) + '</span></a>').join('');
   $('#projGrp').hidden = !data.projects.some(p => p.status !== 'Completed');
+  $('#adminNav').hidden = !(acct && acct.user.admin);
   const theme = '<button class="theme-switch" type="button" aria-label="Dark theme" aria-pressed="false" title="Light or dark">' + ic('sun', 'i-sun') + ic('moon', 'i-moon') + '</button>';
   const home = '<a class="home-link" href="/#work">← Nawres Skhairia</a>';
   $('#sideFoot').innerHTML = acct
     ? '<a class="who-row" href="#/account" title="Your account">' + avatar(acct.user.displayName, 'sm') + '<span><b>' + esc(acct.user.displayName) + '</b><small class="save-state" aria-live="polite">' + esc(acct.saveState || 'Saved to your account') + '</small></span></a><div class="foot-acts"><button type="button" class="lnk" data-act="signout">Sign out</button>' + theme + '</div>' + home
     : '<div class="who-row">' + avatar(data.me, 'sm') + '<label class="me"><span>Viewing as</span><select id="meSel" aria-label="Viewing as">' + opts(people(), data.me) + '</select></label></div><div class="foot-acts">' + (serverOn ? '<button type="button" class="lnk" data-act="signin">Sign in</button>' : '') + theme + '</div>' + home;
   const high = E.insights(data, TODAY).filter(i => i.level === 'high').length;
-  $('#moreSheet').innerHTML = [['calendar', 'Calendar'], ['backlog', 'List of all tasks'], ['projects', 'Projects'], ['dependencies', 'Dependencies'], ['risks', 'Risks'], ['insights', 'Insights' + (high ? ' · ' + high : '')], ['reports', 'Reports'], ['workspace', acct ? 'People' : 'Share'], ...(acct ? [['account', 'Your account']] : [])].map(([k, l]) => '<a href="#/' + k + '" data-nav="' + k + '">' + esc(l) + '</a>').join('') +
+  $('#moreSheet').innerHTML = [['calendar', 'Calendar'], ['backlog', 'List of all tasks'], ['projects', 'Projects'], ['dependencies', 'Dependencies'], ['risks', 'Risks'], ['insights', 'Insights' + (high ? ' · ' + high : '')], ['reports', 'Reports'], ['workspace', acct ? 'People' : 'Share'], ...(acct ? [['account', 'Your account']] : []), ...(acct && acct.user.admin ? [['admin', 'Admin']] : [])].map(([k, l]) => '<a href="#/' + k + '" data-nav="' + k + '">' + esc(l) + '</a>').join('') +
     '<div class="wide">' + (acct ? '<span>' + esc(acct.user.displayName) + '</span><button type="button" class="lnk" data-act="signout">Sign out</button>' : '<label class="me"><span>Viewing as</span><select data-act="me-pick" aria-label="Viewing as">' + opts(people(), data.me) + '</select></label>') + theme + '</div><a class="wide" href="/#work">← Nawres Skhairia</a>';
   if (window.ccThemeSync) window.ccThemeSync();
 }
@@ -889,6 +890,15 @@ document.addEventListener('click', e => {
     case 'acct-export': api('GET', 'account/export').then(r => { if (r.status !== 200) { toast(r.body.error || 'Not available.', 'error'); return; } const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(r.body, null, 2)], { type: 'application/json' })); a.download = 'command-center-my-data-' + TODAY + '.json'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); toast('Your data was downloaded.'); }); break;
     case 'acct-delete': openForm('Delete your account?', '<p>Your account and your private workspaces are deleted. Shared workspaces you own go on with the next person as owner. This cannot be undone.</p>' + field('password', 'Your password, to confirm', input('password', '', 'password', 'autocomplete="current-password" required maxlength="200"')), async fd => { const r = await api('POST', 'account/delete', { password: String(fd.get('password') || '') }); if (r.status !== 200) return r.body.errors || { password: r.body.error || 'Not deleted.' }; dlg.close(); leaveAccount(); location.hash = '#/overview'; toast('Your account was deleted.'); return {}; }, '', 'Delete my account'); break;
     case 'signup': signUpForm(); break;
+    case 'forgot': { const em = (dlg.querySelector('[name="email"]') || {}).value || ''; forgotForm(em.trim()); break; }
+    case 'acct-name': openForm('Change your name', field('displayName', 'Your name', input('displayName', acct.user.displayName, 'text', 'autocomplete="name" required maxlength="40"'), 'Shown on your tasks and comments. Past activity keeps the name it had.'), async fd => { const r = await api('POST', 'account/name', { displayName: String(fd.get('displayName') || '').trim() }); if (r.status !== 200) return r.body.errors || { displayName: r.body.error || 'Not changed.' }; dlg.close(); await refreshMe(acct.wsId); toast('Your name was changed.'); return {}; }); break;
+    case 'acct-password': openForm('Change your password', field('password', 'Current password', input('password', '', 'password', 'autocomplete="current-password" required maxlength="200"')) + field('next', 'New password', input('next', '', 'password', 'autocomplete="new-password" required minlength="10" maxlength="200"'), 'At least 10 characters. Your other devices are signed out.'), async fd => { const r = await api('POST', 'account/password', { password: String(fd.get('password') || ''), next: String(fd.get('next') || '') }); if (r.status !== 200) return r.body.errors || { password: r.body.error || 'Not changed.' }; dlg.close(); await refreshMe(acct.wsId); toast('Your password was changed. Other devices were signed out.'); return {}; }); break;
+    case 'acct-email': openForm('Change your email', '<p class="muted">We send a link to the new address. Your email changes when you open it.</p>' + field('email', 'New email', input('email', '', 'email', 'autocomplete="email" required maxlength="254"')) + field('password', 'Your password, to confirm', input('password', '', 'password', 'autocomplete="current-password" required maxlength="200"')), async fd => { const em = String(fd.get('email') || '').trim(); const r = await api('POST', 'account/email', { email: em, password: String(fd.get('password') || '') }); if (r.status !== 200) return r.body.errors || { email: r.body.error || 'Not changed.' }; checkMailbox(em, 'Check the new address'); return false; }); break;
+    case 'acct-signout-all': confirmBox('Sign out on every device?', 'Every browser and phone where you are signed in, this one included, will need your password again.', 'Sign out everywhere', async () => { await syncing; const r = await api('POST', 'account/signout-all', {}); if (r.status !== 200) { toast(r.body.error || 'Not done.', 'error'); return; } leaveAccount(); location.hash = '#/overview'; toast('Signed out on every device.'); }); break;
+    case 'member-owner': openForm('Make ' + el.dataset.name + ' the owner?', '<p>' + esc(el.dataset.name) + ' gets every right, including deleting the workspace. You stay in it as an admin.</p>' + field('password', 'Your password, to confirm', input('password', '', 'password', 'autocomplete="current-password" required maxlength="200"')), async fd => { const r = await api('POST', 'workspaces/' + acct.wsId + '/members/' + id + '/owner', { password: String(fd.get('password') || '') }); if (r.status !== 200) return r.body.errors || { password: r.body.error || 'Not done.' }; dlg.close(); wsInfo = null; await refreshMe(acct.wsId); location.hash = '#/workspace'; toast(el.dataset.name + ' is now the owner.'); return {}; }, '', 'Hand it over'); break;
+    case 'adm-tab': admin.tab = el.dataset.tab; render(); break;
+    case 'adm-user': adminAct(el.dataset.do, el.dataset.id, el.dataset.email, el.dataset.name); break;
+    case 'adm-refresh': admin.data = null; admin.log = null; render(); break;
     case 'signout': signOut(); break;
     case 'resend': resend(el.dataset.email); break;
     case 'check-mail': { const v = ($('#mbEmail') || {}).value || ''; location.hash = '#/mailbox?email=' + encodeURIComponent(v.trim()); break; }
@@ -987,6 +997,24 @@ document.addEventListener('submit', async e => {
     lastInvite[email] = r.body.link; wsInfo = null; render(); toast('Invitation sent to ' + email + '.');
     return;
   }
+  if (f.dataset.form === 'reset' || f.dataset.form === 'adm-settings') {
+    e.preventDefault();
+    const showErr = errs => { for (const [k, msg] of Object.entries(errs)) { const x = f.querySelector('#e-' + k); if (x) { x.textContent = msg; x.hidden = false; } else toast(msg, 'error'); } };
+    f.querySelectorAll('.err').forEach(x => { x.hidden = true; });
+    const btn = f.querySelector('[type=submit]'); btn.disabled = true;
+    if (f.dataset.form === 'reset') {
+      const r = await api('POST', 'auth/reset', { token: f.dataset.token, password: f.password.value });
+      btn.disabled = false;
+      if (r.status !== 200) return showErr(r.body.errors || { password: r.body.error || 'The password was not changed.' });
+      history.replaceState(null, '', '#/overview'); await refreshMe(); toast('Your new password is saved. You are signed in.');
+      return;
+    }
+    const r = await api('POST', 'admin/settings', { signup: (f.querySelector('[name=signup]:checked') || {}).value, maxOwned: Number(f.maxOwned.value), maxPeople: Number(f.maxPeople.value) });
+    btn.disabled = false;
+    if (r.status !== 200) return showErr(r.body.errors || { _: r.body.error || 'Not saved.' });
+    admin.data.settings = r.body.settings; signupMode = r.body.settings.signup; admin.log = null; loadAdmin(); toast('Settings saved.');
+    return;
+  }
   if (f.dataset.form !== 'comment') return; e.preventDefault();
   const r = E.addComment(data, ui.panel, f.text.value, data.me, stamp());
   if (Object.keys(r.errors).length) { const er = f.querySelector('.err'); er.textContent = Object.values(r.errors)[0]; er.hidden = false; return; }
@@ -1071,6 +1099,7 @@ function leaveAccount() { acct = null; synced = null; wsInfo = null; data = load
 async function refreshMe(preferId) {
   const me = await api('GET', 'me');
   if (me.status !== 200 || !me.body.user) return false;
+  signupMode = me.body.signup || signupMode;
   await enterAccount(me.body, preferId);
   return true;
 }
@@ -1082,7 +1111,7 @@ async function signOut() {
 
 function signInForm(email = '') {
   openForm('Sign in', field('email', 'Email', input('email', email, 'email', 'autocomplete="email" required maxlength="254"')) + field('password', 'Password', input('password', '', 'password', 'autocomplete="current-password" required maxlength="200"')) +
-    '<p class="muted small">No account yet? <button type="button" class="lnk" data-act="signup">Create one</button></p>',
+    '<p class="muted small"><button type="button" class="lnk" data-act="forgot">Forgot your password?</button> · No account yet? <button type="button" class="lnk" data-act="signup">Create one</button></p>',
   async fd => {
     const em = String(fd.get('email') || '').trim();
     const r = await api('POST', 'auth/signin', { email: em, password: String(fd.get('password') || '') });
@@ -1094,15 +1123,29 @@ function signInForm(email = '') {
 
 // Victoria's step (accounts plan 1.6): an informed acknowledgement, not a consent. Words to be approved by Nawres before live.
 const PRIVACY_STEP = '<div class="privacy-step"><p><b>Before you create an account</b></p><ul>' +
-  '<li><b>What is kept:</b> your email, the name you choose, and what you put in your workspaces, including names of people you type and the email addresses of people you invite.</li>' +
+  '<li><b>What is kept:</b> your email, the name you choose, and what you put in your workspaces, including names of people you type and the email addresses of people you invite. Also a short log of account events (sign-ins, password and email changes), kept 90 days.</li>' +
+  '<li><b>Who runs it:</b> the admin of this site sees your name, email, dates and how many workspaces, projects and tasks you have, never what is inside them.</li>' +
   '<li><b>Who sees it:</b> only the people in a workspace you share. They see your name; only its owner and admins see your email.</li>' +
   '<li><b>Why:</b> to run your account and keep your work, on any device.</li>' +
   '<li><b>Where:</b> a database in the EU (Frankfurt), on Vercel and Neon.</li>' +
   '<li><b>How long:</b> until you delete your account. Sign-ups that are never confirmed are removed after 7 days.</li>' +
   '<li><b>Your rights:</b> you can ask to see, download, correct or delete your data at any time, as the <a href="/privacy/" target="_blank" rel="noopener">privacy page</a> explains.</li>' +
   '<li><b>This is a preview:</b> please use made-up details only.</li></ul></div>';
+function forgotForm(email = '') {
+  openForm('Forgot your password?', '<p class="muted">Enter the email of your account. We send a link to choose a new password. It works once, for one hour.</p>' + field('email', 'Email', input('email', email, 'email', 'autocomplete="email" required maxlength="254"')),
+  async fd => {
+    const em = String(fd.get('email') || '').trim();
+    const r = await api('POST', 'auth/forgot', { email: em });
+    if (r.status !== 200) return r.body.errors || { email: r.body.error || 'The link could not be sent.' };
+    dlg.innerHTML = '<form method="dialog" class="form confirm"><header><h2 id="dlgTitle">Check your email</h2></header><div class="form-body"><p>If <b>' + esc(em) + '</b> has an account, a link to choose a new password is on its way. It works once, for one hour.</p>' +
+      '<p class="muted small">On this preview no real email is sent: the link waits in the <a href="#/mailbox?email=' + encodeURIComponent(em) + '" data-close>test mailbox</a>.</p></div><footer><span class="grow"></span><button type="submit" class="btn">OK</button></footer></form>';
+    dlg.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => dlg.close()));
+    return false;
+  }, '', 'Send the link');
+}
 function signUpForm() {
-  openForm('Create an account', '<p class="muted">Your projects and tasks are saved to your account and are there on any device. Without an account, they stay only in this browser.</p>' +
+  if (signupMode === 'closed') { confirmBox('New accounts are closed for now', 'The person who runs this Command Center has paused new sign-ups. You can still try everything in this browser without an account.', 'OK', () => {}); return; }
+  openForm('Create an account', '<p class="muted">Your projects and tasks are saved to your account and are there on any device. Without an account, they stay only in this browser.</p>' + (signupMode === 'invite' ? '<p class="note-calm">New accounts are by invitation only right now. Use the address your invitation was sent to.</p>' : '') +
     field('displayName', 'Your name', input('displayName', '', 'text', 'autocomplete="name" required maxlength="40"'), 'Shown on your tasks and comments.') +
     field('email', 'Email', input('email', '', 'email', 'autocomplete="email" required maxlength="254"'), 'We send one link to confirm it.') +
     field('password', 'Password', input('password', '', 'password', 'autocomplete="new-password" required minlength="10" maxlength="200"'), 'At least 10 characters.') +
@@ -1145,7 +1188,7 @@ function offerCopy() {
 
 // ---------- sharing: the workspace page, invitations, your account ----------
 const ROLE = { owner: 'Owner', admin: 'Admin', member: 'Member' };
-const ROLE_SAYS = { owner: 'Can do everything, including deleting the workspace.', admin: 'Can invite members, rename and remove members.', member: 'Can see and change all projects and tasks.' };
+const ROLE_SAYS = { owner: 'Can do everything, including deleting the workspace or handing it over.', admin: 'Can invite members, rename and remove members.', member: 'Can see and change all projects and tasks.' };
 let wsInfo = null; // { name, yourRole, members, invites } for the open workspace
 async function loadMembers() {
   if (!acct || !acct.wsId) { wsInfo = null; return; }
@@ -1160,6 +1203,7 @@ function workspaceView() {
   const me = wsInfo.yourRole; const manager = me === 'owner' || me === 'admin';
   const person = m => '<div class="tr person">' + avatar(m.name, 'sm') + '<span class="pp"><b>' + esc(m.name) + (m.you ? ' <small>(you)</small>' : '') + '</b>' + (m.email ? '<small>' + esc(m.email) + '</small>' : '') + '</span>' +
     (me === 'owner' && !m.you && m.role !== 'owner' ? '<label><span class="sr">Role of ' + esc(m.name) + '</span><select data-act="member-role" data-id="' + esc(m.id) + '">' + opts([['admin', 'Admin'], ['member', 'Member']], m.role) + '</select></label>' : '<span class="chip2 ' + (m.role === 'owner' ? 'c-acc' : 'c-n') + '">' + ROLE[m.role] + '</span>') +
+    (me === 'owner' && !m.you && m.role !== 'owner' ? '<button type="button" class="lnk" data-act="member-owner" data-id="' + esc(m.id) + '" data-name="' + esc(m.name) + '">Make owner</button>' : '') +
     (manager && !m.you && m.role !== 'owner' && !(me === 'admin' && m.role === 'admin') ? '<button type="button" class="lnk" data-act="member-remove" data-id="' + esc(m.id) + '" data-name="' + esc(m.name) + '">Remove</button>' : '') + '</div>';
   const others = acct.workspaces.filter(w => w.id !== acct.wsId);
   return '<div class="vh"><div><p class="eyebrow">Workspace</p><h2>' + esc(acct.wsName) + '</h2><p class="lede">' + wsInfo.members.length + ' ' + (wsInfo.members.length === 1 ? 'person' : 'people') + '. Everyone here sees and changes the same projects and tasks. You are ' + (me === 'owner' ? 'the owner' : me === 'admin' ? 'an admin' : 'a member') + '.</p></div><div class="row">' + (manager ? '<button class="btn ghost" data-act="ws-rename">Rename</button>' : '') + '<button class="btn" data-act="ws-new">' + ic('plus') + 'New workspace</button></div></div>' +
@@ -1180,6 +1224,11 @@ function accountView() {
   if (!acct) return '<div class="vh"><div><h2>Your account</h2></div></div>' + calmEmpty('You are not signed in', 'Without an account, your work stays in this browser only.', serverOn ? '<div class="row"><button class="btn" data-act="signup">Create an account</button><button class="btn ghost" data-act="signin">Sign in</button></div>' : '');
   return '<div class="vh"><div><p class="eyebrow">Account</p><h2>' + esc(acct.user.displayName) + '</h2><p class="lede">' + esc(acct.user.email) + '</p></div><div class="row"><button class="btn ghost" data-act="signout">Sign out</button></div></div>' +
     '<div class="cols2"><div class="stack">' +
+      '<section class="card2"><div class="ch"><h3>Sign-in and security</h3></div>' +
+        '<div class="tr person"><span class="pp"><b>Name</b><small>' + esc(acct.user.displayName) + '</small></span><button type="button" class="lnk" data-act="acct-name">Change</button></div>' +
+        '<div class="tr person"><span class="pp"><b>Email</b><small>' + esc(acct.user.email) + '</small></span><button type="button" class="lnk" data-act="acct-email">Change</button></div>' +
+        '<div class="tr person"><span class="pp"><b>Password</b><small>Forgot it? Sign out, then use “Forgot your password?”.</small></span><button type="button" class="lnk" data-act="acct-password">Change</button></div>' +
+        '<div class="tr person"><span class="pp"><b>Signed in on ' + (acct.user.devices || 1) + ' ' + ((acct.user.devices || 1) === 1 ? 'device' : 'devices') + '</b><small>Lost a phone, or used a shared computer? Sign out everywhere.</small></span><button type="button" class="lnk" data-act="acct-signout-all">Sign out everywhere</button></div></section>' +
       '<section class="card2"><div class="ch"><h3>Your data</h3></div><p class="soft">Download everything kept about you: your account details and every workspace you are in, as a JSON file you can open or keep.</p><div class="row pad-x"><button class="btn ghost" data-act="acct-export">Download my data</button></div></section>' +
       '<section class="card2"><div class="ch"><h3>Delete my account</h3></div><p class="soft">Your account and your private workspaces are deleted. Shared workspaces you own go on with the next person as owner. Your name in past activity becomes "Former member". This cannot be undone.</p><div class="row pad-x"><button class="btn ghost" data-act="acct-delete">Delete my account</button></div></section>' +
     '</div><div class="stack"><section class="card2"><div class="ch"><h3>How your data is used</h3></div><p class="soft">Kept in a database in the EU (Frankfurt), to run your account and keep your work. Read the <a href="/privacy/" target="_blank" rel="noopener">privacy page</a>.</p></section></div></div>';
@@ -1263,6 +1312,78 @@ function verifyView(r) {
   }, 0);
   return '<div class="vh"><div><h2>Confirming your email</h2><p class="lede" id="verifyMsg" aria-live="polite">One moment…</p></div></div><p><button type="button" class="btn ghost" data-act="signin">Sign in</button></p>';
 }
+// #/reset/<token>: the link from "Forgot your password?".
+function resetView(r) {
+  const token = r.id;
+  return '<div class="vh"><div><p class="eyebrow">Your account</p><h2>Choose a new password</h2><p class="lede">After this, every device where you were signed in is signed out.</p></div></div>' +
+    '<section class="card2 narrow"><form class="form-inline" novalidate data-form="reset" data-token="' + esc(token) + '"><div class="fld" data-field="password"><label for="f-password">New password</label><input id="f-password" name="password" type="password" autocomplete="new-password" required minlength="10" maxlength="200"><small class="hint">At least 10 characters.</small><small class="err" id="e-password" hidden></small></div><div class="row"><button class="btn" type="submit">Save and sign in</button></div></form></section>';
+}
+// #/email/<token>: the link sent to a new email address.
+function emailView(r) {
+  const token = r.id;
+  setTimeout(async () => {
+    const res = await api('POST', 'auth/confirm-email', { token });
+    const el = $('#emailMsg'); if (!el) return;
+    if (res.status === 200) { el.textContent = 'Done. Your account now uses this address.'; if (acct) await refreshMe(acct.wsId); }
+    else el.textContent = res.body.error || 'This link did not work.';
+  }, 0);
+  return '<div class="vh"><div><h2>Confirming your new email</h2><p class="lede" id="emailMsg" aria-live="polite">One moment…</p></div></div><p><a class="btn ghost" href="#/overview">Go to Home</a></p>';
+}
+
+// ---------- the admin area: who has an account, and how much is used. Never what is inside a workspace. ----------
+const admin = { tab: 'people', data: null, log: null, loading: false };
+const when = d => d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+async function loadAdmin() {
+  if (admin.loading) return; admin.loading = true;
+  const [o, l] = await Promise.all([api('GET', 'admin/overview'), api('GET', 'admin/log')]);
+  admin.loading = false;
+  admin.data = o.status === 200 ? o.body : { error: o.body.error || 'Not available.' };
+  admin.log = l.status === 200 ? l.body : null;
+  if (route().name === 'admin') render();
+}
+function adminView() {
+  const head = '<div class="vh"><div><p class="eyebrow">Admin</p><h2>Run Command Center</h2><p class="lede">Accounts, numbers and settings. What people write inside their workspaces stays private, also from you.</p></div><div class="row"><button class="btn ghost" data-act="adm-refresh">Refresh</button></div></div>';
+  if (!acct || !acct.user.admin) return head.replace(/<div class="row">.*<\/div><\/div>$/, '</div>') + calmEmpty('This page is for the admin', 'Only the person who runs this Command Center can open it.');
+  if (!admin.data) { loadAdmin(); return head + '<p class="muted">Loading…</p>'; }
+  if (admin.data.error) return head + calmEmpty('The admin area did not load', admin.data.error);
+  const d = admin.data; const c = d.counts;
+  const kp = (n, l, s = '') => '<div class="kpi"><b>' + n + '</b><span>' + l + '</span>' + (s ? '<small>' + s + '</small>' : '') + '</div>';
+  const tabs = [['people', 'People'], ['workspaces', 'Workspaces'], ['settings', 'Settings'], ['log', 'Activity log']];
+  let body = '';
+  if (admin.tab === 'people') body = '<div class="tbl-wrap"><table class="tbl adm"><thead><tr><th>Person</th><th>Joined</th><th>Last sign-in</th><th>Workspaces</th><th>State</th><th><span class="sr">Actions</span></th></tr></thead><tbody>' + d.users.map(u => {
+      const self = u.id === d.you;
+      const state = u.pausedAt ? '<span class="chip2 c-pause">Paused</span>' : !u.confirmedAt ? '<span class="chip2 c-n">Not confirmed</span>' : '<span class="chip2 c-n">Active</span>';
+      const b = (what, label) => '<button type="button" class="lnk" data-act="adm-user" data-do="' + what + '" data-id="' + esc(u.id) + '" data-email="' + esc(u.email) + '" data-name="' + esc(u.name) + '">' + label + '</button>';
+      return '<tr><td data-label="Person"><span class="pp"><b>' + esc(u.name) + (self ? ' <small>(you)</small>' : '') + '</b><small>' + esc(u.email) + '</small></span></td><td data-label="Joined">' + when(u.createdAt) + '</td><td data-label="Last sign-in">' + when(u.lastSignInAt) + '</td><td data-label="Workspaces"><span>' + u.workspaces + (u.owns ? ' <small class="muted">(owns ' + u.owns + ')</small>' : '') + '</span></td><td data-label="State">' + state + '</td><td data-label="Actions" class="adm-acts">' +
+        (self ? '<small class="muted">Use your account page</small>' : (u.confirmedAt && !u.pausedAt ? b('reset', 'Send password link') : '') + b(u.pausedAt ? 'resume' : 'pause', u.pausedAt ? 'Resume' : 'Pause') + b('delete', 'Delete')) + '</td></tr>';
+    }).join('') + '</tbody></table></div>';
+  if (admin.tab === 'workspaces') body = '<div class="tbl-wrap"><table class="tbl adm"><thead><tr><th>Workspace</th><th>Owner</th><th>People</th><th>Projects</th><th>Tasks</th><th>Created</th><th>Last change</th></tr></thead><tbody>' + d.workspaces.map(w =>
+      '<tr><td data-label="Workspace"><b>' + esc(w.name) + '</b>' + (w.sample ? ' <small class="muted">sample</small>' : '') + '</td><td data-label="Owner">' + esc(w.owner) + '</td><td data-label="People">' + w.people + '</td><td data-label="Projects">' + w.projects + '</td><td data-label="Tasks">' + w.tasks + '</td><td data-label="Created">' + when(w.createdAt) + '</td><td data-label="Last change">' + when(w.lastChange) + '</td></tr>').join('') + '</tbody></table></div>' +
+      '<p class="soft small">Only names and counts. You cannot open someone else’s workspace from here.</p>';
+  if (admin.tab === 'settings') {
+    const s = d.settings;
+    const radio = (v, l, hint) => '<label class="radio"><input type="radio" name="signup" value="' + v + '"' + (s.signup === v ? ' checked' : '') + '><span><b>' + l + '</b><small>' + hint + '</small></span></label>';
+    body = '<form class="adm-set" data-form="adm-settings"><fieldset><legend>New accounts</legend>' + radio('open', 'Open', 'Anyone with the address can create an account.') + radio('invite', 'By invitation only', 'Only an address that was invited to a workspace can create an account.') + radio('closed', 'Closed', 'Nobody can create an account. People who have one can still sign in.') + '</fieldset>' +
+      '<fieldset><legend>Limits</legend><div class="fld" data-field="maxOwned"><label for="f-maxOwned">Workspaces one person can own</label><input id="f-maxOwned" name="maxOwned" type="number" min="1" max="100" value="' + s.maxOwned + '"><small class="err" id="e-maxOwned" hidden></small></div>' +
+      '<div class="fld" data-field="maxPeople"><label for="f-maxPeople">People in one workspace, invitations included</label><input id="f-maxPeople" name="maxPeople" type="number" min="2" max="200" value="' + s.maxPeople + '"><small class="err" id="e-maxPeople" hidden></small></div></fieldset>' +
+      '<div class="row"><button class="btn" type="submit">Save settings</button></div></form>' +
+      '<p class="soft small">' + (d.adminBy === 'list' ? 'You are the admin because your address is on the admin list of this site.' : 'On this preview, the first person who signed in became the admin. On the live site, only the addresses on the admin list can open this page.') + '</p>';
+  }
+  if (admin.tab === 'log') body = !admin.log ? '<p class="muted">The log did not load.</p>' : '<p class="soft small">What happened to accounts, kept ' + admin.log.keptDays + ' days. Never what people wrote.</p><div class="tbl-wrap"><table class="tbl adm"><thead><tr><th>When</th><th>What</th><th>Account</th></tr></thead><tbody>' + admin.log.events.map(e =>
+      '<tr><td data-label="When">' + esc(new Date(e.at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })) + '</td><td data-label="What">' + esc(e.kind) + (e.byAdmin ? ' <small class="muted">by the admin</small>' : '') + (e.detail ? '<br><small class="muted">' + esc(e.detail) + '</small>' : '') + '</td><td data-label="Account">' + (e.kind === 'Account deleted' ? '<small class="muted">removed</small>' : esc(e.name) + (e.email ? ' <small class="muted">' + esc(e.email) + '</small>' : '')) + '</td></tr>').join('') + '</tbody></table></div>';
+  return head + '<div class="kpis adm-k">' + kp(c.accounts, 'Accounts', c.unconfirmed ? c.unconfirmed + ' not confirmed' : 'all confirmed') + kp(c.active7, 'Signed in this week') + kp(c.workspaces, 'Workspaces', c.shared + ' shared') + kp(c.projects, 'Projects') + kp(c.tasks, 'Tasks') + kp(c.invites, 'Invitations waiting', c.paused ? c.paused + ' accounts paused' : '') + '</div>' +
+    '<nav class="seg adm-tabs" aria-label="Admin sections">' + tabs.map(([k, l]) => '<button type="button" data-act="adm-tab" data-tab="' + k + '" aria-pressed="' + (admin.tab === k) + '">' + l + '</button>').join('') + '</nav><section class="card2 adm-body">' + body + '</section>';
+}
+function adminAct(what, id, email, name) {
+  const done = msg => { admin.data = null; admin.log = null; render(); toast(msg); };
+  const post = async (b = {}) => api('POST', 'admin/users/' + id + '/' + what, b);
+  if (what === 'pause') confirmBox('Pause ' + name + '?', 'They are signed out everywhere and cannot sign in until you resume the account. Their workspaces stay as they are.', 'Pause the account', async () => { const r = await post(); if (r.status !== 200) return toast(r.body.error || 'Not done.', 'error'); done(name + ' is paused.'); });
+  if (what === 'resume') confirmBox('Resume ' + name + '?', 'They can sign in again with their password.', 'Resume', async () => { const r = await post(); if (r.status !== 200) return toast(r.body.error || 'Not done.', 'error'); done(name + ' can sign in again.'); });
+  if (what === 'reset') confirmBox('Send ' + name + ' a password link?', 'They get an email with a link to choose a new password, valid for one hour. Their current password keeps working until they use it.', 'Send the link', async () => { const r = await post(); if (r.status !== 200) return toast(r.body.error || 'Not sent.', 'error'); done('The link was sent to ' + email + '.'); });
+  if (what === 'delete') openForm('Delete the account of ' + name + '?', '<p>Their account and private workspaces are deleted. Shared workspaces they own go on with the next person as owner. Their name in past activity becomes “Former member”. This cannot be undone.</p>' + field('confirm', 'Type their email to confirm', input('confirm', '', 'text', 'required autocomplete="off"'), esc(email)),
+    async fd => { const r = await post({ confirm: String(fd.get('confirm') || '') }); if (r.status !== 200) return r.body.errors || { confirm: r.body.error || 'Not deleted.' }; dlg.close(); done('The account was deleted.'); return {}; }, '', 'Delete the account');
+}
+
 // #/mailbox: preview-only test mailbox (no real email is sent from the preview).
 function mailboxView(r) {
   const email = r.params.get('email') || '';
@@ -1270,7 +1391,7 @@ function mailboxView(r) {
     const out = $('#mbList'); if (!out || !email) return;
     const res = await api('GET', 'dev/mailbox?email=' + encodeURIComponent(email));
     if (res.status !== 200) { out.innerHTML = '<p class="muted">The test mailbox exists only on the preview.</p>'; return; }
-    out.innerHTML = res.body.mails.length ? res.body.mails.map(m => '<article class="panel mail"><p class="muted small">' + esc(new Date(m.created_at).toLocaleString('en-GB')) + '</p><h3>' + esc(m.subject) + '</h3><p>' + esc(m.body).replace(/(https?:\/\/[^\s<]+)/g, u => '<a href="' + u + '">Confirm my email</a>') + '</p></article>').join('') : '<p class="muted">No email for this address yet.</p>';
+    out.innerHTML = res.body.mails.length ? res.body.mails.map(m => '<article class="panel mail"><p class="muted small">' + esc(new Date(m.created_at).toLocaleString('en-GB')) + '</p><h3>' + esc(m.subject) + '</h3><p>' + esc(m.body).replace(/(https?:\/\/[^\s<]+)/g, u => '<a href="' + u + '">' + (/#\/reset\//.test(u) ? 'Choose a new password' : /#\/join\//.test(u) ? 'Open the invitation' : /#\/email\//.test(u) ? 'Confirm the new address' : 'Confirm my email') + '</a>') + '</p></article>').join('') : '<p class="muted">No email for this address yet.</p>';
   }, 0);
   return '<div class="vh"><div><p class="eyebrow">Preview only</p><h2>Test mailbox</h2><p class="lede">On the preview, emails are not sent. They wait here so the sign-up can be tried with made-up addresses.</p></div></div>' +
     '<div class="row"><label class="fsearch"><span class="sr">Email address</span><input id="mbEmail" type="email" value="' + esc(email) + '" placeholder="the address you signed up with"></label><button type="button" class="btn ghost" data-act="check-mail">Show emails</button></div><div id="mbList" class="mb-list"></div>';
@@ -1283,5 +1404,6 @@ if (startNotice) toast(startNotice, 'error');
 (async () => {
   const me = await api('GET', 'me');
   serverOn = me.status === 200;
+  if (serverOn) signupMode = me.body.signup || 'open';
   if (serverOn && me.body.user) await enterAccount(me.body); else renderBand();
 })();

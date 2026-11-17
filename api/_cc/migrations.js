@@ -162,4 +162,25 @@ create table cc_invite (
 create index cc_invite_ws on cc_invite (workspace_id);
 alter table cc_invite enable row level security;
 ` },
+  // Account recovery, email change, the admin area and its settings, and a short account event log.
+  { id: 3, sql: `
+alter table cc_token drop constraint if exists cc_token_purpose_check;
+alter table cc_token add constraint cc_token_purpose_check check (purpose in ('verify', 'reset', 'email'));
+alter table cc_token add column new_email text check (new_email is null or (new_email = lower(new_email) and length(new_email) <= 254));
+alter table cc_user add column disabled_at timestamptz;
+alter table cc_user add column last_signin_at timestamptz;
+create table cc_setting (key text primary key, value jsonb not null, updated_at timestamptz not null default now());
+create table cc_event (
+  id bigserial primary key,
+  at timestamptz not null default now(),
+  kind text not null,
+  user_id uuid references cc_user on delete cascade,
+  by_admin boolean not null default false,
+  detail text not null default '' check (length(detail) <= 200)
+);
+create index cc_event_at on cc_event (at);
+create index cc_event_user on cc_event (user_id);
+alter table cc_setting enable row level security;
+alter table cc_event enable row level security;
+` },
 ];

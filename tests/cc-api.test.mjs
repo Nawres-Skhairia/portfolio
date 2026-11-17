@@ -45,7 +45,7 @@ const ops = data => ['project', 'milestone', 'task', 'risk'].flatMap(type => dat
 
 test('Command Center server', { skip }, async t => {
   admin = postgres(URL_, { onnotice: () => {} });
-  await admin.unsafe(`drop table if exists cc_invite, cc_activity, cc_risk, cc_task_dep, cc_task, cc_milestone, cc_project, cc_membership, cc_workspace, cc_outbox, cc_attempt, cc_token, cc_session, cc_user, cc_migration cascade; drop function if exists cc_is_member(uuid);`);
+  await admin.unsafe(`drop table if exists cc_event, cc_setting, cc_invite, cc_activity, cc_risk, cc_task_dep, cc_task, cc_milestone, cc_project, cc_membership, cc_workspace, cc_outbox, cc_attempt, cc_token, cc_session, cc_user, cc_migration cascade; drop function if exists cc_is_member(uuid);`);
   ({ handle } = await import('../api/_cc/server.js'));
   ({ closeForTests } = await import('../api/_cc/db.js'));
   t.after(async () => { await closeForTests(); await admin.end(); });
@@ -302,6 +302,110 @@ test('Command Center server', { skip }, async t => {
     const meB = await call('GET', '/me', { cookie: B.cookie });
     assert.equal(meB.body.workspaces.find(w => w.id === shared).role, 'owner', 'the shared one goes on with the other person as owner');
     assert.equal((await call('GET', '/me', { cookie: A.cookie })).body.user, null, 'signed out everywhere');
+  });
+
+  const linkOf = async (email, kind) => { const r = await call('GET', '/dev/mailbox', { query: { email } }); for (const m of r.body.mails) { const x = new RegExp('#/' + kind + '/([A-Za-z0-9_-]+)').exec(m.body); if (x) return x[1]; } return null; };
+
+  await t.test('forgot password: a one-hour link, one use, every device signed out, same answer for unknown addresses', async () => {
+    const A = await account('Forgetful Fay');
+    const other = await call('POST', '/auth/signin', { body: { email: A.email, password: 'correct horse 1' }, ip: ipOf(60) });
+    assert.equal((await call('POST', '/auth/forgot', { body: { email: 'nobody@example.test' } })).status, 200);
+    assert.equal((await call('POST', '/auth/forgot', { body: { email: A.email } })).status, 200);
+    const token = await linkOf(A.email, 'reset'); assert.ok(token);
+    assert.equal((await call('POST', '/auth/reset', { body: { token, password: 'short' } })).status, 422);
+    const r = await call('POST', '/auth/reset', { body: { token, password: 'a brand new one 2' } });
+    assert.equal(r.status, 200); assert.ok(r.cookie);
+    assert.equal((await call('POST', '/auth/reset', { body: { token, password: 'a brand new one 3' } })).status, 400, 'a link works once');
+    assert.equal((await call('GET', '/me', { cookie: A.cookie })).body.user, null, 'old sessions are gone');
+    assert.equal((await call('GET', '/me', { cookie: other.cookie })).body.user, null);
+    assert.equal((await call('POST', '/auth/signin', { body: { email: A.email, password: 'a brand new one 2' }, ip: ipOf(61) })).status, 200);
+    for (let i = 0; i < 3; i++) await call('POST', '/auth/forgot', { body: { email: A.email } });
+    assert.equal((await call('POST', '/auth/forgot', { body: { email: A.email } })).status, 429);
+  });
+
+  await t.test('your account: change name, password and email; sign out everywhere', async () => {
+    const A = await account('Changing Cleo');
+    const second = await call('POST', '/auth/signin', { body: { email: A.email, password: 'correct horse 1' }, ip: ipOf(62) });
+    assert.equal((await call('GET', '/me', { cookie: A.cookie })).body.user.devices, 2);
+    assert.equal((await call('POST', '/account/name', { cookie: A.cookie, body: { displayName: 'Cleo C.' } })).status, 200);
+    assert.equal((await call('POST', '/account/password', { cookie: A.cookie, body: { password: 'wrong wrong 1', next: 'another good one' } })).status, 422);
+    assert.equal((await call('POST', '/account/password', { cookie: A.cookie, body: { password: 'correct horse 1', next: 'another good one' } })).status, 200);
+    assert.ok((await call('GET', '/me', { cookie: A.cookie })).body.user, 'this device stays signed in');
+    assert.equal((await call('GET', '/me', { cookie: second.cookie })).body.user, null, 'the other device is signed out');
+    const B = await account('Taken Tom');
+    assert.equal((await call('POST', '/account/email', { cookie: A.cookie, body: { password: 'another good one', email: B.email } })).status, 200, 'same answer for a taken address');
+    assert.equal(await linkOf(B.email, 'email'), null, 'no change link to a taken address');
+    const fresh = 'moved' + Date.now() + '@example.test';
+    assert.equal((await call('POST', '/account/email', { cookie: A.cookie, body: { password: 'another good one', email: fresh } })).status, 200);
+    const tok = await linkOf(fresh, 'email'); assert.ok(tok);
+    assert.equal((await call('POST', '/auth/confirm-email', { body: { token: tok } })).status, 200);
+    const me = await call('GET', '/me', { cookie: A.cookie });
+    assert.equal(me.body.user.email, fresh); assert.equal(me.body.user.displayName, 'Cleo C.');
+    assert.equal((await call('POST', '/account/signout-all', { cookie: A.cookie })).status, 200);
+    assert.equal((await call('GET', '/me', { cookie: A.cookie })).body.user, null);
+  });
+
+  await t.test('handing a workspace over needs the password; the old owner stays as admin', async () => {
+    const A = await account('Owner Olga'); const B = await account('Next Nils');
+    await call('POST', '/workspaces/' + A.ws + '/invites', { cookie: A.cookie, body: { email: B.email } });
+    await call('POST', '/invites/accept', { cookie: B.cookie, body: { token: await inviteLink(B.email) } });
+    const bId = (await admin`select id from cc_user where email = ${B.email}`)[0].id;
+    const aId = (await admin`select id from cc_user where email = ${A.email}`)[0].id;
+    assert.equal((await call('POST', '/workspaces/' + A.ws + '/members/' + aId + '/owner', { cookie: B.cookie, body: { password: 'correct horse 1' } })).status, 403);
+    assert.equal((await call('POST', '/workspaces/' + A.ws + '/members/' + bId + '/owner', { cookie: A.cookie, body: { password: 'nope nope nope' } })).status, 422);
+    assert.equal((await call('POST', '/workspaces/' + A.ws + '/members/' + bId + '/owner', { cookie: A.cookie, body: { password: 'correct horse 1' } })).status, 200);
+    const roles = await admin`select u.email, m.role from cc_membership m join cc_user u on u.id = m.user_id where m.workspace_id = ${A.ws}`;
+    assert.equal(roles.find(r => r.email === B.email).role, 'owner'); assert.equal(roles.find(r => r.email === A.email).role, 'admin');
+  });
+
+  await t.test('admin area: only the admin, facts not content, pause, sign-up modes, limits, delete, log', async () => {
+    const Ad = await account('Admin Ada'); const U = await account('User Uma');
+    process.env.CC_ADMIN_EMAILS = Ad.email;
+    assert.equal((await call('GET', '/admin/overview', { cookie: U.cookie })).status, 404, 'hidden from everyone else');
+    assert.equal((await call('GET', '/me', { cookie: Ad.cookie })).body.user.admin, true);
+    await call('POST', '/workspaces/' + U.ws + '/sync', { cookie: U.cookie, body: { version: 0, ops: ops(seed('2026-11-17')) } });
+    const o = await call('GET', '/admin/overview', { cookie: Ad.cookie });
+    assert.equal(o.status, 200); assert.ok(o.body.counts.accounts >= 2);
+    const row = o.body.workspaces.find(w => w.id === U.ws); assert.ok(row.tasks > 0);
+    assert.ok(!JSON.stringify(o.body).includes('Connect finance feed'), 'no task content in the admin area');
+    assert.ok(!JSON.stringify(o.body).includes('scrypt'));
+    const uId = o.body.users.find(x => x.email === U.email).id;
+    assert.equal((await call('POST', '/admin/users/' + o.body.you + '/pause', { cookie: Ad.cookie })).status, 422, 'not on yourself');
+    assert.equal((await call('POST', '/admin/users/' + uId + '/pause', { cookie: Ad.cookie })).status, 200);
+    assert.equal((await call('GET', '/me', { cookie: U.cookie })).body.user, null, 'a paused account is signed out');
+    assert.equal((await call('POST', '/auth/signin', { body: { email: U.email, password: 'correct horse 1' }, ip: ipOf(63) })).status, 403);
+    assert.equal((await call('POST', '/admin/users/' + uId + '/resume', { cookie: Ad.cookie })).status, 200);
+    const back = await call('POST', '/auth/signin', { body: { email: U.email, password: 'correct horse 1' }, ip: ipOf(64) });
+    assert.equal(back.status, 200);
+    assert.equal((await call('POST', '/admin/users/' + uId + '/reset', { cookie: Ad.cookie })).status, 200);
+    assert.ok(await linkOf(U.email, 'reset'));
+    // sign-up modes
+    assert.equal((await call('POST', '/admin/settings', { cookie: Ad.cookie, body: { signup: 'closed' } })).status, 200);
+    assert.equal((await call('GET', '/me')).body.signup, 'closed');
+    const s1 = await call('POST', '/auth/signup', { body: { email: 'late1@example.test', password: 'correct horse 1', displayName: 'Late', privacyAck: true }, ip: ipOf(65) });
+    assert.equal(s1.status, 403);
+    await call('POST', '/admin/settings', { cookie: Ad.cookie, body: { signup: 'invite' } });
+    assert.equal((await call('POST', '/auth/signup', { body: { email: 'late2@example.test', password: 'correct horse 1', displayName: 'Late', privacyAck: true }, ip: ipOf(66) })).status, 403);
+    await call('POST', '/workspaces/' + Ad.ws + '/invites', { cookie: Ad.cookie, body: { email: 'late3@example.test' } });
+    assert.equal((await call('POST', '/auth/signup', { body: { email: 'late3@example.test', password: 'correct horse 1', displayName: 'Late', privacyAck: true }, ip: ipOf(67) })).status, 200, 'an invited address can sign up');
+    // limits
+    assert.equal((await call('POST', '/admin/settings', { cookie: Ad.cookie, body: { maxOwned: 0 } })).status, 422);
+    await call('POST', '/admin/settings', { cookie: Ad.cookie, body: { signup: 'open', maxOwned: 1 } });
+    assert.equal((await call('POST', '/workspaces', { cookie: back.cookie, body: { name: 'Second' } })).status, 422);
+    await call('POST', '/admin/settings', { cookie: Ad.cookie, body: { maxOwned: 20 } });
+    // delete
+    assert.equal((await call('POST', '/admin/users/' + uId + '/delete', { cookie: Ad.cookie, body: { confirm: 'wrong' } })).status, 422);
+    assert.equal((await call('POST', '/admin/users/' + uId + '/delete', { cookie: Ad.cookie, body: { confirm: U.email } })).status, 200);
+    assert.equal((await admin`select count(*)::int as c from cc_user where email = ${U.email}`)[0].c, 0);
+    const log = await call('GET', '/admin/log', { cookie: Ad.cookie });
+    assert.ok(log.body.events.some(e => e.kind === 'Account deleted' && e.byAdmin));
+    assert.ok(!log.body.events.some(e => e.email === U.email), 'a deleted person leaves no email in the log');
+    delete process.env.CC_ADMIN_EMAILS;
+    assert.equal((await call('GET', '/admin/overview', { cookie: Ad.cookie })).status, 404, 'without the list, only the first recorded person');
+    process.env.VERCEL_ENV = 'production';
+    const first = (await admin`select value from cc_setting where key = 'admin'`)[0];
+    assert.ok(first, 'on a preview the first person is recorded');
+    delete process.env.VERCEL_ENV;
   });
 
   await t.test('the test mailbox is closed on the live site', async () => {
