@@ -201,6 +201,6 @@ document.addEventListener('keydown', e => {
   if (b && (e.key === 'ArrowDown' || e.key === 'ArrowUp') && !open) { e.preventDefault(); (b.classList.contains('odate') ? openDate : openSel)(b); }
 }, true);
 addEventListener('resize', () => close());
-document.addEventListener('scroll', e => { if (open && !(e.target.closest && e.target.closest('.opop'))) close(); }, true);
+document.addEventListener('scroll', e => { if (open && !(e.target.closest && e.target.closest('.opop'))) { if (open.btn.isConnected) place(open.pop, open.btn); else close(); } }, true);
 // Everything the app draws later is swapped too.
 new MutationObserver(ms => { for (const m of ms) for (const n of m.addedNodes) if (n.nodeType === 1) { if (n.matches('select:not([multiple]), input[type=date]')) enhance(n.parentNode); else if (n.querySelector('select, input[type=date]')) enhance(n); } }).observe(document.documentElement, { childList: true, subtree: true });

@@ -148,7 +148,7 @@ function route() {
   const parts = path.split('/');
   return { name: parts[0] || '', id: decodeURIComponent(parts[1] || ''), params: new URLSearchParams(query || '') };
 }
-const VIEWS = { overview: r => overview(r) + pinnedLists(), mytasks: myTasks, calendar: calendarView, workspace: workspaceView, account: accountView, join: joinView, board, backlog, projects, project: projectView, dependencies, risks, insights: insightsView, reports, verify: verifyView, mailbox: mailboxView, reset: resetView, email: emailView, admin: adminView, lists: listsView, task: taskPage };
+const VIEWS = { overview: r => overview(r), mytasks: myTasks, calendar: calendarView, workspace: workspaceView, account: accountView, join: joinView, board, backlog, projects, project: projectView, dependencies, risks, insights: insightsView, reports, verify: verifyView, mailbox: mailboxView, reset: resetView, email: emailView, admin: adminView, lists: listsView, task: taskPage };
 const NAV_OF = { backlog: 'board' };
 let lastHash = null;
 
@@ -257,45 +257,58 @@ function pinnedLists() {
   return '<div class="pins">' + pins.map(f => { const { view, ...q } = f.query; const all = sortTasks(E.applyFilter(data.tasks, { ...Q0, ...q }, data.me, TODAY), view.sort); const rows = all.slice(0, 6);
     return '<section class="card2 pin"><div class="ch"><h3>' + esc(f.name) + '</h3><span>' + all.length + '</span><span class="grow"></span><button type="button" class="lnk" data-act="list-open" data-id="' + esc(f.id) + '">Open the list</button></div>' + (rows.length ? rows.map(t => taskRow(t, { when: true, proj: true })).join('') : '<p class="soft">Nothing here right now.</p>') + '</section>'; }).join('') + '</div>' + tip;
 }
+function wrow(t) {
+  const done = t.status === 'Done';
+  return '<li class="wr' + (done ? ' dn' : '') + '"' + pcs(t.projectId) + ' data-flip="row-' + esc(t.id) + '">' +
+    '<button type="button" class="ck' + (done ? ' done' : '') + '" data-act="' + (done ? 'reopen' : 'complete') + '" data-id="' + esc(t.id) + '" aria-label="' + esc((done ? 'Reopen ' : 'Mark done: ') + t.title) + '" aria-pressed="' + done + '"></button>' +
+    typeIcon(t) + '<span class="key">' + esc(t.key) + '</span><button type="button" class="tt" data-act="open" data-id="' + esc(t.id) + '">' + esc(t.title) + '</button>' +
+    (t.status === 'On hold' && t.holdReason ? '<span class="wr-why" title="' + esc(t.holdReason) + '">' + esc(cut(t.holdReason, 60)) + '</span>' : '') +
+    '<span class="wr-r">' + lozenge(t.status) + prioIcon(t.priority) + (done ? '' : dueSpan(t)) + '</span></li>';
+}
 function overview() {
   const hour = new Date().getHours();
-  const hello = (hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening') + ', ' + esc(firstName(data.me));
-  const top = '<p class="date">' + esc(dayLong(TODAY)) + '</p><h2 class="hello">' + hello + '</h2>';
-  if (!data.projects.length) return top + '<p class="sub">This workspace is empty. Create a first project, or load the sample data to look around.</p><div class="row" style="margin-top:20px"><button class="btn" data-act="new-project">' + ic('plus') + 'New project</button><button class="btn ghost" data-act="reset">Load sample data</button></div>';
-  const mine = data.tasks.filter(t => t.owner === data.me && !t.archivedAt);
-  const doneToday = mine.filter(t => t.status === 'Done' && lastStatusAt(t, 'Done').slice(0, 10) === TODAY);
-  const today = mine.filter(t => isOpen(t) && (t.due <= TODAY || t.status === 'In progress' || (t.remindOn && t.remindOn <= TODAY))).sort((a, b) => a.due.localeCompare(b.due));
-  const paused = data.tasks.filter(t => t.status === 'On hold');
-  const pastMine = today.filter(isPast);
-  // One kind sentence, built from the data.
-  const n = today.length, d = doneToday.length;
-  let say = n ? 'You have ' + n + ' task' + (n > 1 ? 's' : '') + ' for today' + (d ? ' and ' + d + ' already done.' : '.') : d ? 'Everything planned for today is done.' : 'Nothing is planned for you today.';
-  if (pastMine.length) say += ' ' + (pastMine.length === 1 ? 'One of them' : pastMine.length + ' of them') + ' could use a new date.';
-  say += paused.length === 0 ? ' Nothing is paused, so everything is moving.' : paused.length === 1 ? ' One task is paused while ' + esc(lowerFirst(cut(paused[0].holdReason, 70)).replace(/[.]$/, '')) + '; everything else is moving.' : ' ' + paused.length + ' tasks are paused, each with its reason; everything else is moving.';
-  // Today
-  const rows = [...today.slice(0, 7), ...doneToday.slice(0, 2)];
-  const todayCard = '<section class="card2" aria-labelledby="hToday"><div class="ch"><h3 id="hToday">Today</h3><span>' + (n + d ? n + ' of ' + (n + d) + ' left' : '') + '</span></div>' +
-    (rows.length ? rows.map(t => taskRow(t)).join('') + (today.length > 7 ? '<a class="tr more-row" href="#/mytasks">' + (today.length - 7) + ' more in My tasks</a>' : '') : '<p class="soft">Nothing planned today. Enjoy the space, or pick something from This week.</p>') + '</section>';
-  // This week: Monday to Friday (next week on a weekend)
-  let mon = E.addDays(TODAY, -((dowOf(TODAY) + 6) % 7)); if (dowOf(TODAY) === 0 || dowOf(TODAY) === 6) mon = E.addDays(mon, 7);
-  const days = [0, 1, 2, 3, 4].map(i => E.addDays(mon, i));
-  const weekTasks = mine.filter(t => isOpen(t) && days.includes(t.due));
-  const weekCard = '<section class="card2" aria-labelledby="hWeek"><div class="ch"><h3 id="hWeek">This week</h3><span>' + weekTasks.length + ' task' + (weekTasks.length === 1 ? '' : 's') + '</span></div><div class="week">' +
-    days.map(day => { const ts = weekTasks.filter(t => t.due === day); return '<a class="day' + (day === TODAY ? ' today' : '') + '" href="#/calendar?d=' + day + '" aria-label="' + esc(dayLong(day) + ': ' + (ts.length ? ts.length + ' task' + (ts.length > 1 ? 's' : '') : 'free')) + '"><b>' + esc(weekday(day, 'short') + ' ' + Number(day.slice(8))) + '</b><span class="dots">' + ts.slice(0, 8).map(t => '<i' + pcs(t.projectId) + '></i>').join('') + '</span>' + (ts.length ? '<small>' + ts.length + ' task' + (ts.length > 1 ? 's' : '') + '</small>' : '<small>Free day</small>') + '</a>'; }).join('') + '</div></section>';
-  // Projects, said plainly
-  const live = data.projects.filter(p => p.status === 'Active' || p.status === 'On hold');
-  const words = { 'On track': 'Going well', 'At risk': 'Worth a look', Critical: 'Needs a look', 'Not started': 'Not started yet', Delivered: 'Delivered' };
-  const prow = p => {
-    const h = E.health(data, p, TODAY); const pts = E.projectTasks(data, p.id);
-    const np = pts.filter(t => t.status === 'On hold').length; const nl = pts.filter(isPast).length;
-    const look = h.label !== 'On track' || np || nl;
-    return '<a class="pr' + (look ? '' : ' phone-hide') + '" href="#/project/' + esc(p.id) + '"' + pcs(p.id) + '>' + pring(h.progress) + '<div><b>' + esc(p.name) + '</b><p>' + esc((p.status === 'On hold' ? 'Paused' : words[h.label] || h.label) + ' · ' + pct(h.progress) + ' done') + '</p>' +
-      (nl ? '<p>' + (nl === 1 ? '1 task could' : nl + ' tasks could') + ' use a new date</p>' : '') + (np ? pausedChip(np + ' task' + (np > 1 ? 's' : '') + ' paused') : '') + '</div></a>';
-  };
-  const projCard = '<section class="card2" aria-labelledby="hProj"><div class="ch"><h3 id="hProj">Projects</h3><span>' + live.length + ' active</span></div>' + (live.length ? live.map(prow).join('') : '<p class="soft">No active project right now.</p>') +
-    '<div class="ch sep"><h3 id="hWait">Waiting on others</h3><span>' + (paused.length || '') + '</span></div>' +
-    (paused.length ? paused.slice(0, 6).map(t => '<div class="wo"' + pcs(t.projectId) + '>' + ic('pause') + '<span class="wo-t"><button type="button" class="tt" data-act="open" data-id="' + esc(t.id) + '">' + esc(t.title) + '</button><small>' + esc(cut(t.holdReason, 80)) + '</small></span>' + (t.remindOn && t.remindOn >= TODAY ? '<span class="chip2 c-acc" title="Reminder">' + ic('bell') + esc(t.remindOn === TODAY ? 'Today' : weekday(t.remindOn, 'short')) + '</span>' : '') + '</div>').join('') : '<p class="soft">Nothing paused. Everything is moving.</p>') + '</section>';
-  return top + '<p class="sub">' + say + '</p><div class="cols2"><div class="stack">' + todayCard + '<div class="phone-hide">' + weekCard + '</div></div><div class="stack">' + projCard + '</div></div>';
+  const hello = (hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening') + ', ' + esc(firstName(data.me)) + '.';
+  const head = (sum) => '<div class="fy-head"><p class="fy-date">' + esc(dayLong(TODAY)) + '</p><div class="fy-line"><h2>For you</h2><p class="fy-sum">' + hello + (sum ? ' ' + sum : '') + '</p></div></div>';
+  if (!data.projects.length) return head('This workspace is empty.') + '<p class="muted">Create a first project, or load the sample data to look around.</p><div class="row" style="margin-top:16px"><button class="btn" data-act="new-project">' + ic('plus') + 'New project</button>' + (canWipe() ? '<button class="btn ghost" data-act="reset">Load sample data</button>' : '') + '</div>';
+  const live = t => !t.archivedAt;
+  const mine = data.tasks.filter(t => t.owner === data.me && live(t));
+  const watching = data.tasks.filter(t => live(t) && (t.watchers || []).includes(data.me) && t.owner !== data.me);
+  const recent = (ui.recent || []).map(task).filter(Boolean);
+  const tabs = [['mine', 'Assigned to me', mine.filter(t => t.status !== 'Done').length], ['watching', 'Watching', watching.filter(t => t.status !== 'Done').length], ['recent', 'Recently viewed', recent.length]];
+  const tab = ui.fyTab || 'mine';
+  const src = tab === 'watching' ? watching : tab === 'recent' ? recent : mine;
+  const doneToday = src.filter(t => t.status === 'Done' && (lastStatusAt(t, 'Done') || '').slice(0, 10) === TODAY);
+  const open = src.filter(t => t.status !== 'Done');
+  const endWeek = E.addDays(TODAY, (7 - dowOf(TODAY)) % 7);
+  const byDue = (a, b) => a.due.localeCompare(b.due) || a.key.localeCompare(b.key, 'en', { numeric: true });
+  const groups = tab === 'recent' ? [['recent', 'Recently viewed', recent, true]] : [
+    ['past', 'Past their date', open.filter(isPast).sort(byDue), true],
+    ['today', 'Today', [...open.filter(t => t.status !== 'On hold' && t.status !== 'Backlog' && (t.due === TODAY || (t.remindOn && t.remindOn <= TODAY))), ...doneToday].sort(byDue), true],
+    ['week', 'Later this week', open.filter(t => t.status !== 'On hold' && t.status !== 'Backlog' && t.due > TODAY && t.due <= endWeek).sort(byDue), true],
+    ['paused', 'Paused', open.filter(t => t.status === 'On hold').sort(byDue), true],
+    ['later', 'Later', open.filter(t => t.status !== 'On hold' && (t.status === 'Backlog' || t.due > endWeek)).sort(byDue), false],
+  ];
+  const nPast = groups[0][2].length, nToday = tab === 'recent' ? 0 : groups[1][2].filter(t => t.status !== 'Done').length, nPaused = data.tasks.filter(t => t.status === 'On hold' && t.owner === data.me).length;
+  const myPast = mine.filter(isPast).length, myToday = mine.filter(t => isOpen(t) && t.status !== 'On hold' && t.due === TODAY).length;
+  const bits = [myPast ? myPast + (myPast === 1 ? ' item' : ' items') + ' past their date' : '', myToday ? myToday + ' due today' : '', nPaused ? nPaused + ' paused' : ''].filter(Boolean);
+  const sum = bits.length ? bits.join(', ').replace(/^./, c => c.toUpperCase()) + '.' : 'Nothing is late and nothing is waiting. A calm day.';
+  const fold = ui.fyFold || {};
+  const work = '<section class="fy-work" aria-labelledby="fyWorkH"><h3 id="fyWorkH" class="sr">Your work</h3><div class="fy-tabs" role="tablist" aria-label="Your work">' + tabs.map(([k, l, n]) => '<button type="button" role="tab" data-act="fy-tab" data-k="' + k + '" aria-selected="' + (tab === k) + '">' + l + (n ? ' <span class="n">' + n + '</span>' : '') + '</button>').join('') + '<span class="grow"></span><span class="fy-grp">Group: due date</span></div>' +
+    (groups.some(g => g[2].length) ? groups.filter(g => g[2].length).map(([k, l, list, openByDefault]) => { const isOpenG = fold[k] === undefined ? openByDefault : fold[k];
+      return '<details class="fy-g"' + (isOpenG ? ' open' : '') + ' data-g="' + k + '"><summary>' + ic('down') + '<span>' + l + '</span><span class="n">' + list.length + '</span></summary><ul class="wrows">' + list.slice(0, 30).map(wrow).join('') + '</ul></details>'; }).join('')
+      : '<div class="fy-empty">' + ic('leaf') + '<p>' + (tab === 'watching' ? 'You are not watching any task. Open a task and choose Watch.' : tab === 'recent' ? 'Tasks you open show up here.' : 'Nothing assigned to you. Enjoy the space.') + '</p></div>') + '</section>';
+  // Projects that need a look come first
+  const lv = data.projects.filter(p => !p.archivedAt && (p.status === 'Active' || p.status === 'On hold'));
+  const rows = lv.map(p => { const h = E.health(data, p, TODAY); const pts = E.projectTasks(data, p.id); const look = h.label !== 'On track' || pts.some(t => t.status === 'On hold') || pts.some(isPast); return { p, h, look, open: pts.filter(t => t.status !== 'Done' && !t.archivedAt).length }; }).sort((x, y) => (y.look - x.look) || x.h.score - y.h.score);
+  const shown = rows.slice(0, 5);
+  const projTbl = '<section class="fy-box" aria-labelledby="fyProjH"><div class="fy-bh"><h3 id="fyProjH">Projects</h3><span class="muted small">' + shown.length + ' of ' + rows.length + ' shown</span><span class="grow"></span><a class="lnk small" href="#/projects">Portfolio</a></div>' +
+    (shown.length ? '<table class="fy-pt"><thead><tr><th>Project</th><th>Progress</th><th class="r">Open</th><th>Health</th></tr></thead><tbody>' + shown.map(({ p, h, look, open }) => '<tr class="' + (look ? '' : 'phone-hide') + '"><td><a href="#/project/' + esc(p.id) + '"' + pcs(p.id) + '><span class="pdot" aria-hidden="true">' + pletter(p) + '</span>' + esc(p.name) + '</a></td><td><span class="fy-bar" aria-hidden="true"><i style="width:' + Math.round(h.progress * 100) + '%"></i></span><span class="pc">' + pct(h.progress) + '</span></td><td class="r">' + open + '</td><td><span class="lz lz-' + (p.status === 'On hold' ? 'pause' : look ? 'pause' : 'done') + '"><i></i>' + (p.status === 'On hold' ? 'Paused' : look ? 'Needs a look' : 'On track') + '</span></td></tr>').join('') + '</tbody></table>' : '<p class="muted small pad">No active project right now.</p>') + '</section>';
+  // Activity of today (or the latest, when today is quiet)
+  const evs = data.tasks.flatMap(t => (t.history || []).map(h => ({ t, h }))).concat(data.tasks.flatMap(t => (t.comments || []).map(c => ({ t, h: { at: c.at, by: c.by, field: 'Comment' } })))).sort((x, y) => String(y.h.at).localeCompare(String(x.h.at)));
+  const todays = evs.filter(e => String(e.h.at).slice(0, 10) === TODAY); const list = (todays.length ? todays : evs).slice(0, 7);
+  const verb = h => h.field === 'Created' ? 'created' : h.field === 'Comment' ? 'commented on' : h.field === 'Status' ? 'moved ' : 'changed the ' + h.field.toLowerCase() + ' of';
+  const act = '<section class="fy-box phone-hide" aria-labelledby="fyActH"><div class="fy-bh"><h3 id="fyActH">' + (todays.length ? 'Activity today' : 'Latest activity') + '</h3></div><ul class="fy-act">' + list.map(({ t, h }) => '<li>' + avatar(h.by, 'xs') + '<p><b>' + esc(firstName(h.by)) + '</b> ' + (h.field === 'Status' ? 'moved <button type="button" class="tt" data-act="open" data-id="' + esc(t.id) + '">' + esc(t.key) + '</button> to ' + esc(stLabel(h.to)) : verb(h) + ' <button type="button" class="tt" data-act="open" data-id="' + esc(t.id) + '">' + esc(t.key) + '</button>') + '</p><small>' + esc(todays.length ? String(h.at).slice(11, 16) : fmtDate(String(h.at).slice(0, 10), true)) + '</small></li>').join('') + '</ul></section>';
+  return head(sum) + '<div class="fy-cols"><div class="fy-left">' + work + '</div><div class="fy-right">' + projTbl + act + pinnedLists() + '</div></div>';
 }
 
 // ---------- My tasks ----------
@@ -348,7 +361,7 @@ function boardHead(active) {
   const create = '<button class="btn sm create" data-act="new-task"' + (active === 'backlog' ? ' data-status="Backlog"' : '') + '>' + ic('plus') + 'Create task</button>';
   if (active !== 'calendar' && projCtx(route())) return '<h2 class="sr">' + names[active] + '</h2><div class="tbar">' + filterBar(active) + '<div class="tbar-r">' + sort + create + '</div></div>';
   const seg = [['board', 'Board'], ['backlog', 'List'], ['calendar', 'Calendar']].map(([k, l]) => '<a href="#/' + k + '"' + (k === active ? ' aria-current="page"' : '') + '>' + l + '</a>').join('');
-  return '<div class="bh"><h2>' + names[active] + '</h2><nav class="seg" aria-label="View">' + seg + '</nav><span class="grow"></span>' + sort + create + '</div>' + (active === 'calendar' ? '' : filterBar(active));
+  return '<div class="bh"><h2>' + names[active] + '</h2><nav class="seg" aria-label="View">' + seg + '</nav>' + (active === 'calendar' ? '' : '<div class="bh-f">' + filterBar(active) + '</div>') + '<span class="grow"></span>' + sort + create + '</div>';
 }
 
 // ---------- the shell: top bar, sidebar with project views, menus ----------
@@ -483,7 +496,7 @@ function backlog() {
   for (const id of [...ui.sel]) if (!data.tasks.some(t => t.id === id)) ui.sel.delete(id);
   const groups = [['Not planned yet', 'Backlog', sorted.filter(t => t.status === 'Backlog')], ['Planned', 'On the board', sorted.filter(t => t.status !== 'Backlog' && t.status !== 'Done')], ['Done', 'Finished', sorted.filter(t => t.status === 'Done')]];
   const row = t => { const p = proj(t.projectId); return '<tr class="' + (ui.sel.has(t.id) ? 'sel' : '') + '" data-flip="' + esc(t.id) + '"><td class="selc"><input type="checkbox" data-act="sel" data-id="' + esc(t.id) + '"' + (ui.sel.has(t.id) ? ' checked' : '') + ' aria-label="Select ' + esc(t.key) + '"></td><td class="c-ty">' + typeIcon(t) + '</td><td class="key">' + esc(t.key) + '</td>' +
-    '<td class="sum"><button type="button" class="bl-title" data-act="open" data-id="' + esc(t.id) + '">' + esc(t.title) + '</button>' + (t.status === 'On hold' && t.holdReason ? '<span class="wait"> · waiting for ' + esc(lowerFirst(cut(t.holdReason, 60))) + '</span>' : '') + '</td>' +
+    '<td class="sum"><button type="button" class="bl-title" data-act="open" data-id="' + esc(t.id) + '">' + esc(t.title) + '</button>' + (t.status === 'On hold' && t.holdReason ? '<span class="wait"> · ' + esc(/^waiting\b/i.test(t.holdReason) ? lowerFirst(cut(t.holdReason, 50)) : 'waiting for ' + lowerFirst(cut(t.holdReason, 50))) + '</span>' : '') + '</td>' +
     '<td>' + lozenge(t.status) + '</td><td class="who">' + avatar(t.owner, 'xs') + '<span>' + esc(t.owner) + '</span></td><td class="c-pr">' + prioIcon(t.priority, true) + '</td><td>' + dueSpan(t) + '</td><td class="r">' + estPill(t) + '</td><td class="c-pj">' + (p ? '<span class="pdot"' + pcs(p.id) + ' aria-hidden="true">' + pletter(p) + '</span><span>' + esc(p.name) + '</span>' : '') + '</td></tr>'; };
   const n = ui.sel.size;
   return boardHead('backlog') +
@@ -517,7 +530,7 @@ function projectView(r) {
   const span = Math.max(1, E.daysBetween(p.start, p.deadline));
   const posOf = iso => Math.max(0, Math.min(100, E.daysBetween(p.start, iso) / span * 100));
   const counts = E.TASK_STATUSES.map(s => [s, tasks.filter(t => t.status === s).length]).filter(x => x[1]);
-  return '<div class="vh"><div><p class="eyebrow">' + esc(p.code) + ' · ' + esc(p.priority) + ' priority · ' + esc(stLabel(p.status)) + '</p><h2>' + esc(p.name) + '</h2><p class="lede">' + esc(p.objective) + '</p></div><div class="row"><button class="btn ghost" data-act="edit-project" data-id="' + esc(p.id) + '">Edit</button>' + (p.archivedAt ? '<button class="btn ghost" data-act="restore-project" data-id="' + esc(p.id) + '">Restore</button>' : p.status === 'Completed' ? '<button class="btn ghost" data-act="archive-project" data-id="' + esc(p.id) + '">Archive</button>' : '') + '<a class="btn ghost" href="#/reports?type=project&p=' + esc(p.id) + '">Report</a><button class="btn ghost danger" data-act="del-project" data-id="' + esc(p.id) + '">Delete</button></div></div>' +
+  return '<div class="sum-bar"><h2 class="sr">' + esc(p.name) + ' summary</h2><div class="sum-t"><p class="sum-meta">' + esc(p.code) + ' · ' + esc(p.priority) + ' priority · ' + esc(stLabel(p.status)) + ' · ' + esc(fmtDate(p.start)) + ' to ' + esc(fmtDate(p.deadline)) + '</p><p class="sum-obj">' + esc(p.objective) + '</p></div><div class="row"><button class="btn2" data-act="edit-project" data-id="' + esc(p.id) + '">Edit</button>' + (p.archivedAt ? '<button class="btn2" data-act="restore-project" data-id="' + esc(p.id) + '">Restore</button>' : p.status === 'Completed' ? '<button class="btn2" data-act="archive-project" data-id="' + esc(p.id) + '">Archive</button>' : '') + '<button class="btn2 danger" data-act="del-project" data-id="' + esc(p.id) + '">Delete</button></div></div>' +
     '<div class="grid g21">' +
       '<section class="panel"><div class="ph"><h3>Timeline</h3><span class="muted small">' + esc(fmtDate(p.start)) + ' → ' + esc(fmtDate(p.deadline)) + '</span></div>' +
         '<div class="ptl"><div class="ptl-track"><span class="ptl-done grow-in" style="--w:' + (h.progress * 100).toFixed(1) + '%"></span>' + (TODAY >= p.start && TODAY <= p.deadline ? '<span class="ptl-today" style="left:' + posOf(TODAY) + '%"><i>Today</i></span>' : '') + ms.map(m => '<button type="button" class="ptl-ms' + (m.done ? ' done' : E.isMilestoneOverdue(m, TODAY) ? ' late' : '') + '" style="left:' + posOf(m.target) + '%" data-act="edit-milestone" data-id="' + esc(m.id) + '" title="' + esc(m.name + ' · ' + fmtDate(m.target)) + '"><span class="sr">' + esc(m.name) + '</span></button>').join('') + '</div></div>' +
@@ -661,6 +674,7 @@ function renderPanel(focus) {
   if (t && route().name === 'task') el.setAttribute('role', 'main'); else el.setAttribute('role', 'complementary');
   if (!t) { el.hidden = true; el.innerHTML = ''; return; }
   const p = proj(t.projectId); const all = E.projectTasks(data, t.projectId);
+  ui.recent = [t.id, ...(ui.recent || []).filter(x => x !== t.id)].slice(0, 12);
   const waitsFor = (t.deps || []).map(task).filter(Boolean); const blocks = E.dependents(data.tasks, t.id);
   const paused = t.status === 'On hold'; const since = paused ? lastStatusAt(t, 'On hold') : '';
   const remindSet = t.remindOn && t.remindOn >= TODAY;
@@ -1081,6 +1095,7 @@ document.addEventListener('click', e => {
     case 'qa-me': { const t = task(id); if (t.owner === data.me) { toast('It is already yours.'); break; } const r = E.updateTask(data, id, { owner: data.me }, data.me, stamp()); if (Object.keys(r.errors).length) toast(Object.values(r.errors)[0], 'error'); else commit(r.data, t.key + ' assigned to you.', { undo: true }); break; }
     case 'qa-date': case 'new-date': dateForm(id); break;
     case 'remind': { const t = task(id); const on = t.remindOn && t.remindOn >= TODAY; const r = E.updateTask(data, id, { remindOn: on ? '' : nextRemind() }, data.me, stamp()); if (Object.keys(r.errors).length) toast(Object.values(r.errors)[0], 'error'); else commit(r.data, on ? 'Reminder removed.' : 'It will be in your Today list on ' + weekday(nextRemind()) + '.', { undo: true }); break; }
+    case 'fy-tab': ui.fyTab = el.dataset.k; render(); { const b = $('[data-act="fy-tab"][data-k="' + el.dataset.k + '"]'); if (b) b.focus(); } break;
     case 'watch': { const t = task(ui.panel); const w = t.watchers || []; panelUpdate({ watchers: w.includes(data.me) ? w.filter(x => x !== data.me) : [...w, data.me] }, w.includes(data.me) ? 'You stopped watching ' + t.key + '.' : 'You are watching ' + t.key + '.'); break; }
     case 'sub-focus': { const i = $('#subNew'); if (i) i.focus(); break; }
     case 'sub-done': { const x = task(id); const r = E.updateTask(data, id, { status: el.checked ? 'Done' : 'To do' }, data.me, stamp()); if (Object.keys(r.errors).length) { el.checked = !el.checked; toast(Object.values(r.errors)[0], 'error'); } else commit(r.data, x.key + (el.checked ? ' done.' : ' reopened.'), { undo: true }); break; }
@@ -1656,3 +1671,6 @@ if (startNotice) toast(startNotice, 'error');
   if (serverOn) signupMode = me.body.signup || 'open';
   if (serverOn && me.body.user) await enterAccount(me.body); else renderBand();
 })();
+
+// Home groups remember being folded while the page is open.
+document.addEventListener('toggle', e => { const d = e.target; if (d.matches && d.matches('details.fy-g')) { ui.fyFold = { ...(ui.fyFold || {}), [d.dataset.g]: d.open }; } }, true);
