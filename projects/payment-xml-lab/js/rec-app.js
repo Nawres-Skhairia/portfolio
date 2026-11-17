@@ -398,8 +398,8 @@ function plainProblem() {
 }
 function renderSimple() {
   const s = state.session, st = state.statement;
-  $('pmGo').disabled = !s || state.busy;
-  if (s && state.sample) $('pmReady').textContent = `A made-up bank statement with ${st.stmt.totals.nCr + st.stmt.totals.nDb} payments and a list of ${state.inv.invoices.length} open invoices are ready.`;
+  $('pmGo').disabled = !s || state.busy; $('pmGo').hidden = state.go;
+  if (s && state.sample) $('pmReady').textContent = `A made-up bank statement (${st.stmt.totals.nCr + st.stmt.totals.nDb} payments) and ${state.inv.invoices.length} open invoices are ready.`;
   else if (!state.sample) $('pmReady').textContent = `Your files: ${state.stmtName || 'no statement yet'} and ${state.invName && !state.invName.startsWith('sample') ? state.invName : 'the sample invoices'}.`;
   $('pmMsg').hidden = !(state.go && !s && !state.busy); $('pmMsg').textContent = plainProblem();
   $('pmResult').hidden = !(state.go && s);
