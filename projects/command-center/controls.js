@@ -71,6 +71,9 @@ export function setValue(hid, v) {
 
 // ---------- the popover ----------
 let open = null; // { pop, btn, hid }
+// Older phones (before iOS 17) have no popover: the menu then floats above the page with a high layer instead.
+const HAS_POP = typeof HTMLElement !== 'undefined' && 'showPopover' in HTMLElement.prototype;
+const show = pop => { if (HAS_POP) pop.showPopover(); else { pop.classList.add('nopop'); pop.style.zIndex = '1000'; } };
 function close(back) {
   if (!open) return; const { pop, btn } = open; open = null;
   try { pop.hidePopover(); } catch (e) {} pop.remove();
@@ -83,7 +86,7 @@ function place(pop, btn) {
   pop.style.left = Math.max(8, Math.min(innerWidth - w - 8, b.left)) + 'px';
 }
 function mkPop(btn, cls, role, label) {
-  const pop = document.createElement('div'); pop.className = 'opop ' + cls; pop.setAttribute('popover', 'manual');
+  const pop = document.createElement('div'); pop.className = 'opop ' + cls; if (HAS_POP) pop.setAttribute('popover', 'manual');
   if (role) pop.setAttribute('role', role); if (label) pop.setAttribute('aria-label', label);
   btn.parentNode.append(pop); // inside the same dialog or panel, so a modal dialog keeps it usable
   return pop;
@@ -112,7 +115,7 @@ function openSel(btn) {
   };
   draw('');
   open = { pop, btn, hid }; btn.setAttribute('aria-expanded', 'true');
-  pop.showPopover(); place(pop, btn);
+  show(pop); place(pop, btn);
   const items = () => [...list.querySelectorAll('[role=option]')];
   const s = pop.querySelector('.osearch');
   if (s) { s.focus(); s.addEventListener('input', () => draw(s.value)); }
@@ -165,7 +168,7 @@ function openDate(btn) {
   };
   draw();
   open = { pop, btn, hid }; btn.setAttribute('aria-expanded', 'true');
-  pop.showPopover(); place(pop, btn);
+  show(pop); place(pop, btn);
   const focusGrid = () => pop.querySelector('.od-grid [tabindex="0"]')?.focus();
   focusGrid();
   pop.addEventListener('click', e => {

@@ -438,7 +438,7 @@ function menuItems(kind) {
 function openMenu(btn) {
   const pop = $('#menuPop'); if (menuFrom === btn && !pop.hidden) { closeMenu(); return; }
   closeMenu(); menuFrom = btn; btn.setAttribute('aria-expanded', 'true');
-  pop.innerHTML = menuItems(btn.dataset.menu); pop.hidden = false; try { pop.showPopover(); } catch (e) {}
+  pop.innerHTML = menuItems(btn.dataset.menu); pop.hidden = false; if ('showPopover' in pop) { try { pop.showPopover(); } catch (e) {} } else { pop.removeAttribute('popover'); if (pop.parentNode !== document.body) document.body.append(pop); pop.style.zIndex = '1000'; }
   pop.setAttribute('aria-label', { ws: 'Workspace', status: 'Status' }[btn.dataset.menu] || 'Your menu');
   const b = btn.getBoundingClientRect(); const w = pop.offsetWidth;
   pop.style.top = Math.max(8, Math.min(innerHeight - pop.offsetHeight - 8, b.bottom + 4)) + 'px';
