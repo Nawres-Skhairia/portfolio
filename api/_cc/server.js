@@ -193,7 +193,7 @@ async function createWorkspace(sql, user, name, isSample) {
 export async function handle(req) {
   const { method, path, headers = {}, body = {}, ip = '' } = req;
   const route = method + ' /' + path.join('/');
-  // Production needs its fixed address and its own secret key; a preview may derive the key from its database address.
+  // Every copy needs its own secret key (CC_SESSION_SECRET, 32+ characters); production also needs its fixed public address.
   if (!configured() || String(process.env.CC_SESSION_SECRET || '').length < 32 || (isProd() && !publicOrigin())) return fail(503, 'Accounts are not available here yet.');
   if (method === 'POST') {
     // Changes are accepted only from this site's own pages (no cross-site requests).

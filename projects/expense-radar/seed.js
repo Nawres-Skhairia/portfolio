@@ -8,7 +8,7 @@ const pad = n => String(n).padStart(2, '0');
 export function seed(today) {
   const r = rng(20261117);
   const cur = monthOf(today); const dayNow = Number(today.slice(8, 10));
-  const txs = []; let k = 0;
+  const txs = []; let k = 0; const goalAdds = [];
   const add = (date, payee, euros, category, note = '') => { if (date <= today) txs.push({ id: 's' + (k++).toString(36), date, payee, amount: Math.round(euros * 100), category, note }); };
   const pick = list => list[Math.floor(r() * list.length)];
   const around = (base, spread) => Math.round((base + (r() * 2 - 1) * spread) * 100) / 100;
@@ -35,7 +35,7 @@ export function seed(today) {
     for (let j = 0; j < 2; j++) { const day = 1 + Math.floor(r() * last); add(d(day), pick(['Bookhouse', 'Homeware Co', 'Threads & Co']), -around(34, 14), 'Shopping'); }
     if (r() > 0.3) { const day = 1 + Math.floor(r() * last); add(d(day), pick(['Cinema Aurora', 'Open Air Concert']), -around(22, 8), 'Leisure'); }
     if (i === -3) { add(d(16), 'SkyHop airlines', -214, 'Travel', 'Weekend in Porto'); add(d(17), 'Harbour Inn', -186, 'Travel'); }
-    if (i === -1) add(d(20), 'Gift shop Ribbon', -45, 'Gifts', 'Birthday present');
+    if (i === -1) add(d(20), 'Gift shop Ribbon', -45, 'Gifts', 'Birthday present');    if (i < 0) { add(d(26), 'To goal: Summer trip', -205, 'Savings'); goalAdds.push({ amount: 205_00, date: d(26), note: '' }); }
   }
   // one clearly unusual purchase this month
   const odd = cur + '-' + pad(Math.max(1, dayNow - 3));
@@ -46,5 +46,6 @@ export function seed(today) {
     budgets: { Groceries: 360_00, 'Eating out': 150_00, Transport: 80_00, Shopping: 120_00, Subscriptions: 80_00, Leisure: 60_00, Utilities: 120_00 },
     subscriptions: [{ id: 'm1', name: 'Newspaper (paid yearly)', amount: 89_00, cadence: 'Yearly', category: 'Subscriptions', next: addMonths(cur, 4) + '-10' }],
     dismissed: [],
+    goals: [{ id: 'g-trip', name: 'Summer trip', target: 3000_00, by: '2027-06-20', icon: 'trip', pinned: true, adds: goalAdds }],
   };
 }

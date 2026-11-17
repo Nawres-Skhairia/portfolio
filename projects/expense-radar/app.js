@@ -34,6 +34,7 @@ function commit(next, message, undoable = true) {
 const ui = { month: THIS_MONTH, q: '', cat: '', type: 'all', tmonth: '', sort: { k: 'date', dir: -1 }, sel: new Set(), more: 0, imp: { step: 1 }, period: 'this', from: '', to: '' };
 const money = (c, o) => E.formatMoney(c, data.currency, o);
 const mnum = (c, o) => '<span class="money">' + esc(money(c, o)) + '</span>';
+const ddate = d => Number(d.slice(8, 10)) + ' ' + new Date(d + 'T00:00:00Z').toLocaleDateString('en-GB', { month: 'short', year: 'numeric', timeZone: 'UTC' });
 const dshort = d => Number(d.slice(8, 10)) + ' ' + new Date(d + 'T00:00:00Z').toLocaleDateString('en-GB', { month: 'short', timeZone: 'UTC' });
 const dlong = d => new Date(d + 'T00:00:00Z').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 const firstMonth = () => data.transactions.reduce((m, t) => t.date < m ? t.date : m, TODAY).slice(0, 7);
@@ -42,14 +43,15 @@ const SPEND = E.CATEGORIES.filter(c => !E.INCOME_CATEGORIES.includes(c));
 
 // ---------- routing ----------
 function route() { const h = location.hash.replace(/^#\/?/, ''); const [p, q] = h.split('?'); return { name: p || 'overview', params: new URLSearchParams(q || '') }; }
-const VIEWS = { overview, transactions, budgets, recurring, analysis, import: importView, reports };
+const VIEWS = { overview, transactions, budgets, goals, recurring, analysis, import: importView, reports };
 function render() {
   if (firstVisit) { $('#main').innerHTML = welcome(); $('#band').innerHTML = ''; document.title = 'Welcome · Expense Radar'; return; }
   const r = route(); const v = VIEWS[r.name] ? r.name : 'overview';
   if (v === 'transactions' && r.params.has('q')) { ui.q = r.params.get('q'); ui.tmonth = ''; history.replaceState(null, '', '#/transactions'); }
   $$('#tabs a').forEach(a => { if (a.dataset.nav === v) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
-  document.title = ({ overview: 'Overview', transactions: 'Transactions', budgets: 'Budgets', recurring: 'Regular payments', analysis: 'Analysis', import: 'Import', reports: 'Reports' })[v] + ' · Expense Radar';
-  $('#main').innerHTML = VIEWS[v](r);
+  document.title = ({ overview: 'Overview', transactions: 'Transactions', budgets: 'Budgets', goals: 'Goals', recurring: 'Regular payments', analysis: 'Analysis', import: 'Import', reports: 'Reports' })[v] + ' · Expense Radar';
+  document.body.dataset.view = v; $('#main').innerHTML = VIEWS[v](r);
+  const mm = $('#moreNav'); if (mm) { mm.open = false; mm.classList.toggle('cur', ['recurring', 'analysis', 'import', 'reports', 'budgets'].includes(v)); }
   renderBand();
 }
 let lastView = '';
@@ -145,26 +147,12 @@ function quickCats() {
   const top = Object.keys(n).sort((a, b) => n[b] - n[a]);
   return [...new Set([...top, 'Groceries', 'Eating out', 'Transport', 'Shopping', 'Leisure', 'Other'])].slice(0, 6);
 }
-function todayBox() {
-  const now = E.spentNow(data, TODAY); const pd = E.perDayLeft(data, TODAY); const lg = E.loggedDays(data, TODAY, 7); const due = E.dueNow(data, TODAY);
-  const dow = new Date(TODAY + 'T00:00:00Z').getUTCDay(); const recap = [1, 2, 3].includes(dow) ? E.weekRecap(data, TODAY) : null;
-  const big = pd ? '<p class="k">Left to spend today</p><p class="big money">' + esc(money(pd.perDay, { round: true })) + '</p><p class="small muted">From your budgets: ' + esc(money(pd.left, { round: true })) + ' left for ' + pd.daysLeft + (pd.daysLeft === 1 ? ' day.' : ' days.') + '</p>'
-    : '<p class="k">Spent today</p><p class="big money">' + esc(money(now.today)) + '</p><p class="small muted">' + esc(money(now.week, { round: true })) + ' this week. <a href="#/budgets">Set a budget</a> to see what is left each day.</p>';
-  const streak = lg.count ? 'You logged on ' + lg.count + ' of the last 7 days.' : 'A fresh start: log one thing today.';
-  return '<section class="today" aria-labelledby="todayH"><h2 id="todayH" class="sr">Today</h2><div class="t-left">' + big + '</div>' +
-    '<form class="quick" data-form="quick" novalidate><label for="qAmt">Log a spend</label><div class="q-row"><span class="q-cur" aria-hidden="true">' + esc(curSym()) + '</span><input id="qAmt" name="amount" inputmode="decimal" autocomplete="off" placeholder="0.00" aria-describedby="qHint"></div>' +
-      '<p id="qHint" class="small muted">Type the amount, then tap what it was for.</p><div class="q-cats" role="group" aria-label="What it was for">' + quickCats().map(c => '<button type="submit" name="cat" value="' + esc(c) + '" class="chipbtn">' + esc(c) + '</button>').join('') + '</div><p class="err" id="qErr" role="alert" hidden></p></form>' +
-    '<div class="t-foot"><p>' + esc(streak) + (lg.today ? '' : ' <button type="button" class="lnk" data-act="checkin">Nothing spent today</button>') + '</p><button type="button" class="lnk" data-act="reminder">Daily reminder</button></div>' +
-    (due.length ? '<ul class="due">' + due.slice(0, 3).map(d => '<li><span><b>' + esc(d.payee) + '</b> ' + esc(money(d.amount)) + ' is usually paid around ' + esc(dshort(d.next)) + '.</span><span class="grow"></span><button type="button" class="btn sm" data-act="due-log" data-id="' + esc(d.id) + '">Log it</button><button type="button" class="lnk" data-act="dismiss" data-id="' + esc(d.id) + '">Not this time</button></li>').join('') + '</ul>' : '') +
-    (recap ? '<p class="recap"><b>Last week</b> you spent ' + esc(money(recap.spent, { round: true })) + (recap.before ? ' (' + esc(money(Math.abs(recap.spent - recap.before), { round: true })) + (recap.spent <= recap.before ? ' less' : ' more') + ' than the week before)' : '') + '. Most went to ' + esc(recap.top.toLowerCase()) + '.</p>' : '') +
-    '</section>';
-}
 function quickLog(form, cat) {
   const cents = E.toCents(form.amount.value); const err = $('#qErr');
   if (cents === null || cents <= 0) { err.textContent = 'Type the amount first, for example 12.50.'; err.hidden = false; form.amount.setAttribute('aria-invalid', 'true'); form.amount.focus(); return; }
   const tx = { id: 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), date: TODAY, payee: cat, amount: -cents, category: cat, note: '' };
   const r = E.upsertTx(data, tx); if (r.errors && Object.keys(r.errors).length) { err.textContent = Object.values(r.errors)[0]; err.hidden = false; return; }
-  commit(r.data, 'Logged: ' + money(cents) + ' for ' + cat.toLowerCase() + '.'); const a = $('#qAmt'); if (a) a.focus();
+  if (dlg.open) dlg.close(); commit(r.data, 'Logged: ' + money(cents) + ' for ' + cat.toLowerCase() + '.');
 }
 function reminderForm() {
   openForm('A daily reminder', '<p>Pick a time. Your phone\'s calendar then reminds you every day to log what you spent. Nothing is sent anywhere, and you can delete the event at any time.</p>' + field('time', 'Time', '<input id="f-time" name="time" type="time" value="20:30" required>'), fd => {
@@ -173,33 +161,168 @@ function reminderForm() {
     toast('Open the downloaded file to add the reminder to your calendar.'); return null;
   }, 'Add to my calendar');
 }
+// ---------- Overview: five calm blocks (Olivia's spec, 17 Nov). The details live in the other tabs. ----------
+const GOAL_SVG = {
+  trip: '<rect x="4" y="7" width="16" height="13" rx="2"/><path d="M9 7V5h6v2M9 11v6M15 11v6"/>',
+  home: '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>',
+  car: '<path d="M3 16v-3l2-5h14l2 5v3z"/><circle cx="7.5" cy="17" r="1.8"/><circle cx="16.5" cy="17" r="1.8"/><path d="M5 13h14"/>',
+  study: '<path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c3 2 9 2 12 0v-5"/>',
+  gift: '<rect x="4" y="9" width="16" height="4"/><rect x="5" y="13" width="14" height="8"/><path d="M12 9v12M12 9C10 5 6 5 6 7.5S10 9 12 9c2 0 6 1 6-1.5S14 5 12 9"/>',
+  safety: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/>',
+  tech: '<rect x="5" y="5" width="14" height="10" rx="1.5"/><path d="M3 19h18"/>',
+  other: '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/>',
+};
+const ICON_NAMES = { trip: 'Trip', home: 'Home', car: 'Car', study: 'Study', gift: 'Gift', safety: 'Safety cushion', tech: 'Tech', other: 'Other' };
+const gicon = k => '<svg class="gi" viewBox="0 0 24 24" aria-hidden="true">' + (GOAL_SVG[k] || GOAL_SVG.other) + '</svg>';
+function goalBar(p) {
+  return '<div class="gtrack" role="progressbar" aria-label="Saved so far" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + p.percent + '" aria-valuetext="' + p.percent + ' %">' +
+    '<span class="gfill' + (p.done ? ' done' : '') + '" style="--w:' + p.percent + '%"></span>' + [25, 50, 75].map(m => '<i class="tick" style="left:' + m + '%"></i>').join('') + '</div>';
+}
+function paceLine(g, p) {
+  if (p.done) return '';
+  if (!p.pace) return '<p class="pace">' + esc(money(p.left, { round: true })) + ' to go</p>';
+  if (p.pace.stale) return '<p class="pace">This goal could use a new date.</p>';
+  return '<p class="pace">About ' + esc(money(p.pace.perWeek, { round: true })) + ' a week reaches it by ' + esc(ddate(g.by)) + '. <span class="est">estimate</span></p>';
+}
+function goalBanner() {
+  const g = E.bannerGoal(data.goals);
+  if (!g) return '<section class="goal empty" aria-labelledby="goalH"><div class="g-ic">' + gicon('other') + '</div><div class="g-body"><h2 id="goalH">Saving for something?</h2><p>Set a goal and watch it fill.</p></div><button type="button" class="btn" data-act="goal-new">Set a goal</button></section>';
+  const p = E.goalProgress(g, TODAY);
+  const cel = ui.celebrate === g.id; ui.celebrate = '';
+  return '<section class="goal' + (p.done ? ' is-done' : '') + (cel ? ' celebrate' : '') + '" aria-labelledby="goalH"><div class="g-ic">' + gicon(g.icon) + '</div>' +
+    '<div class="g-body"><div class="g-top"><h2 id="goalH">' + esc(g.name) + '</h2><span class="g-fig money">' + esc(money(p.saved, { round: true })) + ' <span class="muted">of ' + esc(money(g.target, { round: true })) + '</span></span><span class="g-pct">' + p.percent + ' %</span></div>' +
+    goalBar(p) + '<p class="kind">' + esc(p.line) + '</p>' + paceLine(g, p) + '</div>' +
+    '<div class="g-acts">' + (p.done ? '<button type="button" class="btn" data-act="goal-raise" data-id="' + esc(g.id) + '">Raise the target</button><button type="button" class="btn ghost" data-act="goal-archive" data-id="' + esc(g.id) + '">Archive</button>'
+      : '<button type="button" class="btn" data-act="goal-add" data-id="' + esc(g.id) + '">Add money</button>') + '<a class="lnk small" href="#/goals">All goals</a></div></section>';
+}
+function mainCard(m) {
+  const c = E.monthCard(data, m, TODAY); const isNow = m === THIS_MONTH;
+  const big = c.plan
+    ? (c.left >= 0 ? '<p class="k">Left to spend ' + (isNow ? 'this month' : 'in ' + esc(E.monthName(m).split(' ')[0])) + '</p><p class="big money">' + esc(money(c.left, { round: true })) + '</p>'
+      : '<p class="k">Left to spend ' + (isNow ? 'this month' : 'in ' + esc(E.monthName(m).split(' ')[0])) + '</p><p class="big money">' + esc(money(0)) + '</p><p class="sub">You are ' + esc(money(-c.left, { round: true })) + ' past your plan' + (isNow ? ' so far.' : '.') + '</p>') +
+      (isNow && c.left > 0 ? '<p class="sub">About ' + esc(money(c.perDay, { round: true })) + ' a day for the ' + c.daysLeft + (c.daysLeft === 1 ? ' day' : ' days') + ' left.</p>' : '') +
+      '<div class="plan" role="progressbar" aria-label="Spending plan used" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + c.planUsed + '" aria-valuetext="' + c.planUsed + ' % of ' + esc(money(c.plan, { round: true })) + '"><span style="width:' + c.planUsed + '%"></span></div>' +
+      '<p class="sub">' + c.planUsed + ' % of your ' + esc(money(c.plan, { round: true })) + ' plan used.</p>' +
+      (c.over ? '<p class="over-line">' + esc(c.over.category) + ' is ' + esc(money(c.over.by, { round: true })) + ' over its plan.</p>' : '')
+    : '<p class="k">Spent ' + (isNow ? 'this month' : 'in ' + esc(E.monthName(m).split(' ')[0])) + '</p><p class="big money">' + esc(money(c.spent, { round: true })) + '</p><p class="sub"><a class="lnk" href="#/budgets">Make a spending plan</a> to see what is left.</p>';
+  const lg = isNow ? E.loggedDays(data, TODAY, 7) : null;
+  const habit = isNow ? '<div class="m-foot"><span>' + (lg.count ? 'You logged on ' + lg.count + ' of the last 7 days.' : 'A fresh start: log one thing today.') + '</span>' + (lg.today ? '' : '<button type="button" class="lnk" data-act="checkin">Nothing spent today</button>') + '<button type="button" class="lnk" data-act="reminder">Daily reminder</button></div>' : '';
+  return '<section class="mcard" aria-label="This month"><div class="m-main">' + big + '</div><dl class="m-figs">' +
+    '<div><dt>Income</dt><dd class="money">' + esc(money(c.income, { round: true })) + '</dd></div>' +
+    '<div><dt>Spent</dt><dd class="money">' + esc(money(c.spent, { round: true })) + '</dd></div>' +
+    '<div><dt>Saved</dt><dd class="money">' + esc(money(c.saved, { round: true })) + '</dd></div></dl>' + habit + '</section>';
+}
+function whereChart(m) {
+  const cats = E.byCategory(E.inMonth(data.transactions, m)).filter(x => x.category !== 'Savings');
+  const total = cats.reduce((s, x) => s + x.spent, 0);
+  if (!total) return '<p class="muted">Nothing spent yet in this month.</p>';
+  const top = cats.slice(0, 5); const rest = cats.slice(5).reduce((s, x) => s + x.spent, 0);
+  const list = rest ? [...top, { category: 'Other', spent: rest }] : top;
+  const ins = E.insights({ ...data }, m === THIS_MONTH ? TODAY : E.addDays(E.addMonths(m, 1) + '-01', -1)).find(i => /^(over|pace|mom)-/.test(i.id));
+  const say = ins ? ins.text : list[0].category + ' took the most: ' + money(list[0].spent, { round: true }) + ', ' + E.pct(list[0].spent, total) + ' % of your spending.';
+  return catBars(list, total) + '<p class="say">' + esc(say) + '</p>';
+}
+function lineChart(tr) {
+  tr = tr.map(d => ({ ...d, spent: d.spent + E.sum(E.inMonth(data.transactions, d.month).filter(t => t.amount < 0 && t.category === 'Savings').map(t => t.amount)) }));
+  const W = 520; const H = 150; const top = 12; const bottom = 24; const left = 44; const right = 10;
+  const max = Math.max(1, ...tr.map(x => Math.max(x.income, x.spent)));
+  const step = niceStep(max); const ceil = Math.ceil(max / step) * step;
+  const y = v => top + (H - top - bottom) * (1 - v / ceil);
+  const x = i => left + (W - left - right) * (tr.length === 1 ? 0.5 : i / (tr.length - 1));
+  const path = k => tr.map((d, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(d[k]).toFixed(1)).join(' ');
+  let g = '';
+  for (let v = 0; v <= ceil; v += step) g += '<line class="grid-l" x1="' + left + '" x2="' + (W - right) + '" y1="' + y(v) + '" y2="' + y(v) + '"/><text x="' + (left - 8) + '" y="' + (y(v) + 4) + '" text-anchor="end">' + esc(short(v)) + '</text>';
+  g += '<path class="ln-in" d="' + path('income') + '"/><path class="ln-out" d="' + path('spent') + '"/>';
+  tr.forEach((d, i) => { g += '<circle class="pt-in" cx="' + x(i) + '" cy="' + y(d.income) + '" r="3"/><circle class="pt-out" cx="' + x(i) + '" cy="' + y(d.spent) + '" r="3"/><text class="lbl" x="' + x(i) + '" y="' + (H - 6) + '" text-anchor="middle">' + esc(E.monthName(d.month, true).split(' ')[0]) + '</text>'; });
+  const full = tr.filter(d => d.month !== THIS_MONTH);
+  const avg = k => full.length ? Math.round(full.reduce((s, d) => s + d[k], 0) / full.length) : 0;
+  const say = full.length ? 'In a usual month you earned about ' + money(avg('income'), { round: true }) + ' and spent about ' + money(avg('spent'), { round: true }) + '.' : '';
+  return '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc('Income and spending, last six months. ' + say) + '">' + g + '</svg>' +
+    '<div class="legend"><span><i class="l-in"></i>Income</span><span><i class="l-out"></i>Spent</span></div>' + (say ? '<p class="say">' + esc(say) + '</p>' : '');
+}
 function overview() {
-  const m = ui.month; const prev = E.addMonths(m, -1);
-  const t = E.totals(E.inMonth(data.transactions, m)); const p = E.totals(E.inMonth(data.transactions, prev));
-  const isNow = m === THIS_MONTH;
-  const delta = (a, b, goodUp) => { if (!b) return '<span class="muted">—</span>'; const d = a - b; const word = d === 0 ? 'same as' : d > 0 ? 'more than' : 'less than'; return esc(money(Math.abs(d), { round: true })) + ' ' + word + ' ' + esc(E.monthName(prev).split(' ')[0]); };
-  const all = E.insights({ ...data }, isNow ? TODAY : E.addDays(E.addMonths(m, 1) + '-01', -1));
-  const bs = E.budgetStatus(data, m, TODAY);
-  const rec = E.detectRecurring(data.transactions, TODAY).filter(r => !r.stopped && r.next >= TODAY && E.dayDiff(TODAY, r.next) <= 14);
-  const manual = data.subscriptions.filter(s => s.next >= TODAY && E.dayDiff(TODAY, s.next) <= 14).map(s => ({ payee: s.name, amount: s.amount, next: s.next }));
-  const soon = [...rec, ...manual].sort((a, b) => a.next.localeCompare(b.next));
-  const cats = E.byCategory(E.inMonth(data.transactions, m));
-  const say = !data.transactions.length ? 'Add your first expense, or import a file from your bank.'
-    : t.income === 0 && isNow ? 'So far ' + money(t.spent, { round: true }) + ' went out this month. Your income usually arrives later in the month.'
-    : t.balance >= 0 ? 'You kept ' + money(t.balance, { round: true }) + ' of ' + money(t.income, { round: true }) + (isNow ? ' so far this month.' : '.')
-    : 'You spent ' + money(-t.balance, { round: true }) + ' more than came in' + (isNow ? ' so far this month.' : '.');
-  return (isNow ? todayBox() : '') + head(isNow ? 'This month' : 'Overview', esc(E.monthName(m)), esc(say), monthPicker()) +
-    '<section class="figs" aria-label="This month in figures">' +
-      '<div class="fig"><div class="k">Money in</div><div class="v' + (t.income > 0 ? ' pos' : '') + '">' + esc(money(t.income)) + '</div><div class="d">' + delta(t.income, p.income) + '</div></div>' +
-      '<div class="fig"><div class="k">Money out</div><div class="v">' + esc(money(t.spent)) + '</div><div class="d">' + delta(t.spent, p.spent) + '</div></div>' +
-      '<div class="fig"><div class="k">Left</div><div class="v">' + esc(money(t.balance)) + '</div><div class="d">In minus out</div></div>' +
-      '<div class="fig"><div class="k">Kept</div><div class="v">' + (t.savingsRate === null ? '—' : Math.max(0, t.savingsRate) + ' %') + '</div><div class="d">' + (t.savingsRate === null ? 'No income yet this month' : 'of the money that came in') + '</div></div>' +
-    '</section>' +
-    '<div class="grid g2"><section class="card"><div class="ch"><h2>Six months</h2></div>' + trendChart(E.trend(data.transactions, m, 6)) + '</section>' +
-      '<section class="card"><div class="ch"><h2>What stands out</h2><span class="sub">' + all.length + '</span></div>' + insightList(all, 5) + '</section></div>' +
-    '<div class="grid g2e" style="margin-top:16px"><section class="card"><div class="ch"><h2>Budgets</h2><span class="grow"></span><a class="lnk small" href="#/budgets">All budgets</a></div>' + (bs.length ? '<div class="bars">' + bs.slice(0, 4).map(b => budgetRow(b, false)).join('') + '</div>' : '<p class="muted">No budgets yet. <a class="lnk" href="#/budgets">Set one</a>.</p>') + '</section>' +
-      '<section class="card"><div class="ch"><h2>Coming up</h2><span class="sub">next 14 days</span></div>' + (soon.length ? '<table class="tbl"><tbody>' + soon.slice(0, 6).map(s => '<tr><td>' + esc(dshort(s.next)) + '</td><td>' + esc(s.payee) + '</td><td class="r money">' + esc(money(-s.amount)) + '</td></tr>').join('') + '</tbody></table>' : '<p class="muted">No regular payment is due in the next 14 days.</p>') + '</section></div>' +
-    '<section class="card" style="margin-top:16px"><div class="ch"><h2>Where it went</h2><span class="sub">' + esc(money(t.spent)) + '</span><span class="grow"></span><a class="lnk small" href="#/analysis">Analysis</a></div>' + catBars(cats.slice(0, 8), t.spent) + '</section>';
+  const m = ui.month;
+  return '<div class="ov-head"><div>' + monthPicker() + '</div><span class="grow"></span><button type="button" class="btn" data-act="quick"><span aria-hidden="true">+</span> Add expense</button></div>' +
+    '<h1 class="sr">Overview, ' + esc(E.monthName(m)) + '</h1>' +
+    (notice ? '<p class="notice" role="status">' + esc(notice) + '</p>' : '') +
+    mainCard(m) + goalBanner() +
+    '<div class="grid g2 ov-charts"><section class="card"><div class="ch"><h2>Where it went</h2></div>' + whereChart(m) + '</section>' +
+    '<section class="card"><div class="ch"><h2>Last 6 months</h2></div>' + lineChart(E.trend(data.transactions, m === THIS_MONTH ? E.addMonths(m, -1) : m, 6)) + '</section></div>' +
+    '<nav class="more-row" aria-label="More"><a href="#/transactions">Transactions</a><a href="#/budgets">Budgets</a><a href="#/goals">Goals</a><a href="#/recurring">Regular payments</a><a href="#/analysis">Analysis</a><a href="#/import">Import</a><a href="#/reports">Reports</a></nav>';
+}
+// The quick log: amount, then a category chip. Regular payments that are due sit under it.
+function quickForm() {
+  const due = E.dueNow(data, TODAY);
+  dlg.innerHTML = '<form class="form quick" data-form="quick" novalidate><header><h2 id="dlgTitle">Add an expense</h2></header><div class="body">' +
+    '<label for="qAmt">Amount</label><div class="q-row"><span class="q-cur" aria-hidden="true">' + esc(curSym()) + '</span><input id="qAmt" name="amount" inputmode="decimal" autocomplete="off" placeholder="0.00" aria-describedby="qHint"></div>' +
+    '<p id="qHint" class="small muted">Type the amount, then tap what it was for.</p><div class="q-cats" role="group" aria-label="What it was for">' + quickCats().map(c => '<button type="submit" name="cat" value="' + esc(c) + '" class="chipbtn">' + esc(c) + '</button>').join('') + '</div><p class="err" id="qErr" role="alert" hidden></p>' +
+    (due.length ? '<ul class="due"><li class="small muted">Usually paid around now:</li>' + due.slice(0, 3).map(d => '<li><span><b>' + esc(d.payee) + '</b> ' + esc(money(d.amount)) + '</span><span class="grow"></span><button type="button" class="btn sm ghost" data-act="due-log" data-id="' + esc(d.id) + '">Log it</button><button type="button" class="lnk" data-act="dismiss" data-id="' + esc(d.id) + '">Not this time</button></li>').join('') + '</ul>' : '') +
+    '</div><footer><button type="button" class="lnk" data-act="add-full">More details</button><span class="grow"></span><button type="button" class="btn ghost" data-close>Close</button></footer></form>';
+  $$('[data-close]', dlg).forEach(b => b.addEventListener('click', () => dlg.close()));
+  dlg.showModal(); $('#qAmt').focus();
+}
+
+// ---------- Goals ----------
+function goals() {
+  const all = data.goals || []; const open = all.filter(g => !g.archivedAt); const done = all.filter(g => g.archivedAt);
+  const banner = E.bannerGoal(all);
+  const row = g => {
+    const p = E.goalProgress(g, TODAY);
+    return '<tr><td class="g-name">' + gicon(g.icon) + '<span><b>' + esc(g.name) + '</b>' + (banner && banner.id === g.id && !g.archivedAt ? ' <span class="chip">' + (g.pinned ? 'Pinned' : 'On the overview') + '</span>' : '') + '<small>' + esc(p.line) + '</small></span></td>' +
+      '<td class="g-prog">' + goalBar(p) + '</td><td class="r money">' + esc(money(p.saved)) + '</td><td class="r money">' + esc(money(g.target)) + '</td><td class="r">' + p.percent + ' %</td>' +
+      '<td>' + (g.by ? esc(ddate(g.by)) : '<span class="muted">No date</span>') + '</td><td class="pace-c">' + (g.archivedAt ? '<span class="muted">Archived</span>' : paceLine(g, p).replace('<p class="pace">', '').replace('</p>', '')) + '</td>' +
+      '<td class="acts">' + (g.archivedAt ? '<button type="button" class="lnk" data-act="goal-unarchive" data-id="' + esc(g.id) + '">Bring back</button>' :
+        (p.done ? '<button type="button" class="lnk" data-act="goal-raise" data-id="' + esc(g.id) + '">Raise the target</button><button type="button" class="lnk" data-act="goal-archive" data-id="' + esc(g.id) + '">Archive</button>' : '<button type="button" class="lnk" data-act="goal-add" data-id="' + esc(g.id) + '">Add money</button>') +
+        (p.saved > 0 ? '<button type="button" class="lnk" data-act="goal-out" data-id="' + esc(g.id) + '">Take out</button>' : '') +
+        '<button type="button" class="lnk" data-act="goal-pin" data-id="' + esc(g.id) + '">' + (g.pinned ? 'Unpin' : 'Pin') + '</button>') +
+        '<button type="button" class="lnk" data-act="goal-edit" data-id="' + esc(g.id) + '">Change</button></td></tr>';
+  };
+  const table = list => '<div class="tbl-wrap"><table class="tbl goals"><thead><tr><th>Goal</th><th>Progress</th><th class="r">Saved</th><th class="r">Target</th><th class="r">Done</th><th>Date</th><th>Pace</th><th><span class="sr">Actions</span></th></tr></thead><tbody>' + list.map(row).join('') + '</tbody></table></div>';
+  const history = open.filter(g => g.adds.length).map(g => '<details class="hist"><summary>' + esc(g.name) + ': ' + g.adds.length + (g.adds.length === 1 ? ' entry' : ' entries') + '</summary><table class="tbl"><thead><tr><th>Date</th><th class="r">Amount</th><th>Note</th></tr></thead><tbody>' + [...g.adds].reverse().slice(0, 100).map(a => '<tr><td>' + esc(ddate(a.date)) + '</td><td class="r money">' + esc(money(a.amount, { sign: true })) + '</td><td>' + esc(a.note || '') + '</td></tr>').join('') + '</tbody></table></details>').join('');
+  return head('Savings', 'Goals', open.length ? 'The pinned goal, or the one with the nearest date, shows on the overview. The pace is an estimate, never a promise.' : 'Name what you are saving for, set an amount and, if you like, a date.', '<button type="button" class="btn" data-act="goal-new">New goal</button>') +
+    (open.length ? '<section class="card flush">' + table(open) + '</section>' : '<section class="card"><p class="muted">No goal yet. <button type="button" class="lnk" data-act="goal-new">Set your first goal</button>.</p></section>') +
+    (history ? '<section class="card" style="margin-top:16px"><div class="ch"><h2>Money added and taken out</h2></div>' + history + '</section>' : '') +
+    (done.length ? '<section class="card flush" style="margin-top:16px"><div class="ch pad"><h2>Archived</h2><span class="sub">' + done.length + '</span></div>' + table(done) + '</section>' : '');
+}
+const goalOf = id => (data.goals || []).find(g => g.id === id);
+function setGoal(g, message) { commit({ ...data, goals: (data.goals || []).some(x => x.id === g.id) ? data.goals.map(x => x.id === g.id ? g : x) : [...(data.goals || []), g] }, message); }
+function goalForm(g) {
+  const isNew = !g; g = g || { id: 'g' + Date.now().toString(36), name: '', target: 0, by: '', icon: 'trip', pinned: false, adds: [] };
+  openForm(isNew ? 'A new savings goal' : 'Change the goal',
+    field('name', 'What are you saving for?', '<input id="f-name" name="name" maxlength="40" value="' + esc(g.name) + '" autocomplete="off" autofocus>') +
+    '<div class="two">' + field('target', 'Amount (' + curSym() + ')', '<input id="f-target" name="target" inputmode="decimal" autocomplete="off" placeholder="0.00" value="' + (g.target ? (g.target / 100).toFixed(2) : '') + '">') +
+      field('by', 'By (optional)', '<input id="f-by" name="by" type="date" value="' + esc(g.by || '') + '" min="' + TODAY + '">') + '</div>' +
+    '<fieldset class="icons"><legend>Icon</legend>' + E.GOAL_ICONS.map(k => '<label title="' + ICON_NAMES[k] + '"><input type="radio" name="icon" value="' + k + '"' + (g.icon === k ? ' checked' : '') + '><span>' + gicon(k) + '<span class="sr">' + ICON_NAMES[k] + '</span></span></label>').join('') + '</fieldset>' +
+    '<label class="check"><input type="checkbox" name="pinned"' + (g.pinned ? ' checked' : '') + '> Show this goal on the overview</label>',
+    fd => {
+      const target = E.toCents(fd.get('target'));
+      const next = { ...g, name: String(fd.get('name') || '').trim(), target: target === null ? 0 : target, by: String(fd.get('by') || ''), icon: String(fd.get('icon') || 'other'), pinned: !!fd.get('pinned') };
+      const errs = E.validateGoal(next); if (Object.keys(errs).length) return errs;
+      let list = (data.goals || []); if (next.pinned) list = list.map(x => ({ ...x, pinned: false }));
+      data = { ...data, goals: list }; setGoal(next, isNew ? 'Goal set: ' + next.name + '.' : 'Saved.'); return null;
+    }, isNew ? 'Set the goal' : 'Save', isNew ? '' : '<button type="button" class="lnk" data-act="goal-del" data-id="' + esc(g.id) + '">Delete</button>');
+}
+function goalMoney(g, out) {
+  const before = E.goalProgress(g, TODAY);
+  openForm(out ? 'Take money out of ' + g.name : 'Add money to ' + g.name,
+    '<div class="two">' + field('amount', 'Amount (' + curSym() + ')', '<input id="f-amount" name="amount" inputmode="decimal" autocomplete="off" placeholder="0.00" autofocus>') +
+      field('date', 'Date', '<input id="f-date" name="date" type="date" value="' + TODAY + '" max="' + TODAY + '">') + '</div>' +
+    field('note', out ? 'Reason' : 'Note', '<input id="f-note" name="note" maxlength="120">', out ? 'Required. For example: car repair.' : 'Optional.') +
+    '<label class="check"><input type="checkbox" name="logtx" checked> Also log it as ' + (out ? 'money back in' : 'a transaction') + ' in Savings, so your balance stays right</label>',
+    fd => {
+      const cents = E.toCents(fd.get('amount')); const date = String(fd.get('date')); const note = String(fd.get('note') || '').trim();
+      if (cents === null || cents <= 0) return { amount: 'Enter an amount above 0, like 50.' };
+      if (!E.isDate(date)) return { date: 'Enter a real date.' };
+      if (out && !note) return { note: 'Say why, in a few words.' };
+      const r = E.goalEntry(g, out ? -cents : cents, date, note); if (r.error) return { amount: r.error };
+      let next = data;
+      if (fd.get('logtx')) { const t = E.upsertTx(data, { id: 't' + Date.now().toString(36), date, payee: (out ? 'From goal: ' : 'To goal: ') + g.name, amount: out ? cents : -cents, category: 'Savings', note }); if (Object.keys(t.errors).length) return { amount: Object.values(t.errors)[0] }; next = t.data; }
+      const after = E.goalProgress(r.goal, TODAY);
+      const mark = E.GOAL_LINES.find(([m2]) => after.percent >= m2 && before.percent < m2);
+      ui.celebrate = !out && mark && mark[0] === 100 ? r.goal.id : '';
+      data = next; setGoal(r.goal, out ? 'Taken out: ' + money(cents) + '.' : (mark && mark[0] > 0 ? mark[1] : 'Added ' + money(cents) + ' to ' + g.name + '.'));
+      return null;
+    }, out ? 'Take out' : 'Add');
 }
 
 // ---------- Transactions ----------
@@ -396,6 +519,17 @@ document.addEventListener('click', e => {
   const id = el.dataset.id;
   switch (el.dataset.act) {
     case 'add': txForm(); break;
+    case 'quick': quickForm(); break;
+    case 'add-full': dlg.close(); txForm(); break;
+    case 'goal-new': goalForm(); break;
+    case 'goal-edit': goalForm(goalOf(id)); break;
+    case 'goal-raise': goalForm(goalOf(id)); break;
+    case 'goal-add': goalMoney(goalOf(id), false); break;
+    case 'goal-out': goalMoney(goalOf(id), true); break;
+    case 'goal-pin': { const g = goalOf(id); const on = !g.pinned; commit({ ...data, goals: data.goals.map(x => ({ ...x, pinned: x.id === id ? on : (on ? false : x.pinned) })) }, on ? 'Pinned: ' + g.name + ' shows on the overview.' : 'Unpinned.'); break; }
+    case 'goal-archive': { const g = goalOf(id); setGoal({ ...g, archivedAt: TODAY, pinned: false }, 'Archived: ' + g.name + '.'); break; }
+    case 'goal-unarchive': { const g = goalOf(id); const { archivedAt, ...rest } = g; setGoal(rest, 'Back: ' + g.name + '.'); break; }
+    case 'goal-del': { const g = goalOf(id); confirmBox('Delete ' + g.name + '?', 'The goal and its history are removed. Transactions already logged in Savings stay.', 'Delete', () => commit({ ...data, goals: data.goals.filter(x => x.id !== id) }, 'Deleted: ' + g.name + '.')); break; }
     case 'edit': txForm(data.transactions.find(t => t.id === id)); break;
     case 'del-one': { dlg.close(); const t = data.transactions.find(x => x.id === id); commit(E.removeTx(data, [id]), 'Deleted: ' + t.payee + '.'); break; }
     case 'month': ui.month = E.addMonths(ui.month, Number(el.dataset.n)); render(); break;

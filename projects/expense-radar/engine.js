@@ -2,7 +2,7 @@
 // Money is always a whole number of cents (integers), so 0.1 + 0.2 never becomes 0.30000000000000004.
 // Expenses are negative amounts, income is positive.
 
-export const CATEGORIES = ['Housing', 'Groceries', 'Eating out', 'Transport', 'Subscriptions', 'Utilities', 'Health', 'Shopping', 'Leisure', 'Travel', 'Gifts', 'Other', 'Salary', 'Other income'];
+export const CATEGORIES = ['Housing', 'Groceries', 'Eating out', 'Transport', 'Subscriptions', 'Utilities', 'Health', 'Shopping', 'Leisure', 'Travel', 'Gifts', 'Savings', 'Other', 'Salary', 'Other income'];
 export const INCOME_CATEGORIES = ['Salary', 'Other income'];
 export const CURRENCIES = { EUR: '€', USD: '$', GBP: '£', CHF: 'CHF ' };
 
@@ -70,7 +70,8 @@ export function validateTx(t) {
 }
 export function isValidData(d) {
   return d && typeof d === 'object' && Array.isArray(d.transactions) && d.budgets && typeof d.budgets === 'object' && Array.isArray(d.subscriptions) &&
-    d.transactions.every(t => t && typeof t.id === 'string' && !Object.keys(validateTx(t)).length);
+    d.transactions.every(t => t && typeof t.id === 'string' && !Object.keys(validateTx(t)).length) &&
+    (d.goals === undefined || (Array.isArray(d.goals) && d.goals.length <= 50 && d.goals.every(g => g && typeof g.id === 'string' && !Object.keys(validateGoal(g)).length)));
 }
 export const emptyData = (currency = 'EUR') => ({ version: 1, currency, transactions: [], budgets: {}, subscriptions: [], dismissed: [] });
 
@@ -350,4 +351,58 @@ export function reminderIcs(time, url, today, uid) {
   return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Expense Radar//EN', 'CALSCALE:GREGORIAN', 'BEGIN:VEVENT', 'UID:' + uid + '@expense-radar', 'DTSTAMP:' + stamp,
     'DTSTART:' + day + 'T' + hh + mm + '00', 'DURATION:PT5M', 'RRULE:FREQ=DAILY', 'SUMMARY:Log today\'s spending', 'DESCRIPTION:Two taps in Expense Radar: ' + url, 'URL:' + url,
     'BEGIN:VALARM', 'ACTION:DISPLAY', 'TRIGGER:PT0M', 'DESCRIPTION:Log today\'s spending', 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n') + '\r\n';
+}
+
+// ---------- savings goals: integer cents, one currency, no interest and no promises ----------
+export const GOAL_ICONS = ['trip', 'home', 'car', 'study', 'gift', 'safety', 'tech', 'other'];
+export const GOAL_LINES = [[100, 'Goal reached. Well done.'], [75, 'Three quarters done. The end is in sight.'], [50, 'Halfway there.'], [25, 'A quarter of the way. Nice and steady.'], [0, 'A first step is all it takes.']];
+const MAX_CENTS = 100_000_000_000;
+export function validateGoal(g) {
+  const e = {};
+  const name = String(g.name ?? '').trim();
+  if (!name) e.name = 'Give the goal a name.'; else if (name.length > 40) e.name = 'Keep the name to 40 characters.';
+  if (!Number.isInteger(g.target) || g.target <= 0 || g.target > MAX_CENTS) e.target = 'Enter an amount above 0.';
+  if (g.by && (!isDate(g.by) || g.by < '2000-01-01' || g.by > '2100-12-31')) e.by = 'Enter a real date, or leave it empty.';
+  if (!GOAL_ICONS.includes(g.icon)) e.icon = 'Choose an icon.';
+  if (!Array.isArray(g.adds) || g.adds.length > 5000 || !g.adds.every(a => a && Number.isInteger(a.amount) && a.amount !== 0 && Math.abs(a.amount) <= MAX_CENTS && isDate(a.date) && String(a.note ?? '').length <= 120)) e.adds = 'The money added could not be read.';
+  else if (goalSaved(g) < 0) e.adds = 'You cannot take out more than the goal holds.';
+  return e;
+}
+export const goalSaved = g => sum((g.adds || []).map(a => a.amount));
+// Percentage rounds down, so 100 % shows only when the target is fully reached.
+export function goalProgress(g, today) {
+  const saved = goalSaved(g); const left = Math.max(0, g.target - saved); const done = left === 0;
+  const percent = done ? 100 : Math.min(99, Math.floor(saved * 100 / g.target));
+  const line = GOAL_LINES.find(([m]) => percent >= m)[1];
+  let pace = null;
+  if (!done && g.by) {
+    if (g.by <= today) pace = { stale: true };
+    else { const weeks = Math.max(1, Math.ceil(dayDiff(today, g.by) / 7)); pace = { perWeek: Math.ceil(left / weeks / 100) * 100, weeks }; }
+  }
+  return { saved, left, percent, done, line, pace };
+}
+// The goal on the banner: the pinned one, else the nearest date, else the newest. Archived goals never show.
+export function bannerGoal(goals) {
+  const open = (goals || []).filter(g => !g.archivedAt);
+  return open.find(g => g.pinned) || [...open].filter(g => g.by).sort((a, b) => a.by.localeCompare(b.by))[0] || open[open.length - 1] || null;
+}
+// Add (positive) or take out (negative) money; never below 0.
+export function goalEntry(goal, amount, date, note = '') {
+  const next = { ...goal, adds: [...goal.adds, { amount, date, note: String(note || '').slice(0, 120) }] };
+  return goalSaved(next) < 0 ? { error: 'You cannot take out more than the goal holds (' + (goalSaved(goal) / 100).toFixed(2) + ').' } : { goal: next };
+}
+// The first screen's month: spending excludes money put aside in Savings, which is shown on its own.
+export function monthCard(data, month, today) {
+  const txs = inMonth(data.transactions, month);
+  const income = sum(txs.filter(t => t.amount > 0).map(t => t.amount));
+  const saved = -sum(txs.filter(t => t.amount < 0 && t.category === 'Savings').map(t => t.amount));
+  const spent = -sum(txs.filter(t => t.amount < 0 && t.category !== 'Savings').map(t => t.amount));
+  const list = budgetStatus(data, month, today).filter(b => b.category !== 'Savings');
+  const plan = sum(list.map(b => b.limit)); const used = sum(list.map(b => b.spent));
+  const isNow = monthOf(today) === month;
+  const daysLeft = isNow ? daysInMonth(month) - Number(today.slice(8, 10)) + 1 : 0;
+  const left = plan ? plan - used : null;
+  const over = list.filter(b => b.spent > b.limit).sort((a, b) => (b.spent - b.limit) - (a.spent - a.limit))[0] || null;
+  return { income, spent, saved, plan, used, left, daysLeft, perDay: left !== null && left > 0 && daysLeft ? Math.floor(left / daysLeft) : 0,
+    planUsed: plan ? Math.min(100, Math.floor(used * 100 / plan)) : 0, over: over ? { category: over.category, by: over.spent - over.limit } : null };
 }

@@ -151,3 +151,39 @@ test('daily habit: spent now, per day left, logged days, recap, due now, reminde
   assert.equal(due.length, 1); assert.equal(due[0].amount, 1299);
   assert.equal(E.dueNow({ ...E.emptyData(), transactions: monthly, dismissed: [due[0].id] }, '2026-11-04').length, 0);
 });
+
+test('savings goals: honest percentages, a kind pace, never below zero, cents only', () => {
+  const g = { id: 'g1', name: 'Trip', target: 300000, by: '2027-06-20', icon: 'trip', pinned: false, adds: [{ amount: 299999, date: '2026-11-01', note: '' }] };
+  assert.equal(E.goalProgress(g, '2026-11-17').percent, 99, '100 % only when fully reached');
+  assert.equal(E.goalProgress({ ...g, adds: [{ amount: 300000, date: '2026-11-01' }] }, '2026-11-17').percent, 100);
+  assert.equal(E.goalProgress({ ...g, adds: [{ amount: 300000, date: '2026-11-01' }] }, '2026-11-17').line, 'Goal reached. Well done.');
+  assert.equal(E.goalProgress({ ...g, adds: [{ amount: 300000, date: '2026-11-01' }] }, '2026-11-17').pace, null, 'no pace once reached');
+  const half = { ...g, adds: [{ amount: 150000, date: '2026-11-01' }] };
+  assert.equal(E.goalProgress(half, '2026-11-17').line, 'Halfway there.');
+  assert.equal(E.goalProgress({ ...g, adds: [] }, '2026-11-17').line, 'A first step is all it takes.');
+  // pace: remaining / weeks left, rounded up to a whole unit
+  const p = E.goalProgress({ ...g, adds: [], by: '2026-11-25' }, '2026-11-17').pace;
+  assert.deepEqual(p, { perWeek: 150000, weeks: 2 });
+  assert.deepEqual(E.goalProgress({ ...g, adds: [], by: '2026-11-18' }, '2026-11-17').pace, { perWeek: 300000, weeks: 1 }, 'less than a week counts as one');
+  assert.equal(E.goalProgress({ ...g, adds: [], by: '2026-11-17' }, '2026-11-17').pace.stale, true, 'date reached: could use a new date');
+  assert.equal(E.goalProgress({ ...g, adds: [], by: '2026-10-01' }, '2026-11-17').pace.stale, true);
+  assert.equal(E.goalProgress({ ...g, adds: [{ amount: 1, date: '2026-11-01' }], by: '2027-11-17' }, '2026-11-17').pace.perWeek % 100, 0, 'whole units');
+  // taking out
+  assert.ok(E.goalEntry(half, -150001, '2026-11-17', 'repair').error, 'cannot go below zero');
+  assert.equal(E.goalSaved(E.goalEntry(half, -50000, '2026-11-17', 'repair').goal), 100000);
+  // validation
+  assert.ok(E.validateGoal({ ...g, target: 12.5 }).target, 'cents only');
+  assert.ok(E.validateGoal({ ...g, name: 'x'.repeat(41) }).name);
+  assert.ok(E.validateGoal({ ...g, adds: [{ amount: 1.5, date: '2026-11-01' }] }).adds);
+  assert.deepEqual(E.validateGoal(g), {});
+  // banner: pinned, else nearest date, archived never
+  const a = { ...g, id: 'a', by: '2027-01-01' }; const b = { ...g, id: 'b', by: '2026-12-01' }; const c = { ...g, id: 'c', by: '', pinned: true };
+  assert.equal(E.bannerGoal([a, b]).id, 'b'); assert.equal(E.bannerGoal([a, b, c]).id, 'c'); assert.equal(E.bannerGoal([{ ...b, archivedAt: '2026-11-01' }]), null);
+  // the sample: Summer trip, 3,000, 41 %
+  const s = seed('2026-11-17'); const sp = E.goalProgress(s.goals[0], '2026-11-17');
+  assert.equal(s.goals[0].name, 'Summer trip'); assert.equal(s.goals[0].target, 300000); assert.equal(sp.percent, 41);
+  assert.ok(E.isValidData(s));
+  // month card: savings are not spending
+  const mc = E.monthCard(s, '2026-10', '2026-11-17');
+  assert.equal(mc.saved, 20500); assert.ok(mc.plan > 0);
+});
