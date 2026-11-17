@@ -384,3 +384,4 @@ body[data-view="overview"] .main { padding-top: 14px; }
   .goal .g-acts { margin-top: 14px; }
   .goal.empty .g-body { padding-left: 44px; } .goal.empty h2 { padding-left: 0; } .goal.empty .btn { margin-top: 12px; }
 }
+@media (max-width: 700px) { .top { background: var(--paper); backdrop-filter: none; } }

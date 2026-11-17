@@ -210,7 +210,7 @@ function mainCard(m) {
   return '<section class="mcard" aria-label="This month"><div class="m-main">' + big + '</div><dl class="m-figs">' +
     '<div><dt>Income</dt><dd class="money">' + esc(money(c.income, { round: true })) + '</dd></div>' +
     '<div><dt>Spent</dt><dd class="money">' + esc(money(c.spent, { round: true })) + '</dd></div>' +
-    '<div><dt>Saved</dt><dd class="money">' + esc(money(c.saved, { round: true })) + '</dd></div></dl>' + habit + '</section>';
+    '<div><dt>Saved this month</dt><dd class="money">' + esc(money(c.saved, { round: true })) + '</dd></div></dl>' + habit + '</section>';
 }
 function whereChart(m) {
   const cats = E.byCategory(E.inMonth(data.transactions, m)).filter(x => x.category !== 'Savings');
