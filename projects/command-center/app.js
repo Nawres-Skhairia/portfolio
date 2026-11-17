@@ -81,6 +81,7 @@ const ui = {
   deps: { project: '' },
   reports: { type: 'portfolio', project: '' },
   panel: null, panelTab: 'comments',
+  moreFilters: false, // extra filters stay folded until asked for
 };
 const activeFilterCount = () => ['text', 'assignee', 'label', 'project'].filter(k => ui.q[k]).length + (ui.q.status.length ? 1 : 0) + (ui.q.priority.length ? 1 : 0) + (ui.q.overdue ? 1 : 0) + (ui.q.onHold ? 1 : 0);
 
@@ -135,11 +136,6 @@ function navigate() {
 // Count-up numbers, rings and bars animate in when a view appears.
 function animateIn(root) {
   requestAnimationFrame(() => {
-    root.querySelectorAll('[data-count]').forEach(el => {
-      const end = Number(el.dataset.count); const t0 = performance.now(); const dur = 700;
-      const step = t => { const k = Math.min(1, (t - t0) / dur); el.textContent = Math.round(end * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(step); };
-      requestAnimationFrame(step);
-    });
     root.querySelectorAll('.ring, .grow-in').forEach(el => el.classList.add('in'));
   });
 }
@@ -147,17 +143,25 @@ function animateIn(root) {
 // ---------- shared pieces ----------
 function filterBar(where) {
   const q = ui.q; const ppl = people();
-  const chips = [['me', 'Only my tasks', q.assignee === 'me'], ['overdue', 'Overdue', q.overdue], ['onHold', 'On hold', q.onHold]];
+  const extra = ['label', 'project'].filter(k => q[k]).length + (q.priority.length ? 1 : 0) + (q.overdue ? 1 : 0) + (q.onHold ? 1 : 0) + (q.assignee && q.assignee !== 'me' ? 1 : 0);
+  const open = ui.moreFilters;
+  const chip = (k, l, on) => '<button type="button" class="chip' + (on ? ' on' : '') + '" data-act="q-chip" data-k="' + k + '" aria-pressed="' + !!on + '">' + l + '</button>';
   return '<div class="fbar" role="search">' +
-    '<label class="fsearch"><span class="sr">Search tasks</span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input type="search" data-q="text" value="' + esc(q.text) + '" placeholder="Search key, title, label"></label>' +
-    '<div class="avstack" role="group" aria-label="Filter by assignee">' + ppl.map(n => '<button type="button" class="avbtn' + ((q.assignee === n || (q.assignee === 'me' && n === data.me)) ? ' on' : '') + '" data-act="q-assignee" data-name="' + esc(n) + '" aria-pressed="' + (q.assignee === n) + '" aria-label="Only ' + esc(n) + '">' + avatar(n) + '</button>').join('') + '</div>' +
-    chips.map(([k, l, on]) => '<button type="button" class="chip' + (on ? ' on' : '') + '" data-act="q-chip" data-k="' + k + '" aria-pressed="' + !!on + '">' + l + '</button>').join('') +
-    '<label class="fsel"><span class="sr">Project</span><select data-q="project">' + opts(data.projects.map(p => [p.id, p.name]), q.project, 'All projects') + '</select></label>' +
-    '<label class="fsel"><span class="sr">Label</span><select data-q="label">' + opts(E.allLabels(data), q.label, 'All labels') + '</select></label>' +
-    '<label class="fsel"><span class="sr">Priority</span><select data-q="priority">' + opts(E.PRIORITIES, q.priority[0] || '', 'Any priority') + '</select></label>' +
-    '<div class="saved"><label class="fsel"><span class="sr">Saved filters</span><select data-act="load-filter"><option value="">Saved filters</option>' + (data.filters || []).map(f => '<option value="' + esc(f.id) + '">' + esc(f.name) + '</option>').join('') + '</select></label>' +
-    (activeFilterCount() ? '<button type="button" class="lnk" data-act="save-filter">Save</button><button type="button" class="lnk" data-act="clear-q">Clear (' + activeFilterCount() + ')</button>' : '') + '</div>' +
+    '<label class="fsearch"><span class="sr">Search tasks</span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input type="search" data-q="text" value="' + esc(q.text) + '" placeholder="Search tasks"></label>' +
+    chip('me', 'My tasks', q.assignee === 'me') +
+    '<button type="button" class="chip more' + (open || extra ? ' on-soft' : '') + '" data-act="more-filters" aria-expanded="' + open + '" aria-controls="moreFilters">Filters' + (extra ? ' <span class="pill-n">' + extra + '</span>' : '') + '</button>' +
+    (activeFilterCount() ? '<button type="button" class="lnk" data-act="clear-q">Clear</button>' : '') +
     (where === 'board' ? '<div class="seg" role="group" aria-label="Group the board"><button type="button" data-act="group" data-g="none" aria-pressed="' + (ui.group === 'none') + '">Columns</button><button type="button" data-act="group" data-g="people" aria-pressed="' + (ui.group === 'people') + '">By person</button></div>' : '') +
+    '</div>' +
+    '<div class="fmore" id="moreFilters"' + (open ? '' : ' hidden') + '>' +
+      '<div class="fm-row"><span class="fm-l">Person</span><div class="avstack" role="group" aria-label="Filter by assignee">' + ppl.map(n => '<button type="button" class="avbtn' + ((q.assignee === n || (q.assignee === 'me' && n === data.me)) ? ' on' : '') + '" data-act="q-assignee" data-name="' + esc(n) + '" aria-pressed="' + (q.assignee === n) + '" aria-label="Only ' + esc(n) + '" title="' + esc(n) + '">' + avatar(n) + '</button>').join('') + '</div></div>' +
+      '<div class="fm-row"><span class="fm-l">Show</span>' + chip('overdue', 'Overdue', q.overdue) + chip('onHold', 'On hold', q.onHold) + '</div>' +
+      '<div class="fm-row"><span class="fm-l">Narrow</span>' +
+        '<label class="fsel"><span class="sr">Project</span><select data-q="project">' + opts(data.projects.map(p => [p.id, p.name]), q.project, 'All projects') + '</select></label>' +
+        '<label class="fsel"><span class="sr">Label</span><select data-q="label">' + opts(E.allLabels(data), q.label, 'All labels') + '</select></label>' +
+        '<label class="fsel"><span class="sr">Priority</span><select data-q="priority">' + opts(E.PRIORITIES, q.priority[0] || '', 'Any priority') + '</select></label></div>' +
+      '<div class="fm-row"><span class="fm-l">Saved</span><label class="fsel"><span class="sr">Saved filters</span><select data-act="load-filter"><option value="">Saved filters</option>' + (data.filters || []).map(f => '<option value="' + esc(f.id) + '">' + esc(f.name) + '</option>').join('') + '</select></label>' +
+        (activeFilterCount() ? '<button type="button" class="lnk" data-act="save-filter">Save this filter</button>' : '') + '</div>' +
     '</div>';
 }
 
@@ -179,24 +183,18 @@ function overview() {
   if (!data.projects.length) return '<div class="vh"><h2>Overview</h2></div>' + emptyState('An empty workspace', 'Create a project, or bring the sample portfolio back to explore.', '<div class="row"><button class="btn" data-act="new-project">New project</button><button class="btn ghost" data-act="reset">Load sample data</button></div>');
   const live = s.health.filter(x => x.project.status === 'Active' || x.project.status === 'On hold').sort((a, b) => a.h.score - b.h.score);
   const ins = E.insights(data, TODAY);
-  const wl = E.workload(data); const maxDays = Math.max(1, ...wl.map(w => w.days));
   const onHold = data.tasks.filter(t => t.status === 'On hold').length;
-  const kpi = (n, l, tone = '', hint = '') => '<div class="kpi ' + tone + '"><b data-count="' + n + '">' + n + '</b><span>' + l + '</span>' + (hint ? '<small>' + hint + '</small>' : '') + '</div>';
+  const mine = data.tasks.filter(t => t.owner === data.me && t.status !== 'Done' && t.status !== 'Backlog').length;
   const hello = new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 18 ? 'Good afternoon' : 'Good evening';
-  return '<div class="vh"><div><p class="eyebrow">' + esc(fmtDate(TODAY)) + ' · Orbis Studio</p><h2>' + hello + ', ' + esc(String(data.me).split(' ')[0]) + '.</h2><p class="lede">' + (s.delayed ? s.delayed + ' project' + (s.delayed > 1 ? 's need' : ' needs') + ' attention, ' : 'Everything runs to plan, ') + s.overdueTasks + ' task' + (s.overdueTasks === 1 ? ' is' : 's are') + ' overdue and ' + onHold + ' on hold.</p></div><div class="row"><a class="btn ghost" href="#/board">Open the board</a></div></div>' +
-    '<div class="kpis">' + kpi(s.active, 'Active projects') + kpi(s.delayed, 'Delayed', s.delayed ? 'bad' : '', 'late or a milestone missed') + kpi(s.openTasks, 'Open tasks') + kpi(s.overdueTasks, 'Overdue', s.overdueTasks ? 'warn' : '') + kpi(onHold, 'On hold', onHold ? 'warn' : '') + kpi(s.completed, 'Delivered', 'ok') + '</div>' +
-    '<section class="panel"><div class="ph"><h3>Project health</h3><a class="lnk" href="#/projects">All projects</a></div><div class="rings">' +
-      live.map(({ project: p, h }) => '<a class="ring-card" href="#/project/' + esc(p.id) + '">' + ring(h.score, healthTone(h.label), 78) + '<span><b>' + esc(p.name) + '</b><small>' + esc(h.label) + ' · ' + pct(h.progress) + ' done</small></span></a>').join('') + '</div></section>' +
+  const fig = (n, l, tone = '', href = '') => '<a class="fig' + (tone ? ' ' + tone : '') + '" href="' + href + '"><b>' + n + '</b><span>' + l + '</span></a>';
+  return '<div class="vh"><div><p class="eyebrow">' + esc(fmtDate(TODAY)) + '</p><h2>' + hello + ', ' + esc(String(data.me).split(' ')[0]) + '.</h2><p class="lede">' + (s.delayed ? s.delayed + ' project' + (s.delayed > 1 ? 's need' : ' needs') + ' your attention today.' : 'Everything runs to plan today.') + '</p></div></div>' +
+    '<div class="figs">' + fig(mine, 'Your open tasks', '', '#/board') + fig(s.overdueTasks, 'Overdue', s.overdueTasks ? 'warn' : '', '#/board') + fig(onHold, 'On hold', '', '#/board') + fig(s.active, 'Active projects', '', '#/projects') + '</div>' +
     '<div class="grid g21">' +
-      '<section class="panel"><div class="ph"><h3>Progress against plan</h3><span class="legend"><i class="lg-done"></i>Done <i class="lg-plan"></i>Expected today</span></div><ul class="bars">' +
-        live.map(({ project: p, h }) => '<li><a href="#/project/' + esc(p.id) + '" class="bar-name">' + esc(p.name) + '</a><span class="bar" role="img" aria-label="' + esc(p.name) + ': ' + pct(h.progress) + ' done, ' + pct(h.expected) + ' expected"><span class="fill grow-in tone-' + healthTone(h.label) + '" style="--w:' + (h.progress * 100).toFixed(1) + '%"></span><span class="plan" style="left:' + (h.expected * 100).toFixed(1) + '%"></span></span><span class="bar-val">' + pct(h.progress) + '</span></li>').join('') + '</ul></section>' +
-      '<section class="panel"><div class="ph"><h3>Needs attention</h3><a class="lnk" href="#/insights">All ' + ins.length + '</a></div>' + (ins.length ? '<ul class="att">' + ins.slice(0, 4).map(i => '<li class="lv-' + i.level + '"><b>' + esc(i.title) + '</b><span>' + esc(i.action) + '</span></li>').join('') + '</ul>' : emptyState('All clear', 'No rule found anything to flag.')) + '</section>' +
+      '<section class="panel"><div class="ph"><h3>Needs attention</h3>' + (ins.length > 3 ? '<a class="lnk" href="#/insights">See all ' + ins.length + '</a>' : '') + '</div>' + (ins.length ? '<ul class="att">' + ins.slice(0, 3).map(i => '<li class="lv-' + i.level + '"><b>' + esc(i.title) + '</b><span>' + esc(i.action) + '</span></li>').join('') + '</ul>' : emptyState('All clear', 'Nothing needs attention right now.')) + '</section>' +
+      '<section class="panel"><div class="ph"><h3>Coming up</h3></div>' + (s.upcoming.length ? '<ol class="tl">' + s.upcoming.slice(0, 4).map(m => '<li><span class="tl-d">' + esc(fmtDate(m.target, true)) + '</span><span class="tl-dot"></span><span><b>' + esc(m.name) + '</b><small>' + esc(proj(m.projectId)?.name) + ' · ' + rel(m.target) + '</small></span></li>').join('') + '</ol>' : emptyState('Nothing due soon', 'No milestone in the next 30 days.')) + '</section>' +
     '</div>' +
-    '<div class="grid g11">' +
-      '<section class="panel"><div class="ph"><h3>Who carries the work</h3><span class="muted small">open days of work</span></div><ul class="wl">' + wl.map(w => '<li><button type="button" class="wl-who" data-act="filter-person" data-name="' + esc(w.owner) + '">' + avatar(w.owner, 'sm') + '<span>' + esc(w.owner) + '</span></button><span class="bar"><span class="fill grow-in tone-done" style="--w:' + (w.days / maxDays * 100).toFixed(1) + '%"></span></span><span class="bar-val">' + w.days + ' d</span><small>' + w.tasks + ' tasks' + (w.onHold ? ' · ' + w.onHold + ' on hold' : '') + '</small></li>').join('') + '</ul></section>' +
-      '<section class="panel"><div class="ph"><h3>Next 30 days</h3></div>' + (s.upcoming.length ? '<ol class="tl">' + s.upcoming.map(m => '<li><span class="tl-d">' + esc(fmtDate(m.target, true)) + '</span><span class="tl-dot"></span><span><b>' + esc(m.name) + '</b><small>' + esc(proj(m.projectId)?.name) + ' · ' + rel(m.target) + '</small></span></li>').join('') + '</ol>' : emptyState('Nothing due soon', 'No milestone in the next 30 days.')) +
-      '<div class="ph sp"><h3>Highest risks</h3><a class="lnk" href="#/risks">Register</a></div><ul class="rl">' + s.topRisks.slice(0, 3).map(r => '<li><span class="score rk-' + slug(E.riskLevel(E.riskScore(r))) + '">' + E.riskScore(r) + '</span><span><b>' + esc(r.title) + '</b><small>' + esc(proj(r.projectId)?.name) + '</small></span></li>').join('') + '</ul></section>' +
-    '</div>';
+    '<section class="panel"><div class="ph"><h3>Projects</h3><span class="legend"><i class="lg-plan"></i>where it should be today</span></div><ul class="prows">' +
+      live.map(({ project: p, h }) => '<li><a href="#/project/' + esc(p.id) + '"><span class="pr-name"><b>' + esc(p.name) + '</b><small>' + esc(p.owner) + ' · due ' + esc(fmtDate(p.deadline, true)) + '</small></span><span class="pr-state tone-' + healthTone(h.label) + '"><i></i>' + esc(h.label) + '</span><span class="bar" role="img" aria-label="' + esc(p.name) + ': ' + pct(h.progress) + ' done, ' + pct(h.expected) + ' expected"><span class="fill grow-in tone-' + healthTone(h.label) + '" style="--w:' + (h.progress * 100).toFixed(1) + '%"></span><span class="plan" style="left:' + (h.expected * 100).toFixed(1) + '%"></span></span><span class="bar-val">' + pct(h.progress) + '</span></a></li>').join('') + '</ul></section>';
 }
 
 function board() {
@@ -672,6 +670,7 @@ document.addEventListener('click', e => {
     case 'clear-q': ui.q = { text: '', assignee: '', status: [], priority: [], label: '', project: '', overdue: false, onHold: false }; flipRender(); break;
     case 'save-filter': openForm('Save this filter', field('name', 'Name', input('name', '', 'text', 'maxlength="40" required autocomplete="off"'), 'It appears under Saved filters on the board and the backlog.'), fd => { const name = String(fd.get('name') || '').trim(); const err = E.validateFilterName(name, data.filters); if (err) return { name: err }; commit({ ...data, filters: [...(data.filters || []), { id: E.uid('f'), name, query: JSON.parse(JSON.stringify(ui.q)) }] }, 'Filter "' + name + '" saved.'); }, '', 'Save'); break;
     case 'group': ui.group = el.dataset.g; flipRender(); break;
+    case 'more-filters': ui.moreFilters = !ui.moreFilters; render(); { const b = $('[data-act="more-filters"]'); if (b) b.focus(); } break;
     case 'filter-person': ui.q = { ...ui.q, assignee: el.dataset.name }; location.hash = '#/board'; break;
     case 'sel': if (el.checked) ui.sel.add(id); else ui.sel.delete(id); render(); break;
     case 'sel-all': { const ids = E.applyFilter(data.tasks, ui.q, data.me, TODAY).map(t => t.id); if (el.checked) ids.forEach(i => ui.sel.add(i)); else ui.sel.clear(); render(); break; }
@@ -758,20 +757,7 @@ $('#enterDemo').addEventListener('click', e => { e.preventDefault(); $('#app').s
 window.addEventListener('hashchange', () => { $('#moreSheet').hidden = true; navigate(); });
 window.addEventListener('storage', e => { if (e.key === KEY) { data = load(); render(); } });
 
-// ---------- hero: a live miniature of this workspace ----------
-function hero() {
-  const s = E.portfolioSummary(data, TODAY);
-  const live = s.health.filter(x => x.project.status === 'Active').sort((a, b) => a.h.score - b.h.score).slice(0, 3);
-  const cols = E.BOARD_COLUMNS.map(c => [c, data.tasks.filter(t => t.status === c).length]); const max = Math.max(1, ...cols.map(c => c[1]));
-  const top = E.insights(data, TODAY)[0];
-  $('#heroLive').innerHTML = '<p class="hl-tag"><span class="pulse"></span>Live from the demo workspace</p><div class="hl-rings">' + live.map(({ project: p, h }) => '<div>' + ring(h.score, healthTone(h.label), 84) + '<b>' + esc(p.name) + '</b><small>' + esc(h.label) + '</small></div>').join('') + '</div>' +
-    '<div class="hl-cols">' + cols.map(([c, n], i) => '<div class="hl-col"><span class="hl-bar grow-in sb-' + slug(c) + '" style="--h:' + (n / max * 100).toFixed(0) + '%;--d:' + i * 90 + 'ms"></span><b>' + n + '</b><small>' + esc(c) + '</small></div>').join('') + '</div>' +
-    (top ? '<p class="hl-ins"><b>' + esc(top.title) + '.</b> ' + esc(top.action) + '</p>' : '');
-  animateIn($('#heroLive'));
-}
-
 if (!location.hash) history.replaceState(null, '', '#/overview');
-hero();
 render();
 lastHash = location.hash;
 if (startNotice) toast(startNotice, 'error');
