@@ -138,5 +138,21 @@ ok(MAP_RULES.every((r) => r.source.length && r.source.every((s) => MAP_SOURCES[s
   ok(/<Ustrd>INVOICE 2026-118 ORDER 5521<\/Ustrd>/.test(two.xml), 'Info: :70: lines joined with a space');
   ok(/reviewPoints" value="3"/.test(mapJUnit({ res: convert(S.address), schema: { valid: true }, sha: 'x', name: 'n', when: '2026-11-18T10:00:00Z' })), 'Info: JUnit carries the number of review points');
 }
+// Daniel's hands-on Minors (PORT-41 10668)
+{
+  const today = '2026-11-17';
+  const base0 = convert(S.clean, { today });
+  const rev = (r) => r.findings.filter((f) => f.severity === 'review');
+  ok(rev(base0).length === 0, 'clean sample: no review point for today');
+  const badIban = convert(S.clean.replace(':59F:/FR1420041010050500013M02606', ':59F:/FR1520041010050500013M02606'), { today });
+  ok(rev(badIban).some((f) => /looks like an IBAN, but its check digits are wrong/.test(f.message)) && !/<IBAN>FR15/.test(badIban.xml), 'IBAN-like account with bad check digits: needs review, not written as IBAN');
+  const notIban = convert(S.clean.replace(':59F:/FR1420041010050500013M02606', ':59F:/123456789'), { today });
+  ok(!rev(notIban).some((f) => /check digits/.test(f.message)), 'a plain account number is not called a bad IBAN');
+  const far = convert(S.clean.replace(':32A:261118EUR1250,00', ':32A:991231EUR1250,00'), { today });
+  ok(rev(far).some((f) => /2099-12-31, which is more than a year ahead/.test(f.message)), 'value date 991231: needs review', JSON.stringify(rev(far).map((f) => f.message)));
+  ok(!rev(convert(S.clean.replace(':32A:261118', ':32A:271110'), { today })).length, 'value date within a year: no review point');
+  const zero = convert(S.clean.replace(':32A:261118EUR1250,00', ':32A:261118EUR0,00'), { today });
+  ok(rev(zero).some((f) => /amount is zero/.test(f.message)), 'amount 0,00: needs review');
+}
 console.log(`${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

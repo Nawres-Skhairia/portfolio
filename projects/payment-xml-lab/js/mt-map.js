@@ -133,7 +133,8 @@ export function refuse(message, fix) {
   return { mt: { fields: [], blocks: { b3: [], b5: [] }, errors: [e], lineCount: 0 }, rows: [], findings: [{ severity: 'error', rule: 'MT', mtLine: null, xmlLine: null, message, fix }], errors: [e], counts: { mapped: 0, transformed: 0, defaulted: 0, lost: 0, review: 0 }, verdict: 'Not converted', facts: {}, xml: '', refused: true, tool: MAP_TOOL, catalogue: MAP_CATALOGUE_VERSION, xsd: MX.id };
 }
 
-export function convert(src) {
+// today: YYYY-MM-DD, given by the tests; the page uses the visitor's date
+export function convert(src, { today = new Date().toISOString().slice(0, 10) } = {}) {
   const mt = readMt(src);
   if (mt.refused) {
     const findings = mt.errors.map((e) => ({ severity: 'error', rule: 'MT', mtLine: e.line, xmlLine: null, message: e.message, fix: e.fix }));
@@ -226,8 +227,14 @@ export function convert(src) {
     const ccy = m32[2], amt = amountToIso(m32[3]);
     const dec = (m32[3].split(',')[1] || '').length;
     if (dec > minorUnits(ccy)) fail('MAP-10', f32.line, `${ccy} has ${minorUnits(ccy)} decimals, but the amount has ${dec}.`, `Round the amount to ${minorUnits(ccy)} decimals.`, 'The receiving bank cannot book a fraction of the smallest unit.');
-    if (amt) { const x = put(tx, E('IntrBkSttlmAmt', { Ccy: ccy }, amt)); row({ rule: 'MAP-10', tag: '32A', mtLines: [f32.line], mtValue: m32[2] + m32[3], path: 'IntrBkSttlmAmt', value: `${amt} ${ccy}`, status: 'transformed', node: x, note: 'Decimal comma becomes a decimal point.' }); }
-    if (vd) { const x = put(tx, E('IntrBkSttlmDt', vd)); row({ rule: 'MAP-10', tag: '32A', mtLines: [f32.line], mtValue: m32[1], path: 'IntrBkSttlmDt', value: vd, status: 'transformed', node: x, note: 'YYMMDD becomes YYYY-MM-DD, read as 20YY (our choice).' }); }
+    // Daniel (PORT-41 10668): a zero amount and a value date more than a year away are read, but a person must look
+    const zero = amt && !/[1-9]/.test(amt);
+    if (amt) { const x = put(tx, E('IntrBkSttlmAmt', { Ccy: ccy }, amt)); row({ rule: 'MAP-10', tag: '32A', mtLines: [f32.line], mtValue: m32[2] + m32[3], path: 'IntrBkSttlmAmt', value: `${amt} ${ccy}`, status: zero ? 'review' : 'transformed', node: x, note: zero ? 'The amount is zero. A customer transfer of nothing is almost always a mistake.' : 'Decimal comma becomes a decimal point.', fix: zero ? 'Check the amount with the ordering customer.' : undefined }); }
+    if (vd) {
+      const days = Math.round((Date.parse(vd + 'T00:00:00Z') - Date.parse(today + 'T00:00:00Z')) / 86400000), far = Math.abs(days) > 366;
+      const x = put(tx, E('IntrBkSttlmDt', vd));
+      row({ rule: 'MAP-10', tag: '32A', mtLines: [f32.line], mtValue: m32[1], path: 'IntrBkSttlmDt', value: vd, status: far ? 'review' : 'transformed', node: x, note: far ? `YYMMDD read as ${vd}, which is more than a year ${days > 0 ? 'ahead' : 'ago'}. Check the year.` : 'YYMMDD becomes YYYY-MM-DD, read as 20YY (our choice).', fix: far ? 'Correct the value date in :32A:.' : undefined });
+    }
   }
   // 13C (MAP-12)
   for (const f of fieldsOf(/^13C$/)) {
@@ -367,7 +374,7 @@ export function convert(src) {
       }
     }
     sortBy(node, ORDERS.Party);
-    if (acct) { const a = acctNode(accName, acct); tx.add(a); const id = acct.replace(/^\/(?:[CD]\/)?/, ''); const iban = !!a.get('Id').get('IBAN'); row({ rule, tag: f.tag, mtLines: [acctLine], mtValue: acct, path: accName + (iban ? '/Id/IBAN' : '/Id/Othr/Id'), value: id, status: 'mapped', node: a, note: iban ? 'Account is a valid IBAN.' : 'Account is not a valid IBAN, so it is written as another account identifier.' }); }
+    if (acct) { const a = acctNode(accName, acct); tx.add(a); const id = acct.replace(/^\/(?:[CD]\/)?/, ''); const iban = !!a.get('Id').get('IBAN'), badIban = !iban && /^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$/.test(id) && COUNTRIES.has(id.slice(0, 2)); row({ rule, tag: f.tag, mtLines: [acctLine], mtValue: acct, path: accName + (iban ? '/Id/IBAN' : '/Id/Othr/Id'), value: id, status: badIban ? 'review' : 'mapped', node: a, note: iban ? 'Account is a valid IBAN.' : badIban ? `Account ${id} looks like an IBAN, but its check digits are wrong, so it is written as another account identifier.` : 'Account is not a valid IBAN, so it is written as another account identifier.', fix: badIban ? 'Check the account number with the customer: one character is probably mistyped.' : undefined }); }
   };
   party(fieldsOf(/^50[AFK]$/)[0], 'Dbtr', 'DbtrAcct');
 
