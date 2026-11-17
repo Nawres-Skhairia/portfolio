@@ -37,7 +37,7 @@
     </div>
   </header>
 
-  <!-- CV page: Leo's words v13, layout after Olivia. Preview only until Nawres's yes. No phone or home address. -->
+  <!-- CV page: Leo's words v14, layout after Olivia. Preview only until Nawres's yes. No phone or home address. -->
   <main id="main" class="wrap cv">
     <header class="cv-hero">
       <p class="kicker">CV</p>
@@ -52,7 +52,7 @@
       </ul>
       <section class="cv-profile-block" aria-labelledby="cv-profile">
         <h2 id="cv-profile" class="cv-h">Profile</h2>
-        <p class="cv-profile">QA analyst specialised in factoring and receivables finance, with nearly five years inside the software that banks and factoring companies rely on every day. At Codix, I test iMX across the full business chain: third parties and screening, contracts and limits, invoicing and funding, payments and bank interfaces, allocation, collections, accounting and nightly batches. I read business rules like a business analyst and test them like an engineer, with SQL, application logs, REST APIs and ISO 20022 files, from DEV through to UAT. I make sure every release that reaches a client is one they can trust. I am also the dedicated tester of an AI solution, and I work in English, French and Arabic.</p>
+        <p class="cv-profile">QA Analyst with nearly five years' experience at Codix on iMX, an enterprise platform used by banks and factoring companies to manage receivables finance. Experienced in functional, integration and regression testing across the full factoring lifecycle: third-party onboarding and compliance screening, contracts and credit limits, invoice processing and funding, payments and banking interfaces (SEPA, ISO 20022, MT940, CAMT.053), cash allocation, collections, accounting and batch processing. Skilled in requirements analysis, test design, SQL data validation, REST API testing and defect management across DEV, VAL and UAT environments. Dedicated tester of an AI solution, covering answer accuracy, consistency and risk. Fluent in English, French and Arabic.</p>
       </section>
     </header>
 
@@ -70,36 +70,36 @@
               <p class="cv-context">iMX, factoring and receivables finance software for banks and factoring companies</p>
               <h4 class="cv-sub">Business areas tested</h4>
               <ul class="cv-points">
-                <li>Third parties and onboarding: creation of individuals and companies and their roles (client, debtor, guarantor and others), with sanctions and compliance screening of each party.</li>
+                <li>Third parties and onboarding: creation of individuals and legal entities and their roles (client, debtor, guarantor), with sanctions and compliance screening.</li>
                 <li>Contracts: contract set-up for each factoring product (recourse and non-recourse, disclosed and undisclosed, reverse factoring), amendments, renewals and closure.</li>
                 <li>Limits and credit risk: debtor limit requests through the approval workflow (approval, partial approval, refusal, expiry, renewal), limit consumption, over-limit and concentration cases, and their effect on funding.</li>
                 <li>Portfolio management: client and debtor portfolios, their outstanding balances, risk exposure and transfers between portfolios.</li>
                 <li>Invoicing and assignment: invoice and credit note intake by screen and file import, eligibility rules, ineligible and rejected items, and invoicing of the factor's own fees and commissions.</li>
-                <li>Funding: availability, advance rate and reserve, funding requests and payment orders, cut-off times, with fee and interest calculations checked against contract terms at edge cases (period end, rate change, minimum fee).</li>
-                <li>Payments and bank interfaces: outgoing SEPA and cross-border payments in ISO 20022 XML and incoming MT940 and CAMT.053 bank statements, traced from the bank file to the client account.</li>
+                <li>Funding: availability, advance rate and reserve, funding requests, payment orders and cut-off times; fee and interest calculations validated against contract terms, including period-end, rate-change and minimum-fee cases.</li>
+                <li>Payments and banking interfaces: outgoing SEPA and cross-border payments (ISO 20022 XML) and incoming MT940 and CAMT.053 bank statements, validated end to end from bank file to client account.</li>
                 <li>Multi-currency: invoices, funding and payments in several currencies, exchange rates and currency conversion on balances.</li>
                 <li>Financial items: creation, life cycle and balances of the financial items behind every invoice, payment, fee and adjustment.</li>
-                <li>Allocation: allocating debtor payments to invoices, including partial, over- and underpayments, splits, unidentified payments, reallocations, reversals and write-offs.</li>
+                <li>Cash allocation: allocation of debtor payments to invoices, including partial, over- and underpayments, splits, unidentified payments, reallocations, reversals and write-offs.</li>
                 <li>Collections and disputes: dunning cycles, overdue tracking and ageing, recourse on unpaid items, and disputes from opening to resolution, with their effect on eligibility and funding.</li>
                 <li>Accounting: the accounting impact of each operation (assignment, funding, allocation, fees, write-off), with client and debtor balances checked in SQL.</li>
-                <li>Batches and end-of-day runs: interest accrual, ageing, limit expiry, dunning and file runs, verified in the database and logs, including month ends, value dates and reruns after a failure.</li>
-                <li>APIs and web services: REST API and web service testing with Postman, checking that API calls create the same records and accounting as the screens.</li>
-                <li>Reporting and documents: client and debtor statements, notices, letters and operational reports, reconciled with the database.</li>
+                <li>Batch processing and end-of-day: interest accrual, ageing, limit expiry, dunning and file runs, verified in the database and logs, including month-end, value-date and rerun scenarios.</li>
+                <li>APIs and web services: REST API and web service testing with Postman, including consistency of records and accounting between API and user interface.</li>
+                <li>Reporting and documents: client and debtor statements, notices, letters and operational reports, reconciled against the database.</li>
                 <li>User rights: roles, permissions, four-eyes approvals and the audit trail.</li>
-                <li>Configuration: the same flows checked under client- and country-specific parameter settings.</li>
+                <li>Configuration: validation of business flows under client- and country-specific parameter settings.</li>
               </ul>
-              <h4 class="cv-sub">How I work</h4>
+              <h4 class="cv-sub">Testing practice</h4>
               <ul class="cv-points">
-                <li>Requirements: analysing business requirements and specifications, finding gaps and contradictions before development, and turning them into test scenarios and acceptance criteria with business experts and client teams.</li>
-                <li>Test design: positive, negative and boundary cases, end-to-end scenarios across the business chain, and the test data to run them.</li>
-                <li>Environments and releases: test execution across DEV, VAL and UAT, smoke tests, retests of each fix, and full regression and non-regression campaigns before each release.</li>
-                <li>Test management and defects: test cases and campaigns in Jira and Xray, evidence-based defect reports (steps, expected and actual results, SQL results, log extracts) and follow-up with developers until the fix is confirmed.</li>
-                <li>Investigation: root-cause analysis with SQL queries and application logs.</li>
+                <li>Requirements analysis: review of business requirements and functional specifications to identify gaps and inconsistencies before development; definition of test scenarios and acceptance criteria with business experts and client teams.</li>
+                <li>Test design: positive, negative and boundary test cases, end-to-end scenarios across the factoring lifecycle, and supporting test data.</li>
+                <li>Execution and release validation: test execution across DEV, VAL and UAT; smoke testing, retesting, and full regression and non-regression campaigns prior to each release.</li>
+                <li>Test and defect management: test cases and campaigns in Jira and Xray; evidence-based defect reporting (reproduction steps, expected and actual results, SQL results, log extracts) and follow-up with development through to closure.</li>
+                <li>Investigation: root-cause analysis using SQL queries and application logs.</li>
               </ul>
               <h4 class="cv-sub">AI testing</h4>
               <ul class="cv-points">
-                <li>Dedicated tester of an AI solution: evaluating its answers for accuracy, consistency, made-up facts and risky cases.</li>
-                <li>Designing test questions with expected answers, and reporting quality issues to the team.</li>
+                <li>Dedicated tester of an AI solution: evaluation of answers for accuracy, consistency, hallucinations and high-risk cases.</li>
+                <li>Design of test question sets with expected answers; reporting of quality issues to the product team.</li>
               </ul>
             </li>
             <li class="cv-job">
@@ -109,11 +109,11 @@
               </div>
               <p class="cv-context">iMX documentation and localization</p>
               <ul class="cv-points">
-                <li>Maintained the iMX system documentation, keeping it accurate and consistent with each release.</li>
-                <li>Translated software and documentation between French and English for international clients.</li>
-                <li>Contributed to the Arabic localization of the software.</li>
-                <li>Took part in unit testing: checking compliance with specifications and database requirements, and reporting issues.</li>
-                <li>Trained business colleagues on the specification management system.</li>
+                <li>Maintenance of iMX system documentation, kept accurate and consistent across releases.</li>
+                <li>French–English translation of software and documentation for international clients.</li>
+                <li>Contribution to the Arabic localization of the software.</li>
+                <li>Unit testing: verification of compliance with specifications and database requirements; issue reporting.</li>
+                <li>Training of business users on the specification management system.</li>
               </ul>
             </li>
             <li class="cv-job">
@@ -123,8 +123,8 @@
               </div>
               <p class="cv-context">Player support for a major online game</p>
               <ul class="cv-points">
-                <li>Multilingual support in English, French and Arabic.</li>
-                <li>Technical troubleshooting and escalation of complex issues to internal teams.</li>
+                <li>Multilingual customer support in English, French and Arabic.</li>
+                <li>Technical troubleshooting and escalation of complex cases to internal teams.</li>
               </ul>
             </li>
             <li class="cv-job">
@@ -133,7 +133,7 @@
                 <p class="cv-when">2019</p>
               </div>
               <ul class="cv-points">
-                <li>Client consultations to assess needs and recommend insurance products, explained in clear, simple words.</li>
+                <li>Client needs assessment and recommendation of insurance products.</li>
               </ul>
             </li>
           </ol>
@@ -141,7 +141,7 @@
 
         <section class="cv-block cv-noprint" aria-labelledby="cv-side-projects">
           <h2 id="cv-side-projects" class="cv-h">Side projects</h2>
-          <p class="cv-profile">Web tools created through vibe coding, on this site: Test Pilot, payment tools, Loan simulator, Hiring Desk, Spreadsheet X-ray.</p>
+          <p class="cv-profile">Web tools created through vibe coding: Test Pilot, payment tools, Loan simulator, Hiring Desk, Spreadsheet X-ray.</p>
           <a class="cv-more" href="/#work">See the tools <span aria-hidden="true">→</span></a>
         </section>
       </div>
