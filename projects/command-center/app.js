@@ -57,7 +57,7 @@ const slug = s => String(s).toLowerCase().replace(/\s+/g, '-');
 function hue(name) { let h = 0; for (const c of String(name)) h = (h * 31 + c.charCodeAt(0)) % 360; return h; }
 const initials = n => String(n || '?').split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
 const avatar = (name, size = '') => '<span class="av ' + size + '" style="--h:' + hue(name) + '" title="' + esc(name) + '" aria-hidden="true">' + esc(initials(name)) + '</span>';
-const prioIcon = p => '<span class="pri pri-' + slug(p) + '" title="' + esc(p) + ' priority" aria-label="' + esc(p) + ' priority"><svg viewBox="0 0 16 16" aria-hidden="true">' + ({ Critical: '<path d="M3 9l5-5 5 5M3 13l5-5 5 5"/>', High: '<path d="M3 11l5-5 5 5"/>', Medium: '<path d="M3 6h10M3 10h10"/>', Low: '<path d="M3 5l5 5 5-5"/>' }[p] || '') + '</svg></span>';
+const prioIcon = p => '<span class="pri pri-' + slug(p) + '" role="img" title="' + esc(p) + ' priority" aria-label="' + esc(p) + ' priority"><svg viewBox="0 0 16 16" aria-hidden="true">' + ({ Critical: '<path d="M3 9l5-5 5 5M3 13l5-5 5 5"/>', High: '<path d="M3 11l5-5 5 5"/>', Medium: '<path d="M3 6h10M3 10h10"/>', Low: '<path d="M3 5l5 5 5-5"/>' }[p] || '') + '</svg></span>';
 function opts(list, sel, blank) { return (blank !== undefined ? '<option value="">' + esc(blank) + '</option>' : '') + list.map(v => { const [val, lab] = Array.isArray(v) ? v : [v, v]; return '<option value="' + esc(val) + '"' + (String(val) === String(sel) ? ' selected' : '') + '>' + esc(lab) + '</option>'; }).join(''); }
 function emptyState(title, text, action, icon = 'spark') { return '<div class="empty"><span class="empty-ic ic-' + icon + '" aria-hidden="true"></span><p class="empty-t">' + esc(title) + '</p><p>' + esc(text) + '</p>' + (action || '') + '</div>'; }
 function ring(score, tone, size = 64, label = '') {
@@ -303,13 +303,13 @@ function calendarView(r) {
   for (let i = 0; i < weeks * 7; i++) {
     const day = E.addDays(start, i); const out = day.slice(0, 7) !== ym;
     const items = [...ms.filter(x => x.target === day).map(mev), ...tasks.filter(t => t.due === day).sort(E.byRank).map(ev)];
-    cells += '<div class="cell' + (out ? ' out' : '') + (day === TODAY ? ' today' : '') + (day === ui.calDay ? ' picked' : '') + '" data-act="cal-day" data-d="' + day + '" role="gridcell" aria-label="' + esc(dayLong(day) + (items.length ? ', ' + items.length + ' item' + (items.length > 1 ? 's' : '') : '')) + '"><span class="num">' + Number(day.slice(8)) + '</span>' + items.slice(0, 3).join('') + (items.length > 3 ? '<span class="more">+' + (items.length - 3) + ' more</span>' : '') + '</div>';
+    cells += '<div class="cell' + (out ? ' out' : '') + (day === TODAY ? ' today' : '') + (day === ui.calDay ? ' picked' : '') + '" data-act="cal-day" data-d="' + day + '" role="group" aria-label="' + esc(dayLong(day) + (items.length ? ', ' + items.length + ' item' + (items.length > 1 ? 's' : '') : '')) + '"><span class="num">' + Number(day.slice(8)) + '</span>' + items.slice(0, 3).join('') + (items.length > 3 ? '<span class="more">+' + (items.length - 3) + ' more</span>' : '') + '</div>';
   }
   const pick = ui.calDay && ui.calDay.slice(0, 7) === ym ? ui.calDay : (TODAY.slice(0, 7) === ym ? TODAY : '');
   const dayList = pick ? (() => { const ts = tasks.filter(t => t.due === pick); const mm = ms.filter(x => x.target === pick); return '<section class="card2 cal-list"><div class="ch"><h3>' + esc(dayLong(pick)) + '</h3><span>' + (ts.length + mm.length || '') + '</span></div>' + (ts.length || mm.length ? mm.map(x => '<div class="tr"' + pcs(x.projectId) + '>' + ic('flag') + '<button type="button" class="tt" data-act="edit-milestone" data-id="' + esc(x.id) + '">' + esc(x.name) + '</button><span class="pj"><span class="pd"></span>' + esc(shortName(proj(x.projectId))) + '</span></div>').join('') + ts.map(t => taskRow(t)).join('') : '<p class="soft">Nothing due on this day.</p>') + '</section>'; })() : '';
   return boardHead('calendar') +
     '<div class="cal-head"><h3>' + esc(title) + '</h3><button type="button" class="icon-btn" data-act="cal-move" data-n="-1" aria-label="Previous month">' + ic('left') + '</button><button type="button" class="icon-btn" data-act="cal-move" data-n="1" aria-label="Next month">' + ic('right') + '</button><button type="button" class="btn ghost sm" data-act="cal-today">Today</button><span class="grow"></span><button type="button" class="chip' + (ui.calMine ? ' on' : '') + '" data-act="cal-mine" aria-pressed="' + !!ui.calMine + '">Only my tasks</button></div>' +
-    '<div class="cal" role="grid" aria-label="' + esc(title) + '">' + ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(x => '<span class="dow" role="columnheader">' + x + '</span>').join('') + cells + '</div>' + dayList;
+    '<div class="cal" role="group" aria-label="' + esc(title) + '">' + ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(x => '<span class="dow" aria-hidden="true">' + x + '</span>').join('') + cells + '</div>' + dayList;
 }
 
 // Board, List and Calendar share one header with a segmented switch.
@@ -829,7 +829,7 @@ function openPalette() {
 function closePalette() { pal.hidden = true; pal.innerHTML = ''; document.body.classList.remove('pal-open'); }
 function go(name) { if (route().name === name) render(); else location.hash = '#/' + name; }
 function shortcutsHelp() {
-  const rows = [['⌘ K or Ctrl K, /', 'Search and commands'], ['c', 'Create a task'], ['g then h, m, b, l, k, p, d, r, i, e', 'Go to a page'], ['Enter', 'Open the selected card'], ['[ and ]', 'Move the selected card one column left or right'], ['m', 'Assign the selected card to me'], ['Esc', 'Close a panel or dialog'], ['?', 'This list']];
+  const rows = [['⌘ K or Ctrl K, /', 'Search and commands'], ['c', 'Create a task'], ['g then h, m, b, l, k, p, d, r, i, e', 'Go to a page'], ['Enter', 'Open the selected card'], ['Arrow keys', 'Go from card to card on the board'], ['Shift + arrow, or [ and ]', 'Move the selected card one column left or right'], ['m', 'Assign the selected card to me'], ['Esc', 'Close a panel or dialog'], ['?', 'This list']];
   openForm('Keyboard shortcuts', '<dl class="keys">' + rows.map(([k, v]) => '<div><dt>' + k.split(', ').map(x => '<kbd>' + esc(x) + '</kbd>').join(' ') + '</dt><dd>' + esc(v) + '</dd></div>').join('') + '</dl>', () => {}, '', 'Got it');
 }
 
@@ -962,7 +962,9 @@ document.addEventListener('keydown', e => {
   if (el.matches && el.matches('g.node') && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openTask(el.dataset.id); return; }
   if (el.matches && el.matches('.card')) {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openTask(el.dataset.task); return; }
-    if (e.key === '[' || e.key === ']') { e.preventDefault(); moveByKey(el.dataset.task, e.key === ']' ? 1 : -1); return; }
+    if (e.key === '[' || e.key === ']' || (e.shiftKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight'))) { e.preventDefault(); moveByKey(el.dataset.task, e.key === ']' || e.key === 'ArrowRight' ? 1 : -1); return; }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); const list = $$('.card', el.closest('.col-body')); const n = list[list.indexOf(el) + (e.key === 'ArrowDown' ? 1 : -1)]; if (n) n.focus(); return; }
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); const cols = $$('.col', el.closest('.board')).filter(c => c.querySelector('.card')); const i = cols.indexOf(el.closest('.col')); const c = cols[i + (e.key === 'ArrowRight' ? 1 : -1)]; if (c) c.querySelector('.card').focus(); return; }
     if (e.key === 'm') { const r = E.updateTask(data, el.dataset.task, { owner: data.me }, data.me, stamp()); if (!Object.keys(r.errors).length) commit(r.data, task(el.dataset.task).key + ' assigned to you.', { undo: true }); return; }
   }
   if (e.key === '/') { e.preventDefault(); openPalette(); return; }

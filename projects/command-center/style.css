@@ -6,9 +6,9 @@
 
 :root {
   --bg: #F7F8FA; --side: #F2F4F7; --surf: #FFFFFF; --sunk: #EEF0F4; --lane: #F0F2F6; --line: #E3E6EC; --divider: #EEF0F4;
-  --t1: #1D2130; --t2: #555C70; --t3: #8C92A4; --t4: #C3C8D4;
+  --t1: #1D2130; --t2: #555C70; --t3: #676D80; --t4: #C3C8D4;
   --acc: #5B66E0; --accd: #4650C8; --accl: #AEB4FF; --accbg: #EEF0FF; --accline: #C9CDFB;
-  --pause: #7466C6; --pausebg: #F2F0FC; --past: #9A6A2C; --pastbg: #FBF2E4; --done: #3E9A78; --donebg: #E6F5EE;
+  --pause: #6556B8; --pausebg: #F2F0FC; --past: #8A5C22; --pastbg: #FBF2E4; --done: #3E9A78; --donebg: #E6F5EE;
   --p1: #5B66E0; --p2: #3E9A78; --p3: #C08A3E; --p4: #B86A8F; --p5: #4F8FB0; --p6: #8A7F5A;
   --sh-rest: 0 1px 2px rgba(0, 0, 0, .03); --sh-hover: 0 10px 24px rgba(20, 20, 40, .10); --sh-drag: 0 18px 34px rgba(20, 20, 40, .16); --sh-panel: -24px 0 48px rgba(20, 20, 40, .07);
   --r: 14px; --ri: 10px; --rs: 9px; --ease: cubic-bezier(.2, .7, .3, 1);
@@ -23,11 +23,11 @@
 }
 :root[data-theme="dark"] {
   --bg: #12141B; --side: #161922; --surf: #1B1E28; --sunk: #232734; --lane: #191C26; --line: #2A2E3B; --divider: #232734;
-  --t1: #ECEEF4; --t2: #A9AFC0; --t3: #7C8296; --t4: #4A5063;
+  --t1: #ECEEF4; --t2: #A9AFC0; --t3: #8A90A4; --t4: #4A5063;
   --acc: #8C95FF; --accd: #A9B0FF; --accl: #C3C8FF; --accbg: #252A4A; --accline: #3C4380;
   --pause: #A99CF0; --pausebg: #262240; --past: #E0B072; --pastbg: #33281A; --done: #6CC7A2; --donebg: #1A3229;
   --p1: #8C95FF; --p2: #6CC7A2; --p3: #E0B072; --p4: #E09BBB; --p5: #7DB8D6; --p6: #C2B58A;
-  --line2: #363B4A; --acc-ink: #12141B; --todo: #7C8296; --rev: #7DB8D6; --back: #5C6276;
+  --line2: #363B4A; --acc-ink: #12141B; --todo: #8A90A4; --prog: #8C95FF; --rev: #7DB8D6; --back: #9095A8;
   --sh-rest: 0 1px 2px rgba(0, 0, 0, .3); --sh-hover: 0 10px 24px rgba(0, 0, 0, .35); --sh-drag: 0 18px 34px rgba(0, 0, 0, .45); --sh-panel: -24px 0 48px rgba(0, 0, 0, .35);
   color-scheme: dark;
 }
@@ -474,8 +474,8 @@ dialog::backdrop { background: rgba(4, 5, 8, .6); backdrop-filter: blur(4px); }
 .seg { display: inline-flex; background: var(--sunk); border: 0; border-radius: var(--rs); padding: 3px; }
 .seg button, .seg a { border: 0; background: transparent; padding: 5px 12px; border-radius: 7px; font-size: 13px; font-weight: 500; color: var(--t2); text-decoration: none; }
 .seg button[aria-pressed="true"], .seg button[aria-selected="true"], .seg a[aria-current="page"] { background: var(--surf); color: var(--t1); font-weight: 600; box-shadow: 0 1px 2px rgba(0, 0, 0, .06); }
-.av { width: 26px; height: 26px; font: 600 10.5px/1 var(--font); color: #fff; background: hsl(var(--h) 38% 52%); box-shadow: none; }
-:root[data-theme="dark"] .av { background: hsl(var(--h) 30% 42%); }
+.av { width: 26px; height: 26px; font: 600 10.5px/1 var(--font); color: #fff; background: hsl(var(--h) 38% 35%); box-shadow: none; }
+:root[data-theme="dark"] .av { background: hsl(var(--h) 30% 36%); }
 .av.sm { width: 22px; height: 22px; font-size: 9.5px; }
 .lbl { font: 500 11.5px/1.5 var(--font); color: var(--t2); background: var(--sunk); border-radius: 99px; padding: 1px 8px; }
 :root[data-theme="dark"] .lbl { color: var(--t2); background: var(--sunk); }
@@ -671,7 +671,7 @@ dialog::backdrop { background: rgba(29, 33, 48, .28); backdrop-filter: none; }
 .cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
 .cal .dow { font-size: 12px; color: var(--t3); padding: 0 6px 4px; }
 .cal .cell { min-height: 112px; background: var(--surf); border: 1px solid var(--line); border-radius: var(--ri); padding: 8px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.cal .cell.out { background: transparent; border-style: dashed; opacity: .55; }
+.cal .cell.out { background: transparent; border-style: dashed; }
 .cal .cell.today { border-color: var(--accline); box-shadow: inset 0 0 0 1px var(--accline); background: var(--accbg); }
 .cal .num { font-size: 12.5px; font-weight: 600; color: var(--t2); } .cal .today .num { color: var(--accd); }
 .cal .ev { display: flex; align-items: center; gap: 6px; font-size: 12px; padding: 3px 6px; border-radius: 6px; background: var(--bg); border: 0; text-align: left; color: var(--t1); min-width: 0; }
@@ -856,3 +856,7 @@ a.who-row:hover b { color: var(--accd); }
   @page { margin: 14mm; }
 }
 @media (min-width: 901px) { body.panel-open.on-board .main { padding-right: 414px; } }
+.day.today small { color: var(--accd); }
+.st { color: var(--t2); } .st::before { background: var(--c); }
+.cal .cell.out .num { color: var(--t3); }
+.col header { min-height: 34px; }
