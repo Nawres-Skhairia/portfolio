@@ -282,8 +282,8 @@ export function prepareImport(rows, map, opts, existing) {
     return { line, tx, errors, duplicate };
   });
 }
-// Text cells that start with = + - @ are prefixed so a spreadsheet never runs them as formulas.
-const safeCell = v => { const s = String(v ?? ''); const t = /^[=+\-@\t\r]/.test(s) ? "'" + s : s; return /[",\n\r;]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
+// Text cells that start with = + - @ (also their full-width forms) are prefixed so a spreadsheet never runs them as formulas.
+const safeCell = v => { const s = String(v ?? ''); const t = /^[=+\-@\t\r\uFF1D\uFF0B\uFF0D\uFF20]/.test(s) ? "'" + s : s; return /[",\n\r;]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
 export function toCsv(txs) {
   const head = ['Date', 'Payee', 'Category', 'Amount', 'Note'];
   const lines = txs.map(t => [t.date, safeCell(t.payee), safeCell(t.category), (t.amount < 0 ? '-' : '') + Math.floor(Math.abs(t.amount) / 100) + '.' + String(Math.abs(t.amount) % 100).padStart(2, '0'), safeCell(t.note)].join(','));
