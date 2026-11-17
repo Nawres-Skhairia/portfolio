@@ -103,12 +103,13 @@
 
 /* print: A4, light, no navigation or motion, two columns kept, breaks only between jobs */
 @media print {
-  @page { size: A4; margin: 14mm 12mm; }
+  /* no page margin: the browser has no room for its own header and footer (page address); the space is padding, repeated on every page */
+  @page { size: A4; margin: 0; }
   .site-head, .footer, .cv-print-item, .cv-more, .cv-closing, .cv-noprint, .cv-screen, .kicker, .pt-panel { display: none !important; }
   .cv-printonly { display: inline; }
   .cv-contact a { color: inherit; text-decoration: none; }
   :root, :root[data-theme="dark"] { color-scheme: light; background: #fff; }
-  body { background: #fff; font-size: 10pt; }
+  body { background: #fff; font-size: 10pt; padding: 14mm 12mm; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
   .wrap.cv { padding-inline: 0; }
   .cv-grid > * { min-width: 0; }
   .cv { padding: 0; max-width: none; }
