@@ -12,7 +12,7 @@ import { euro, groupIban, money } from './rules.js';
 const $ = (id) => document.getElementById(id);
 const h = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
 const xsdReady = loadSchema(new URL('../schemas/' + CAMT.xsd, import.meta.url).href);
-const state = { stmtSrc: '', stmtName: '', invSrc: '', invName: '', sample: true, statement: null, inv: null, session: null, filter: 'review', sel: null, manual: null, run: 0, busy: false };
+const state = { go: false, box: 'check', no: null, stmtSrc: '', stmtName: '', invSrc: '', invName: '', sample: true, statement: null, inv: null, session: null, filter: 'review', sel: null, manual: null, run: 0, busy: false };
 const PLACE = { auto: 'Auto-matched', person: 'Decided by you', review: 'To review', unmatched: 'Unmatched' };
 const KIND = { auto: 'Auto-matched', accepted: 'Accepted', manual: 'Manual' };
 const dateWord = (iso) => { const t = Date.parse((iso || '') + 'T00:00:00Z'); return Number.isFinite(t) ? new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : iso || '—'; };
@@ -43,6 +43,7 @@ function start(settings) {
     state.session = createSession({ stmt: st.stmt, invoices: state.inv.invoices, settings: settings || readTolerance() || DEFAULT_SETTINGS,
       inputs: { stmtName: state.stmtName, stmtSha: sha256(state.stmtSrc), invName: state.invName, invSha: sha256(state.invSrc) } });
     state.filter = state.session.view.counts.review ? 'review' : 'all';
+    if (state.box === 'check' && !state.session.view.counts.review) state.box = 'paid';
     const first = firstOf(state.filter); state.sel = first ? first.ref : null;
   }
   render();
@@ -68,7 +69,8 @@ $('tolForm').addEventListener('submit', (e) => {
 
 // ---------- render ----------
 function fact(label, value, mono) { const d = h('div', 'fact'); d.append(h('span', 'f-l', label), h('span', 'f-v' + (mono ? ' mono' : ''), value || '—')); return d; }
-function render() {
+function render() { renderAdv(); renderSimple(); }
+function renderAdv() {
   const st = state.statement, s = state.session;
   const stm = st && st.stmt;
   $('facts').replaceChildren(fact('Statement', stm ? stm.id : '—', true), fact('Account', stm && stm.iban ? groupIban(stm.iban) : '—', true), fact('Date', stm ? dateWord(stm.date) : '—'), fact('Entries', stm ? `${stm.totals ? stm.totals.nCr : '?'} credits, ${stm.totals ? stm.totals.nDb : '?'} debits` : '—'));
@@ -314,12 +316,12 @@ async function readText(f, limit) {
 }
 $('stmtIn').addEventListener('change', async (e) => {
   const f = e.target.files[0]; e.target.value = ''; if (!f) return;
-  if (f.size > MAX_BYTES) { state.statement = { status: 'refused', reason: sizeWords(f.size, MAX_BYTES, 'The statement'), findings: [], reconcilable: false }; state.session = null; state.sample = false; sel.value = ''; render(); return; }
-  state.stmtSrc = await readText(f, MAX_BYTES); state.stmtName = f.name; state.sample = false; sel.value = ''; run();
+  if (f.size > MAX_BYTES) { state.statement = { status: 'refused', reason: sizeWords(f.size, MAX_BYTES, 'The statement'), findings: [], reconcilable: false }; state.session = null; state.sample = false; state.go = true; sel.value = ''; render(); return; }
+  state.stmtSrc = await readText(f, MAX_BYTES); state.stmtName = f.name; state.sample = false; state.go = true; state.box = 'check'; sel.value = ''; run();
 });
 $('invIn').addEventListener('change', async (e) => {
   const f = e.target.files[0]; e.target.value = ''; if (!f) return;
-  state.invSrc = f.size > MAX_INVOICE_BYTES ? 'x'.repeat(MAX_INVOICE_BYTES + 1) : await readText(f, MAX_INVOICE_BYTES); state.invName = f.name; state.sample = false; sel.value = '';
+  state.invSrc = f.size > MAX_INVOICE_BYTES ? 'x'.repeat(MAX_INVOICE_BYTES + 1) : await readText(f, MAX_INVOICE_BYTES); state.invName = f.name; state.sample = false; state.go = true; state.box = 'check'; sel.value = '';
   state.inv = readInvoices(state.invSrc);
   if (state.inv.needsMapping && state.inv.headers.length) { clearRun(); render(); askMapping(); return; }
   start();
@@ -376,6 +378,103 @@ for (const r of [...STM_RULES.map((x) => ({ ...x, gives: 'Statement check' })), 
   ctb.append(tr);
 }
 void TREATMENT;
+
+// ---------- the simple view (Olivia, 17 Nov): one button, three boxes, one question at a time ----------
+const list = (a) => (a.length > 1 ? a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1] : a[0] || '');
+const entryOf = (ref) => state.session.entries.find((e) => e.ref === ref);
+function payerOf(p) { const e = entryOf(p.entries[0]); return (e && e.payer) || (p.invoices[0] && state.session.byNum.get(p.invoices[0]) ? state.session.byNum.get(p.invoices[0]).customer : 'Someone'); }
+function sentence(p, done) {
+  const paid = `${amt(p.paid)} ${p.ccy}`, inv = (p.invoices.length > 1 ? 'invoices ' : 'invoice ') + list(p.invoices), d = `${amt(p.diff < 0n ? -p.diff : p.diff)} ${p.ccy}`;
+  const what = p.treatment === 'partial' ? `pays part of ${inv}, and ${d} stays open` : p.treatment === 'credit' ? `covers ${inv}, with ${d} paid too much` : p.treatment === 'small-diff' ? `covers ${inv}, with a small difference of ${d}` : `covers ${inv}`;
+  return `${payerOf(p)} paid ${paid}${p.entries.length > 1 ? ` in ${p.entries.length} payments` : ''}. That ${done ? what.replace(/^covers/, 'covered').replace(/^pays/, 'paid') : what}.`;
+}
+function why(p) { const d = h('details', 'pm-why'); d.append(h('summary', null, 'Why?'), evidenceList(p.evidence)); if (p.effect) d.append(h('p', 'muted small', (p.kind ? '' : 'If you say yes: ') + p.effect)); return d; }
+function plainProblem() {
+  const st = state.statement;
+  if (state.busy || !st) return 'Reading the files…';
+  if (!st.reconcilable) return 'The bank statement could not be used, so nothing was matched. ' + (st.reason || (st.status === 'not-wellformed' ? 'It is not a readable XML file.' : st.status === 'schema-errors' ? 'It does not follow the camt.053.001.08 format.' : 'Its balances or totals do not add up.')) + ' Open Advanced below for the details.';
+  if (state.inv && !state.inv.ok) return 'The invoice list could not be used, so nothing was matched. ' + state.inv.error;
+  return 'Nothing was matched.';
+}
+function renderSimple() {
+  const s = state.session, st = state.statement;
+  $('pmGo').disabled = !s || state.busy;
+  if (s && state.sample) $('pmReady').textContent = `A made-up bank statement with ${st.stmt.totals.nCr + st.stmt.totals.nDb} payments and a list of ${state.inv.invoices.length} open invoices are ready.`;
+  else if (!state.sample) $('pmReady').textContent = `Your files: ${state.stmtName || 'no statement yet'} and ${state.invName && !state.invName.startsWith('sample') ? state.invName : 'the sample invoices'}.`;
+  $('pmMsg').hidden = !(state.go && !s && !state.busy); $('pmMsg').textContent = plainProblem();
+  $('pmResult').hidden = !(state.go && s);
+  if (!state.go || !s) return;
+  const c = s.view.counts;
+  $('pmPaidN').textContent = c.auto + c.person; $('pmCheckN').textContent = c.review; $('pmLostN').textContent = c.unmatched;
+  for (const b of document.querySelectorAll('.pm-box')) { b.classList.toggle('on', b.dataset.box === state.box); b.setAttribute('aria-pressed', String(b.dataset.box === state.box)); }
+  const v = $('pmView'); v.replaceChildren();
+  if (state.box === 'check') v.append(...checkView(s));
+  else if (state.box === 'paid') v.append(...paidView(s));
+  else v.append(...lostView(s));
+}
+function checkView(s) {
+  const out = [], sug = s.view.suggestions[0];
+  if (!sug) {
+    const done = h('div', 'pm-done'); done.append(h('p', 'pm-done-t', 'All checked.'));
+    const dl = h('button', 'pm-go pm-dl', 'Download the report'); dl.type = 'button'; dl.addEventListener('click', downloadReport); done.append(dl);
+    out.push(done);
+  } else {
+    const card = h('article', 'pm-card');
+    card.append(h('p', 'pm-left muted small', `${s.view.suggestions.length} left to check`), h('p', 'pm-say', sentence(sug)));
+    if (state.no === sug.id) card.append(noForm(sug));
+    else {
+      const act = h('div', 'pm-act');
+      const y = h('button', 'pm-yes', "Yes, that's right"); y.type = 'button'; y.addEventListener('click', () => { try { accept(s, sug.id); } catch (err) { $('pmMsg').hidden = false; $('pmMsg').textContent = err.message; return; } render(); });
+      const n = h('button', 'pm-no', 'No'); n.type = 'button'; n.addEventListener('click', () => { state.no = sug.id; render(); const f = $('pmView').querySelector('input[name="pmr"]'); if (f) f.focus(); });
+      act.append(y, n); card.append(act);
+    }
+    card.append(why(sug));
+    out.push(card);
+  }
+  if (s.undo.length) { const u = h('button', 'linkish small', 'Undo my last answer'); u.type = 'button'; u.addEventListener('click', () => { undo(s); state.no = null; render(); }); const up = h('p', 'pm-undo'); up.append(u); out.push(up); }
+  return out;
+}
+const NO_REASONS = ['Wrong customer', 'Wrong invoice', 'Not a payment for an invoice'];
+function noForm(sug) {
+  const f = h('form', 'pm-noform'); f.append(h('p', 'pm-q', 'What is wrong?'));
+  NO_REASONS.forEach((r, i) => { const l = h('label', 'pm-opt'), inp = h('input'); inp.type = 'radio'; inp.name = 'pmr'; inp.value = r; inp.checked = i === 0; l.append(inp, document.createTextNode(' ' + r)); f.append(l); });
+  const t = h('input'); t.type = 'text'; t.maxLength = 300; t.placeholder = 'Anything to add? (optional)'; t.setAttribute('aria-label', 'Anything to add (optional)'); t.className = 'pm-text';
+  const ok = h('button', 'pm-yes', 'Save'), cancel = h('button', 'pm-no', 'Cancel'); ok.type = 'submit'; cancel.type = 'button';
+  cancel.addEventListener('click', () => { state.no = null; render(); });
+  const act = h('div', 'pm-act'); act.append(ok, cancel); f.append(t, act);
+  f.addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    const pick = f.querySelector('input[name="pmr"]:checked').value, extra = t.value.trim();
+    try { reject(state.session, sug.id, extra ? `${pick}: ${extra}` : pick); } catch (err) { $('pmMsg').hidden = false; $('pmMsg').textContent = err.message; return; }
+    state.no = null; render();
+  });
+  return f;
+}
+function paidView(s) {
+  const ul = h('ul', 'pm-list');
+  for (const m of s.matches) {
+    const li = h('li'); li.append(h('span', 'pm-line', sentence(m, true)));
+    li.append(h('span', 'pm-reason muted small', m.kind === 'auto' ? `Matched by the rule "${ruleName(m.rule)}".` : m.reason ? `You matched it: ${m.reason}` : 'You said yes.'));
+    ul.append(li);
+  }
+  if (!ul.children.length) return [h('p', 'muted', 'Nothing is matched yet.')];
+  return [ul];
+}
+function lostView(s) {
+  const ul = h('ul', 'pm-list');
+  for (const e of s.entries) {
+    const p = placeOf(e.ref); if (p.place !== 'unmatched') continue;
+    const li = h('li'); li.append(h('span', 'pm-line', `${e.cd === 'DBIT' ? 'Paid out' : (e.payer || 'Someone') + ' paid'} ${amt(e.amt)} ${e.ccy}${e.cd === 'DBIT' && e.payer ? ' to ' + e.payer : ''}.`));
+    li.append(h('span', 'pm-reason muted small', p.un.reason.replace(/^You rejected the suggestion [^:]*: /, 'You said no: ')));
+    ul.append(li);
+  }
+  if (!ul.children.length) return [h('p', 'muted', 'Every payment found its invoice.')];
+  return [ul, h('p', 'muted small', 'To match one of these by hand, open Advanced below.')];
+}
+function downloadReport() { const ctx = { session: state.session, statement: state.statement, when: new Date().toISOString() }; save('reconciliation-' + String(state.session.stmt.id || 'statement').replace(/[^A-Za-z0-9-]/g, '') + '-report.html', 'text/html', recHtml(ctx)); }
+$('pmGo').addEventListener('click', () => { state.go = true; state.box = state.session && state.session.view.counts.review ? 'check' : 'paid'; render(); $('pmResult').scrollIntoView({ block: 'nearest' }); });
+$('pmOwnBtn').addEventListener('click', () => { const o = $('pmOwn'); o.hidden = !o.hidden; $('pmOwnBtn').setAttribute('aria-expanded', String(!o.hidden)); });
+for (const b of document.querySelectorAll('.pm-box')) b.addEventListener('click', () => { state.box = b.dataset.box; state.no = null; render(); });
 
 // ---------- start: the made-up day, already reconciled ----------
 loadSample('day');

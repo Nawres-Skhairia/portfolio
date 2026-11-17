@@ -1,4 +1,4 @@
-// Reconciliation Workbench: automatic proof of Olivia's acceptance tests (PORT-42) and Daniel's design points (PORT-39).
+// Payment Matcher: automatic proof of Olivia's acceptance tests (PORT-42) and Daniel's design points (PORT-39).
 // Run: npm i --no-save xmllint-wasm@5.3.0 && node tests/reconcile.test.mjs
 import { readFileSync, readdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -163,7 +163,7 @@ for (const t of ['', 'abc', 'a'.repeat(55), 'a'.repeat(56), 'a'.repeat(64), 'Zo√
   E.manual(s, ['XMPL2611170023'], ['INV-1060'], 'closed', '-USD invoice paid via conversion');
   const csv = R.trailCsv(ctx(s, st)), jsonl = R.trailJsonl(ctx(s, st));
   ok(csv.includes(`'=HYPERLINK`) && csv.includes(`'-USD`), 'trail CSV guards formula-like cells');
-  ok(/^# Reconciliation Workbench 0\.1\.0, catalogue/.test(csv) && csv.includes('Final fingerprint ' + s.trail[s.trail.length - 1].fingerprint), 'trail CSV header names versions and the final fingerprint');
+  ok(/^# Payment Matcher 0\.1\.0, catalogue/.test(csv) && csv.includes('Final fingerprint ' + s.trail[s.trail.length - 1].fingerprint), 'trail CSV header names versions and the final fingerprint');
   for (const [name, text] of [['CSV', csv], ['JSON Lines', jsonl]]) {
     const r = E.verifyTrail(R.parseTrail(text));
     ok(r.ok && r.count === s.trail.length && r.last === s.trail[s.trail.length - 1].fingerprint, `AT8 ${name} trail checks out`, JSON.stringify(r.problem));
@@ -324,7 +324,7 @@ for (const t of ['', 'abc', 'a'.repeat(55), 'a'.repeat(56), 'a'.repeat(64), 'Zo√
   ok(/clearRun\(\);[\s\S]*readyToReconcile\(/.test(startFn), 'start() clears the old run before checking the inputs');
 }
 
-ok((readFileSync(new URL('reconcile/index.html', base), 'utf8').match(/class="table-wrap" tabindex="0" role="region"/g) || []).length === 2, 'scrolling tables reachable by keyboard (Mia)');
+ok((readFileSync(new URL('../payment-matcher/index.html', base), 'utf8').match(/class="table-wrap" tabindex="0" role="region"/g) || []).length === 2, 'scrolling tables reachable by keyboard (Mia)');
 
 // Daniel's measure: 2,000 entries against 3,000 invoices
 {
