@@ -108,6 +108,7 @@ async function api(method, path, body) {
 // ---------- state ----------
 let dek = null; let meta = null; let host = null; let data = null;
 const st = { phase: 'loading', sync: 'idle', note: '', lastSync: null };
+export const MAX_BLOB = 4_400_000; // same cap as the server (Vercel accepts bodies up to 4.5 MB)
 const EMPTY_META = { version: 0, highest: 0, dirty: false, lastSync: null };
 
 // Start: returns the decrypted working copy, or null when this phone must sign in or set up first.
@@ -148,15 +149,16 @@ let running = false; let again = false;
 export async function sync() {
   if (!dek || !meta) return;
   if (running) { again = true; return; }
-  running = true; st.sync = 'busy'; host.band();
+  running = true; st.sync = 'busy'; st.note = ''; host.band();
   try {
     for (let round = 0; round < 4; round++) {
       await storeChain;
       const r = await api('GET', 'data');
       if (r.status === 401) { st.sync = 'signin'; return; }
       if (r.status !== 200) { st.sync = r.status === 0 ? 'offline' : 'error'; return; }
+      // Rollback guard: the server must never answer with a version older than one this phone has already seen.
+      if (r.body.version < meta.highest) { st.sync = 'error'; st.note = 'The safe copy is older than this phone. Nothing was changed. Download a backup from Safety and backups.'; return; }
       if (r.body.version > meta.version) {
-        if (r.body.version < meta.highest) { st.sync = 'error'; st.note = 'The safe copy is older than one this phone has seen. Nothing was changed.'; return; }
         const remote = await open(r.body.blob, dek, dataLabel(r.body.version));
         const base = meta.version ? await open(await get('base'), dek, 'er-base') : null;
         const merged = meta.dirty ? mergeData(base, data, remote) : remote;
@@ -171,6 +173,7 @@ export async function sync() {
       const snapshot = data; const v = meta.version + 1;
       const blob = await seal(snapshot, dek, dataLabel(v));
       if (!same(await open(blob, dek, dataLabel(v)), snapshot)) { st.sync = 'error'; st.note = 'A check before saving failed. Nothing was sent.'; return; }
+      if (blob.length > MAX_BLOB) { st.sync = 'error'; st.note = 'Your data is now too large for the safe copy, so it was not sent. It is still on this phone. Download a backup from Safety and backups.'; return; }
       const w = await api('POST', 'data', { base: meta.version, blob });
       if (w.status === 409) continue;                 // another device saved first: fetch, merge, try again
       if (w.status === 401) { st.sync = 'signin'; return; }
