@@ -589,7 +589,7 @@ const input = (name, val, type = 'text', extra = '') => '<input id="f-' + name +
 const select = (name, list, val, blank) => '<select id="f-' + name + '" name="' + name + '">' + opts(list, val, blank) + '</select>';
 const peopleList = () => '<datalist id="peopleList">' + people().map(o => '<option value="' + esc(o) + '">').join('') + '</datalist>';
 function openForm(title, body, onSubmit, extraBtn = '', submitLabel = 'Save') {
-  dlg.innerHTML = '<form method="dialog" novalidate class="form"><header><h2 id="dlgTitle">' + esc(title) + '</h2><button type="button" class="icon" data-close aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header><div class="form-body">' + body + '</div><footer>' + extraBtn + '<span class="grow"></span><button type="button" class="btn ghost" data-close>Cancel</button><button type="submit" class="btn">' + esc(submitLabel) + '</button></footer></form>';
+  dlg.innerHTML = '<form method="dialog" novalidate class="form"><header><h2 id="dlgTitle">' + esc(title) + '</h2><button type="button" class="icon-btn" data-close aria-label="Close">' + ic('x') + '</button></header><div class="form-body">' + body + '</div><footer>' + extraBtn + '<span class="grow"></span><button type="button" class="btn ghost" data-close>Cancel</button><button type="submit" class="btn">' + esc(submitLabel) + '</button></footer></form>';
   const form = dlg.querySelector('form');
   form.addEventListener('submit', e => {
     e.preventDefault();
