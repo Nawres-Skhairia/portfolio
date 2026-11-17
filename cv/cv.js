@@ -11,7 +11,7 @@
   var skipVT = function (e) { if (off && e.viewTransition) e.viewTransition.skipTransition(); };
   window.addEventListener('pagereveal', skipVT);
   window.addEventListener('pageswap', skipVT);
-  if (off) root.classList.add('cv-motion-off');
+  root.classList.add(off ? 'cv-motion-off' : 'cv-motion-on');
   var still = off || !('IntersectionObserver' in window);
   if (!still) {
     root.classList.add('fx');

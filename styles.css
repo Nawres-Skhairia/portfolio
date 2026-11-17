@@ -297,7 +297,8 @@ h2 { font-size: var(--step-3); line-height: 1; letter-spacing: -.025em; max-widt
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  *, *::before, *::after { animation: none !important; transition-duration: .01ms !important; }
+  /* the CV page keeps its effects while its own Motion switch is on (Nawres, 17 Nov); the switch turns them off */
+  :root:not(.cv-motion-on) *, :root:not(.cv-motion-on) *::before, :root:not(.cv-motion-on) *::after { animation: none !important; transition-duration: .01ms !important; }
 }
 @media print { .site-head { position: static; } body::after { display: none; } }
 
