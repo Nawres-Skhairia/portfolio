@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex">
+  <title>Command Center · Nawres Skhairia</title>
+  <meta name="description" content="A calm place for a team's projects and tasks: today's work, the week ahead, a board with drag and drop, paused work with its reason, comments and history, project health, dependencies, risks and reports.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="style.css">
+  <script src="cc-theme.js"></script>
+  <link rel="modulepreload" href="engine.js">
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11l8-6 8 6v8a1 1 0 0 1-1 1h-4v-5H9v5H5a1 1 0 0 1-1-1z"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M8.5 12l2.4 2.4 4.6-4.8"/></symbol>
+    <symbol id="i-board" viewBox="0 0 24 24"><rect x="4" y="5" width="4.5" height="14" rx="1.5"/><rect x="10" y="5" width="4.5" height="9" rx="1.5"/><rect x="16" y="5" width="4" height="11" rx="1.5"/></symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14" rx="2.5"/><path d="M4 10h16M9 3.5v4M15 3.5v4"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M5 19V9M10 19V5M15 19v-7M20 19v-4"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.2-4.2"/></symbol>
+    <symbol id="i-expand" viewBox="0 0 24 24"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-filter" viewBox="0 0 24 24"><path d="M5 7h14M8 12h8M11 17h2"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M10 9.5v5M14 9.5v5"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 2"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="9" r="3.5"/><path d="M5.5 19c1-3.3 3.6-5 6.5-5s5.5 1.7 6.5 5"/></symbol>
+    <symbol id="i-flag" viewBox="0 0 24 24"><path d="M6 20V5m0 0h10l-2 3.5 2 3.5H6"/></symbol>
+    <symbol id="i-tag" viewBox="0 0 24 24"><path d="M4 12V5h7l9 9-7 7z"/><circle cx="8.5" cy="8.5" r="1.2"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></symbol>
+    <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="6" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="18" cy="12" r="1"/></symbol>
+    <symbol id="i-leaf" viewBox="0 0 24 24"><path d="M5 19c0-8 5-13 14-14-1 9-6 14-14 14zM5 19l7-7"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M4 7.5A1.5 1.5 0 0 1 5.5 6H10l2 2h6.5A1.5 1.5 0 0 1 20 9.5v8a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z"/></symbol>
+    <symbol id="i-graph" viewBox="0 0 24 24"><circle cx="6" cy="7" r="2.2"/><circle cx="18" cy="7" r="2.2"/><circle cx="12" cy="17" r="2.2"/><path d="M8.2 7h7.6M7.2 9l3.6 6M16.8 9l-3.6 6"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 4l7 3v5c0 4-3 7-7 8-4-1-7-4-7-8V7z"/></symbol>
+    <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3.5a5.5 5.5 0 0 0-3.5 9.8c.7.6 1 1.3 1 2.2h5c0-.9.3-1.6 1-2.2A5.5 5.5 0 0 0 12 3.5z"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="M5 12l14-7-5 14-2.5-5.5z"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20h4"/></symbol>
+    <symbol id="i-left" viewBox="0 0 24 24"><path d="M14.5 6l-6 6 6 6"/></symbol>
+    <symbol id="i-right" viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></symbol>
+    <symbol id="i-people" viewBox="0 0 24 24"><circle cx="9" cy="9" r="3.2"/><path d="M3.5 19c.8-3 3-4.6 5.5-4.6s4.7 1.6 5.5 4.6M15.5 6.2a3 3 0 0 1 0 5.6M17 14.6c1.8.5 3 1.9 3.5 4.4"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.5a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.6M12 17h.01"/></symbol>
+    <symbol id="i-summary" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><path d="M5 7h14M5 12h14M5 17h14"/></symbol>
+  </svg>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <div class="strip" id="band" role="region" aria-label="About this workspace"></div>
+  <header class="topbar">
+    <h1 class="sr">Command Center</h1>
+    <button type="button" class="ws-btn" id="wsBtn" data-menu="ws" aria-haspopup="menu" aria-expanded="false"><span class="ws-mark" aria-hidden="true"><i></i></span><span class="ws-name" id="wsBox">Orbis Studio</span><svg class="i chev" aria-hidden="true"><use href="#i-down"/></svg></button>
+    <button type="button" class="gsearch" data-act="palette" aria-label="Search work, projects and people (Ctrl K)"><svg class="i" aria-hidden="true"><use href="#i-search"/></svg><span>Search work, projects and people</span><kbd>Ctrl K</kbd></button>
+    <span class="grow"></span>
+    <span class="save-state top-save" id="topSave" aria-live="polite"></span>
+    <button type="button" class="btn create" data-act="new-task" title="Create · C"><svg class="i" aria-hidden="true"><use href="#i-plus"/></svg>Create</button>
+    <button type="button" class="ib" data-act="shortcuts" aria-label="Keyboard shortcuts" title="Keyboard shortcuts · ?"><svg class="i" aria-hidden="true"><use href="#i-help"/></svg></button>
+    <button type="button" class="ib me-btn" id="meBtn" data-menu="me" aria-haspopup="menu" aria-expanded="false" aria-label="Your menu"></button>
+    <div class="menu-pop" id="menuPop" role="menu" popover="manual" hidden></div>
+  </header>
+  <div class="app" id="app">
+    <aside class="side" aria-label="Command Center">
+      <nav class="nav" aria-label="Pages">
+        <a class="nv" href="#/overview" data-nav="overview"><svg class="i"><use href="#i-home"/></svg>For you</a>
+        <a class="nv" href="#/mytasks" data-nav="mytasks"><svg class="i"><use href="#i-check"/></svg>My work<i class="ct" id="myCount"></i></a>
+        <a class="nv" href="#/lists" data-nav="lists"><svg class="i"><use href="#i-list"/></svg>Saved views</a>
+        <a class="nv" href="#/projects" data-nav="projects"><svg class="i"><use href="#i-folder"/></svg>Portfolio</a>
+        <a class="nv" href="#/calendar" data-nav="calendar"><svg class="i"><use href="#i-cal"/></svg>Calendar</a>
+        <a class="nv" href="#/reports" data-nav="reports"><svg class="i"><use href="#i-chart"/></svg>Reports</a>
+        <a class="nv" href="#/insights" data-nav="insights"><svg class="i"><use href="#i-bulb"/></svg>Insights<i class="ins-count" hidden></i></a>
+        <p class="grp" id="projGrp"><span>Projects</span><button type="button" class="grp-add" data-act="new-project" aria-label="New project" title="New project"><svg class="i"><use href="#i-plus"/></svg></button></p>
+        <div id="projNav" class="nav"></div>
+        <p class="grp"><span>Team</span></p>
+        <a class="nv" href="#/workspace" data-nav="workspace"><svg class="i"><use href="#i-people"/></svg>People<i class="ct" id="pplCount"></i></a>
+      </nav>
+      <div class="foot" id="sideFoot">
+        <a class="nv" href="#/admin" data-nav="admin" id="adminNav" hidden><svg class="i"><use href="#i-shield"/></svg>Admin</a>
+        <a class="home-link" href="/#work">← Nawres Skhairia</a>
+      </div>
+    </aside>
+
+    <div class="content">
+      <main id="main" class="main" tabindex="-1"></main>
+    </div>
+  </div>
+
+  <nav class="tabbar" aria-label="Command Center, phone">
+    <a class="tab" href="#/overview" data-nav="overview"><svg class="i"><use href="#i-home"/></svg><span>Home</span></a>
+    <a class="tab" href="#/mytasks" data-nav="mytasks"><svg class="i"><use href="#i-check"/></svg><span>My tasks</span></a>
+    <a class="tab" href="#/board" data-nav="board"><svg class="i"><use href="#i-board"/></svg><span>Board</span></a>
+    <button type="button" class="tab" data-act="palette"><svg class="i"><use href="#i-search"/></svg><span>Search</span></button>
+    <button type="button" class="tab" data-act="more" aria-label="More pages" aria-controls="moreSheet"><svg class="i"><use href="#i-more"/></svg><span>More</span><i class="ins-count" hidden></i></button>
+  </nav>
+  <button type="button" class="fab" data-act="new-task" aria-label="Create task"><svg class="i" style="width:22px;height:22px"><use href="#i-plus"/></svg></button>
+  <div class="more-sheet" id="moreSheet" hidden></div>
+
+  <div class="panel-drawer" id="panel" role="complementary" hidden aria-label="Task details"></div>
+  <div class="palette" id="palette" hidden></div>
+  <dialog id="dlg" aria-labelledby="dlgTitle"></dialog>
+  <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+  <noscript><p class="noscript">Command Center needs JavaScript to run.</p></noscript>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

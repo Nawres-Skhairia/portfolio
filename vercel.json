@@ -1,4 +1,13 @@
 {
+  "regions": [
+    "fra1"
+  ],
+  "rewrites": [
+    {
+      "source": "/api/cc/:path*",
+      "destination": "/api/cc/handler?__p=:path*"
+    }
+  ],
   "headers": [
     {
       "source": "/((?!projects/test-pilot(?:/|$)|projects/process-xray(?:/|$)|projects/payment-xml-lab(?:/|$)|projects/payment-file-check(?:/|$)|projects/test-file-maker(?:/|$)|projects/mt-to-mx(?:/|$)|projects/payment-matcher(?:/|$)).*)",
