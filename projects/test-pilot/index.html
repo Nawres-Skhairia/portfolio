@@ -131,26 +131,6 @@
           </tbody>
         </table>
       </details>
-      <details>
-        <summary>How it was made</summary>
-        <p>I created Test Pilot through vibe coding, between 16 and 17 November 2026. I wanted one small tool that shows what good testing looks like, in under a minute.</p>
-        <p>A restaurant booking form keeps it clear at a glance. Six real-life bugs make it worth testing: a guest limit, a closed day, a lunch time window, a time zone, an email with "+" and a double click.</p>
-        <p>One rule matters most: the robot really types and clicks in the form, and fixed rules, never a guess, decide pass, fail and the verdict.</p>
-        <p>Before release, every mention of AI that was not true yet was taken out. The AI step comes in a later version, once it really works.</p>
-      </details>
-      <details>
-        <summary>How it was tested</summary>
-        <p>Tested on a laptop and a phone, on 16 and 17 November 2026.</p>
-        <ul>
-          <li>Each of the six planted bugs is caught by its own test, 5 runs out of 5: bug 1 by T5, bug 2 by T6, bug 3 by T10, bug 4 by T14, bug 5 by T17, bug 6 by T19.</li>
-          <li>The clean form passes all 19 tests and says "Ready to ship": no false alarm in 5 runs.</li>
-          <li>The same choice always gives the same tests and the same report (35 runs).</li>
-          <li>The results are identical in 3 time zones: Sofia, Los Angeles and UTC+14.</li>
-          <li>A run at watch speed takes about 24 seconds, and the page never freezes.</li>
-          <li>Nothing is sent to any other website, and the accessibility check is clean.</li>
-        </ul>
-        <p>One thing the tests caught: before the first run, two boxes showed an "AI" badge although this version has no AI. They now say "pre-made" from the start.</p>
-      </details>
     </section>
 
     <p class="foot">Everything happens in your browser: nothing you type is sent anywhere, and nothing is kept when you close the page. Created by <a href="/">Nawres Skhairia</a>. A work in progress: ideas and feedback are welcome, <a href="/#contact">get in touch</a>. <a href="/privacy/">Privacy</a></p>
