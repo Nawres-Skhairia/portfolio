@@ -18,6 +18,12 @@ export const STATUS = {
   mapped: 'Mapped', transformed: 'Transformed', defaulted: 'Defaulted', lost: 'Cut or lost', review: 'Needs review',
 };
 
+// Olivia, spec v1.1 (PORT-41 10682): any Error from these rules gives the red status. Never name SWIFT as the one who refuses: these are
+// the format rules of our own catalogue, not SWIFT's network check. 'MT' is the MT103 format check itself.
+export const REJECTED = 'Would be rejected';
+export const REJECTED_LINE = 'This MT breaks a basic format rule (listed below). A bank would refuse it before any conversion. The pacs.008 below is shown for learning only.';
+export const REJECTING_RULES = ['MT', 'MAP-03', 'MAP-10', 'MAP-11', 'MAP-21', 'MAP-31', 'MAP-50', 'MAP-61'];
+
 // The catalogue: one entry per rule. source: s1, s3 or own; several may be listed.
 export const MAP_RULES = [
   { id: 'MAP-01', mt: ':20:', target: 'PmtId/InstrId', statuses: 'Mapped', source: ['own'], what: 'The sender\'s reference becomes the instruction ID.' },
@@ -458,7 +464,7 @@ export function convert(src, { today = new Date().toISOString().slice(0, 10) } =
   const counts = { mapped: 0, transformed: 0, defaulted: 0, lost: 0, review: 0 };
   rows.forEach((r) => counts[r.status]++);
   const nErr = errors.length, nRev = counts.review;
-  const verdict = nErr || nRev ? 'Needs review' : counts.lost ? 'Converted with warnings' : 'Clean';
+  const verdict = nErr ? REJECTED : nRev ? 'Needs review' : counts.lost ? 'Converted with warnings' : 'Clean';
   const facts = { uetr: u121 ? u121.value : null, ref, valueDate: vd, amount: m32 ? `${m32[2]} ${amountToIso(m32[3]) || m32[3]}` : null };
   return { mt, rows, findings, errors, counts, verdict, facts, xml, tool: MAP_TOOL, catalogue: MAP_CATALOGUE_VERSION, xsd: MX.id };
 }

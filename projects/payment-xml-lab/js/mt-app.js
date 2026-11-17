@@ -1,5 +1,5 @@
 // MT to MX Migration Lab: the page. Everything happens in this tab; nothing is uploaded or stored.
-import { convert, refuse, MAP_RULES, MAP_SOURCES, MAP_TOOL, MAP_CATALOGUE_VERSION, MX, STATUS } from './mt-map.js';
+import { convert, refuse, MAP_RULES, MAP_SOURCES, MAP_TOOL, MAP_CATALOGUE_VERSION, MX, STATUS, REJECTED, REJECTED_LINE, REJECTING_RULES } from './mt-map.js';
 import { MT_SAMPLES, NATIVE_PACS008 } from './mt-samples.js';
 import { reverseCheck } from './mt-reverse.js';
 import { validate, loadSchema } from './schema.js';
@@ -39,10 +39,15 @@ function fact(label, value, mono) { const d = h('div', 'fact'); d.append(h('span
 function render() {
   const r = state.res; if (!r) return;
   $('facts').replaceChildren(fact('UETR', r.facts.uetr || 'missing', true), fact('Reference', r.facts.ref, true), fact('Value date', r.facts.valueDate, true), fact('Amount', r.facts.amount, true));
-  const v = $('verdict'); v.className = 'verdict ' + (r.verdict === 'Clean' ? 'v-ok' : r.verdict === 'Needs review' && r.errors.length ? 'v-bad' : 'v-warn');
+  const rejected = r.verdict === REJECTED;
+  const v = $('verdict'); v.className = 'verdict ' + (r.verdict === 'Clean' ? 'v-ok' : rejected || r.refused ? 'v-bad' : 'v-warn');
   const sc = state.schema;
   const schemaLine = sc.busy ? 'Schema: checking…' : sc.failed ? 'Schema: not checked (' + sc.failed + ')' : sc.valid ? `Schema: valid (pacs.008.001.08, ${sc.timeMs} ms)` : `Schema: ${sc.errors.length} error${sc.errors.length > 1 ? 's' : ''}`;
-  v.replaceChildren(h('span', 'v-chip', r.verdict), h('span', 'v-line', schemaLine));
+  // not colour alone: a symbol and the words differ too (Olivia)
+  const chip = h('span', 'v-chip'); const sym = h('span', 'v-sym', r.verdict === 'Clean' ? '✓' : rejected || r.refused ? '✗' : '!'); sym.setAttribute('aria-hidden', 'true'); chip.append(sym, document.createTextNode(' ' + r.verdict));
+  const vl = h('span', 'v-line'); if (rejected) vl.append(h('span', 'v-reject', REJECTED_LINE), h('br')); vl.append(document.createTextNode(schemaLine));
+  v.replaceChildren(chip, vl);
+  $('learnBand').hidden = !rejected;
   const nRev = r.counts.review, nErr = r.errors.length;
   $('banner').textContent = `Made-up MT103 (${state.name}): converted` + (nErr ? `, ${nErr} error${nErr > 1 ? 's' : ''}` : '') + (nRev ? `, ${nRev} point${nRev > 1 ? 's' : ''} need${nRev > 1 ? '' : 's'} review` : '') + (r.counts.lost ? `, ${r.counts.lost} cut or lost` : '') + '.';
   $('cAll').textContent = r.rows.length;
@@ -210,7 +215,7 @@ for (const r of MAP_RULES) {
     const S = MAP_SOURCES[s];
     if (S.url) { const a = h('a', null, s.toUpperCase()); a.href = S.url; a.rel = 'noopener'; a.target = '_blank'; a.title = S.name; src.append(a); } else src.append(h('span', 'choice', S.name));
   });
-  tr.append(h('td', 'mono', r.id), h('td', 'mono small', r.mt), h('td', 'mono small', r.target), h('td', 'small', r.statuses), h('td', 'small', r.what), src);
+  tr.append(h('td', 'mono', r.id), h('td', 'mono small', r.mt), h('td', 'mono small', r.target), h('td', 'small', r.statuses + (REJECTING_RULES.includes(r.id) ? ' (an Error gives "' + REJECTED + '")' : '')), h('td', 'small', r.what), src);
   ctb.append(tr);
 }
 

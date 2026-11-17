@@ -1,6 +1,6 @@
 // Exports of the MT to MX Migration Lab, built in the browser: HTML report, CSV mapping table, JSON findings, JUnit XML.
 // Each carries the tool version, the catalogue version, the export time and the SHA-256 of the MT input.
-import { MAP_RULES, MAP_TOOL, MAP_CATALOGUE_VERSION, MX, STATUS } from './mt-map.js';
+import { MAP_RULES, MAP_TOOL, MAP_CATALOGUE_VERSION, MX, STATUS, REJECTED, REJECTED_LINE } from './mt-map.js';
 
 const x = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const NOTE = 'Not SWIFT\'s official translation and not CBPR+ validated. For learning and testing only. Not certified, not affiliated with SWIFT. Made on the device; the message was not uploaded.';
@@ -48,7 +48,7 @@ export function mapHtml(ctx) {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'"><title>${x(m.tool)} report</title>
 <style>body{font:14px/1.5 system-ui,sans-serif;color:#17202a;margin:32px;max-width:1200px}h1{font-size:22px;margin:0 0 4px}table{border-collapse:collapse;width:100%;margin-top:16px}th,td{text-align:left;vertical-align:top;border-bottom:1px solid #d5dbe1;padding:5px 7px;font-size:13px}th{background:#f2f4f6}.meta td{border:0;padding:2px 12px 2px 0}code{font:12px ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap}.review td:nth-child(6){color:#8a5a00;font-weight:700}.lost td:nth-child(6){color:#a3261b;font-weight:700}.n{color:#56636f;font-size:12px;margin-top:24px}pre{font:12px ui-monospace,Menlo,Consolas,monospace;background:#f6f7f9;padding:12px;overflow:auto}</style></head><body>
 <h1>${x(m.tool)}: mapping report</h1>
-<table class="meta"><tr><td>Input</td><td>${x(m.input)}</td></tr><tr><td>MT SHA-256</td><td><code>${x(m.sha256)}</code></td></tr><tr><td>Exported</td><td>${x(m.exportedAt)}</td></tr><tr><td>Versions</td><td>tool ${x(m.toolVersion)} · mapping catalogue ${x(m.catalogue)} · target ${x(m.target)}</td></tr><tr><td>Result</td><td><b>${x(m.verdict)}</b> · schema ${x(schemaWord(ctx.schema))} · ${Object.entries(m.counts).map(([k, v]) => `${v} ${STATUS[k].toLowerCase()}`).join(' · ')}</td></tr></table>
+<table class="meta"><tr><td>Input</td><td>${x(m.input)}</td></tr><tr><td>MT SHA-256</td><td><code>${x(m.sha256)}</code></td></tr><tr><td>Exported</td><td>${x(m.exportedAt)}</td></tr><tr><td>Versions</td><td>tool ${x(m.toolVersion)} · mapping catalogue ${x(m.catalogue)} · target ${x(m.target)}</td></tr><tr><td>Result</td><td><b>${x(m.verdict)}</b>${m.verdict === REJECTED ? '<br>' + x(REJECTED_LINE) + '<br>' : ''} · schema ${x(schemaWord(ctx.schema))} · ${Object.entries(m.counts).map(([k, v]) => `${v} ${STATUS[k].toLowerCase()}`).join(' · ')}</td></tr></table>
 <h2>Findings</h2>${finds ? `<ul>${finds}</ul>` : '<p>Nothing to review.</p>'}
 <h2>Mapping table</h2><table><thead><tr><th>MT field</th><th>MT value</th><th>Rule</th><th>pacs.008 element</th><th>pacs.008 value</th><th>Status</th><th>Explanation</th></tr></thead><tbody>${rows}</tbody></table>
 <h2>pacs.008</h2><pre>${x(res.xml)}</pre>

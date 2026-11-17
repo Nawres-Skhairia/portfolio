@@ -39,3 +39,9 @@
 .choice { font-style: italic; color: var(--soft); }
 @media (max-width: 1000px) { .mt-bench { grid-template-columns: 1fr; } .code.lc { height: 380px; } }
 @media (max-width: 600px) { .suite { margin-left: 0; } .bar-in { flex-wrap: wrap; } }
+
+/* Olivia, spec v1.1: the red status and the grey band on the pacs.008 panel */
+.learn-band { margin: 0; padding: 6px 12px; font-size: 12px; font-weight: 700; color: #3d4650; background: #e4e7eb; border-bottom: 1px solid var(--line); }
+.learn-band[hidden] { display: none; }
+.v-reject { color: var(--err); font-weight: 600; }
+.v-sym { font-weight: 800; }

@@ -5,7 +5,7 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const { validateXML } = require(process.env.XMLLINT_WASM || 'xmllint-wasm');
 const base = new URL('../projects/payment-xml-lab/', import.meta.url);
-const { convert, MAP_RULES, MAP_SOURCES, guessAddress } = await import(new URL('js/mt-map.js', base));
+const { convert, MAP_RULES, MAP_SOURCES, guessAddress, REJECTED, REJECTED_LINE, REJECTING_RULES } = await import(new URL('js/mt-map.js', base));
 const { MT_SAMPLES, NATIVE_PACS008 } = await import(new URL('js/mt-samples.js', base));
 const { reverseCheck, toX } = await import(new URL('js/mt-reverse.js', base));
 const { mapJson, mapJUnit, mapCsv, mapHtml } = await import(new URL('js/mt-reports.js', base));
@@ -153,6 +153,21 @@ ok(MAP_RULES.every((r) => r.source.length && r.source.every((s) => MAP_SOURCES[s
   ok(!rev(convert(S.clean.replace(':32A:261118', ':32A:271110'), { today })).length, 'value date within a year: no review point');
   const zero = convert(S.clean.replace(':32A:261118EUR1250,00', ':32A:261118EUR0,00'), { today });
   ok(rev(zero).some((f) => /amount is zero/.test(f.message)), 'amount 0,00: needs review');
+}
+// AT5 v1.1 (Olivia, PORT-41 10682): three levels; an Error gives "Would be rejected", never "SWIFT rejects"
+{
+  const v = (id) => convert(S[id]).verdict;
+  ok(v('broken') === REJECTED && v('no-uetr') === REJECTED, 'AT5 v1.1 broken MT and missing UETR: Would be rejected', v('broken') + ' / ' + v('no-uetr'));
+  ok(v('clean') === 'Clean' && v('address') === 'Needs review', 'AT5 v1.1 clean stays Clean, guesses stay Needs review');
+  const broken = convert(S.broken);
+  ok(broken.findings.filter((f) => f.severity === 'error').every((f) => f.rule), 'AT5 v1.1 findings keep Error severity and rule ID');
+  ok(REJECTED_LINE === 'This MT breaks a basic format rule (listed below). A bank would refuse it before any conversion. The pacs.008 below is shown for learning only.', 'AT5 v1.1 exact line under the chip');
+  const src = readFileSync(new URL('js/mt-map.js', base), 'utf8');
+  const used = new Set([...src.matchAll(/fail\('(MAP-\d+)'/g)].map((m) => m[1]));
+  ok([...used].every((id) => REJECTING_RULES.includes(id)) && REJECTING_RULES.every((id) => id === 'MT' || MAP_RULES.some((r) => r.id === id)), 'catalogue names every rule that can give the red status', [...used].join(','));
+  ok(mapHtml({ res: convert(S.broken), schema: { valid: true }, sha: 'x', name: 'n', when: '2026-11-17T10:00:00Z' }).includes('A bank would refuse it before any conversion.'), 'HTML report carries the red line');
+  const page = readFileSync(new URL('mt-to-mx/index.html', base), 'utf8') + readFileSync(new URL('js/mt-app.js', base), 'utf8');
+  ok(/id="learnBand"/.test(page) && /For learning only/.test(page) && !/SWIFT rejects/i.test(page + src), 'grey band present; never "SWIFT rejects"');
 }
 console.log(`${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
