@@ -215,3 +215,28 @@
   .fx .cv-side .cv-block.in .cv-tags li { background-image: linear-gradient(100deg, transparent 35%, color-mix(in srgb, var(--accent) 28%, transparent) 50%, transparent 65%); background-size: 260% 100%; background-repeat: no-repeat; animation: cv-sweep 1.3s calc(.6s + var(--d, 0ms)) var(--ease) both; }
   @keyframes cv-sweep { from { background-position: 130% 0; } to { background-position: -30% 0; } }
 }
+
+/* signature moment: pinned career path (wide screens, motion allowed; never printed) */
+.cv-story { display: none; }
+@media screen and (min-width: 960px) and (prefers-reduced-motion: no-preference) {
+  .cv-story { display: block; position: relative; height: 170vh; margin: 0 0 clamp(24px, 2vw, 40px); }
+  .cv-story-pin { position: sticky; top: calc(50vh - 190px); height: 380px; border: 1px solid var(--line); border-radius: var(--r-2); background: radial-gradient(120% 90% at 85% 10%, var(--accent-soft), transparent 60%), var(--bg-raised); overflow: hidden; opacity: calc(.35 + var(--sp, 0) * 3); }
+  .cv-story svg { position: absolute; inset: 10px 20px; width: calc(100% - 40px); height: calc(100% - 20px); overflow: visible; }
+  .cv-story-base { fill: none; stroke: var(--line-strong); stroke-width: 1.5; stroke-dasharray: 4 6; vector-effect: non-scaling-stroke; }
+  .cv-story-line { fill: none; stroke: var(--accent); stroke-width: 3; stroke-linecap: round; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 60%, transparent)); }
+  .cv-story-node { position: absolute; left: calc(20px + (100% - 40px) * var(--x, 0)); top: calc(10px + (100% - 20px) * var(--y, 0)); width: 0; height: 0; }
+  .cv-story-node i { position: absolute; left: -7px; top: -7px; width: 14px; height: 14px; border-radius: 50%; background: var(--bg-raised); border: 2px solid var(--line-strong); transform: scale(.4); transition: transform .5s cubic-bezier(.34, 1.56, .64, 1), background-color .4s, border-color .4s, box-shadow .4s; }
+  .cv-story-node.on i { transform: scale(1); background: var(--accent); border-color: var(--accent); box-shadow: 0 0 0 5px var(--accent-soft); }
+  .cv-story-node.is-now i { left: -13px; top: -13px; width: 26px; height: 26px; }
+  .cv-story-node.is-now.on i { box-shadow: 0 0 0 8px var(--accent-soft), 0 0 40px 10px color-mix(in srgb, var(--accent) 45%, transparent); animation: cv-pulse 2.4s .4s ease-out 3; }
+  .cv-story-label { position: absolute; left: 50%; top: 22px; transform: translate(-50%, 10px); display: grid; justify-items: center; gap: 2px; white-space: nowrap; opacity: 0; transition: opacity .5s, transform .6s var(--ease); }
+  .cv-story-node.on .cv-story-label { opacity: 1; transform: translate(-50%, 0); }
+  .cv-story-label b { font-family: var(--mono); font-size: var(--step--2); font-weight: 500; letter-spacing: .06em; color: var(--accent); }
+  .cv-story-label em { font-style: normal; font-size: var(--step--1); color: var(--ink-2); }
+  .cv-story-node.is-now .cv-story-label { top: 28px; bottom: auto; left: auto; right: -10px; justify-items: end; transform: translateY(10px); }
+  .cv-story-node.is-now.on .cv-story-label { transform: none; }
+  .cv-story-node.is-now .cv-story-label em { font-family: var(--serif); font-size: var(--step-2); color: var(--ink); }
+  .cv-story-node:first-of-type .cv-story-label { left: -14px; justify-items: start; transform: translateY(10px); }
+  .cv-story-node:first-of-type.on .cv-story-label { transform: none; }
+}
+@media print { .cv-story { display: none !important; } }
