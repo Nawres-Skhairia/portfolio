@@ -40,12 +40,12 @@
     var ref = document.referrer && new URL(document.referrer);
     if (ref && ref.origin === location.origin && ref.pathname.indexOf('/projects/') === 0) root.classList.add('from-tool');
   } catch (e) {}
-  var showAll = function () { document.querySelectorAll('.section-head, .rows li, .about, .contact-box, .xp-head, .xp-item, .xp-skills, .xp-facts').forEach(function (el) { el.classList.add('in'); }); };
+  var showAll = function () { document.querySelectorAll('.section-head, .rows li, .about, .contact-box').forEach(function (el) { el.classList.add('in'); }); };
   document.addEventListener('DOMContentLoaded', function () {
     var io = new IntersectionObserver(function (entries) {
       entries.forEach(function (en) { if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); } });
     }, { rootMargin: '0px 0px -12% 0px', threshold: 0.05 });
-    document.querySelectorAll('.section-head, .rows li, .about, .contact-box, .xp-head, .xp-item, .xp-skills, .xp-facts').forEach(function (el) { io.observe(el); });
+    document.querySelectorAll('.section-head, .rows li, .about, .contact-box').forEach(function (el) { io.observe(el); });
     // printing or jumping straight to a section shows everything
     window.addEventListener('beforeprint', showAll);
     if (location.hash) setTimeout(showAll, 50);
