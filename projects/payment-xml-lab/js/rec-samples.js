@@ -84,7 +84,7 @@ export function statementXml({ opening = '12400.00', closingDelta = 0n, dropStat
       : rem ? `            <RmtInf>\n              <Ustrd>${xe(rem)}</Ustrd>\n            </RmtInf>\n` : '';
     const details = !party ? '' : `        <NtryDtls>\n          <TxDtls>\n            <Refs><EndToEndId>${xe(x.e2e || 'NOTPROVIDED')}</EndToEndId></Refs>\n            <Amt Ccy="EUR">${a}</Amt>\n            <CdtDbtInd>${x.debit ? 'DBIT' : 'CRDT'}</CdtDbtInd>\n` +
       (x.instd ? `            <AmtDtls><InstdAmt><Amt Ccy="${x.instd[0]}">${x.instd[1]}</Amt></InstdAmt></AmtDtls>\n` : '') + parties + rmt + `          </TxDtls>\n        </NtryDtls>\n`;
-    return `      <Ntry>\n        <NtryRef>${i + 1}</NtryRef>\n        <Amt Ccy="EUR">${a}</Amt>\n        <CdtDbtInd>${x.debit ? 'DBIT' : 'CRDT'}</CdtDbtInd>\n` +
+    return `      <Ntry>\n        <NtryRef>${i + 1}</NtryRef>\n        <Amt Ccy="EUR">${a}</Amt>\n        <CdtDbtInd>${x.debit ? 'DBIT' : 'CRDT'}</CdtDbtInd>\n` + (x.reversal ? `        <RvslInd>true</RvslInd>\n` : '') +
       (dropStatusOfFirst && i === 0 ? '' : `        <Sts><Cd>BOOK</Cd></Sts>\n`) +
       `        <BookgDt><Dt>2026-11-17</Dt></BookgDt>\n        <ValDt><Dt>2026-11-17</Dt></ValDt>\n        <AcctSvcrRef>${ref(i)}</AcctSvcrRef>\n` +
       `        <BkTxCd><Domn><Cd>${code}</Cd><Fmly><Cd>${fam}</Cd><SubFmlyCd>${sub}</SubFmlyCd></Fmly></Domn></BkTxCd>\n` + details +
@@ -121,8 +121,13 @@ ${entries.map(ntry).join('\n')}
 `;
 }
 
+// the day plus a payment that the bank took back later the same day (Daniel, PORT-42)
+export const REVERSAL_ENTRIES = [...ENTRIES,
+  ['REC-01', 'wexley', '1875.00', 'INV-1056', { e2e: 'WEXLEY-PAY-1056' }],
+  ['REC-09', 'wexley', '1875.00', 'INV-1056', { debit: true, reversal: true, e2e: 'WEXLEY-PAY-1056', btc: 'PMNT/RCDT/RRTN', addtl: 'Payment returned: account closed (AC04)' }]];
 export const REC_SAMPLES = [
   { id: 'day', label: 'Statement of 17 Nov 2026 (26 entries)', statement: () => statementXml(), invoices: () => invoiceCsv() },
+  { id: 'reversal', label: 'Same day, plus a payment taken back (reversal)', statement: () => statementXml({ entries: REVERSAL_ENTRIES }), invoices: () => invoiceCsv() },
   { id: 'balance', label: 'Closing balance off by 100.00', statement: () => statementXml({ closingDelta: 10000n }), invoices: () => invoiceCsv() },
   { id: 'schema', label: 'Not schema-valid (entry status missing)', statement: () => statementXml({ dropStatusOfFirst: true }), invoices: () => invoiceCsv() },
 ];

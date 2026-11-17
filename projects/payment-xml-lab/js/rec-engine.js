@@ -132,6 +132,14 @@ export function createSession({ stmt, invoices, settings = DEFAULT_SETTINGS, inp
     clock: clock || (() => new Date().toISOString()), matches: [], rejected: new Map(), trail: [], undo: [], view: null, nextMatch: 1,
   };
   s.byRef = new Map(s.entries.map((e) => [e.ref, e]));
+  // reversals: the entry a reversal takes back is never matched without a person (Daniel, PORT-42)
+  s.revOf = new Map(); s.revTarget = new Map();
+  for (const r of s.entries) {
+    if (!r.reversal || r.status !== 'BOOK') continue;
+    const o = s.entries.find((x) => !x.reversal && x.status === 'BOOK' && x.cd !== r.cd && x.amt === r.amt && x.ccy === r.ccy && !s.revOf.has(x.ref)
+      && ((r.e2e && r.e2e !== 'NOTPROVIDED' && x.e2e === r.e2e) || (x.payerIban && (x.payerIban === r.counterIban || x.payerIban === r.payerIban))));
+    if (o) { s.revOf.set(o.ref, r); s.revTarget.set(r.ref, o); }
+  }
   s.byNum = new Map(s.invoices.map((i) => [i.number, i]));
   s.customersByIban = new Map();
   for (const i of s.invoices) if (i.account) { if (!s.customersByIban.has(i.account)) s.customersByIban.set(i.account, new Set()); s.customersByIban.get(i.account).add(i.customer); }
@@ -223,9 +231,24 @@ function proposal(s, rule, e, invs, hits, extra = []) {
 
 // the place of one open entry: an automatic match, a suggestion, or unmatched with a reason
 function outcome(s, e, autoOnly) {
+  const rev = s.revOf.get(e.ref);
+  if (!rev) return baseOutcome(s, e, autoOnly);
+  if (autoOnly) return null;
+  const o = baseOutcome(s, e, false);
+  const line = { m: '✗', k: 'Reversed', t: `Entry ${rev.ref} takes this payment back${rev.addtl ? ' (' + rev.addtl + ')' : ''}. If you accept, the invoice is closed although the money went back.` };
+  if (o.auto) { o.auto.evidence.push(line); o.auto.effect = 'Reversed payment: ' + o.auto.effect; return { sug: o.auto }; }
+  if (o.sug) { o.sug.evidence.push(line); o.sug.effect = 'Reversed payment: ' + o.sug.effect; return o; }
+  o.un.reason = `Reversed by entry ${rev.ref}. ` + o.un.reason;
+  return o;
+}
+function baseOutcome(s, e, autoOnly) {
   const un = (rule, reason, candidates = []) => ({ un: { entry: e.ref, rule, reason, candidates } });
   if (e.status !== 'BOOK') return un('STM-05', `Not booked yet (status ${e.status || 'unknown'}). Pending entries are listed apart and not matched.`);
-  if (e.reversal) return un('REC-09', 'A reversal of an earlier entry, not a customer payment.');
+  if (e.reversal) {
+    const o = s.revTarget.get(e.ref);
+    const om = o && matchOfEntry(s, o.ref);
+    return un('REC-09', o ? `A reversal of entry ${o.ref} (${amt(o.amt)} from ${o.payer || 'an unknown payer'}): the bank took that payment back${e.addtl ? ' (' + e.addtl + ')' : ''}. ` + (om ? `Entry ${o.ref} is matched to ${om.invoices.join(', ')} (${om.kind}): check that decision.` : `Entry ${o.ref} waits for your review.`) : 'A reversal of an earlier entry, not a customer payment. No entry of this statement matches it.', om ? om.invoices : []);
+  }
   if (e.cd === 'DBIT') {
     const fee = /CHRG|FEES|COMM/.test(e.btc) || /\b(FEE|FEES|CHARGE|CHARGES)\b/i.test(remText(e));
     return un('REC-09', fee ? `Money going out: a bank fee (${e.btc || 'no transaction code'}). Only customer payments are matched to invoices.` : `Money going out (debit, ${e.btc || 'no transaction code'})${e.payer ? ' to ' + e.payer : ''}, for example a refund. Only customer payments are matched to invoices.`);

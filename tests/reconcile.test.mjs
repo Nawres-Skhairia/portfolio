@@ -225,6 +225,20 @@ for (const t of ['', 'abc', 'a'.repeat(55), 'a'.repeat(56), 'a'.repeat(64), 'Zo√
   ok(place(sb, 'XMPL2611170006').place !== 'auto', 'RF reference with wrong check digits is not matched automatically', place(sb, 'XMPL2611170006').place);
 }
 
+// a reversal sends the reversed payment to review instead of leaving it matched (Daniel, PORT-42)
+{
+  const smp = REC_SAMPLES.find((x) => x.id === 'reversal');
+  const { st, s } = await session(smp.statement());
+  ok(st.reconcilable && st.schema.valid, 'reversal sample is schema-valid and balances');
+  const o = place(s, 'XMPL2611170027'), r = place(s, 'XMPL2611170028');
+  ok(o.place === 'review' && o.sug.rule === 'REC-01' && o.sug.evidence.some((l) => l.m === '‚úó' && l.k === 'Reversed' && /XMPL2611170028/.test(l.t)), 'reversed payment waits for review, flagged', o.place);
+  ok(r.place === 'unmatched' && /A reversal of entry XMPL2611170027/.test(r.un.reason) && /AC04/.test(r.un.reason), 'the reversal names the entry it takes back', r.un && r.un.reason);
+  ok(s.view.counts.auto === 14 && s.view.invState.find((x) => x.inv.number === 'INV-1056').status === 'open', 'INV-1056 stays open');
+  E.accept(s, o.sug.id);
+  ok(/is matched to INV-1056 \(accepted\): check that decision/.test(place(s, 'XMPL2611170028').un.reason), 'after a person accepts it, the reversal points at that decision');
+  ok(s.view.totals.ok, 'AT10 totals with a reversal');
+}
+
 // invoices CSV reader
 {
   const semi = 'Rechnungsnummer;Kunde;IBAN;Betrag;W√§hrung;F√§lligkeit\nINV-1;Alpha GmbH;;1.250,50;EUR;17.11.2026\nINV-2;Beta;;"2.000,00";EUR;2026-11-18\n';
@@ -245,6 +259,8 @@ for (const t of ['', 'abc', 'a'.repeat(55), 'a'.repeat(56), 'a'.repeat(64), 'Zo√
   const formula = readInvoices('invoice,customer,amount,currency\n=1+1,"=HYPERLINK(""x"")",10.00,EUR\n');
   ok(formula.ok && formula.invoices[0].number === '=1+1' && formula.invoices[0].customer === '=HYPERLINK("x")', 'formula-like cells stay plain text');
   ok(!readInvoices('invoice,customer,amount,currency\nINV-1,A,10.00,EUR\u0007\n').ok, 'control characters refused');
+  const neg = readInvoices('invoice,customer,amount,currency\nCN-1,A,-10.00,EUR\n');
+  ok(!neg.ok && /Credit notes are not in this version/.test(neg.problems[0].message), 'negative amount: credit notes are not in this version');
   ok(parseAmount('1 234,56', ',') === 123456000n && parseAmount('1,23,4.00', '.') === null && parseAmount('12.345.678,9', ',') === 1234567890000n, 'amount reader');
   const big = readInvoices('invoice,customer,amount,currency\n' + 'INV-1,A,1.00,EUR\n'.repeat(5001));
   ok(!big.ok && /limit is 5,000/.test(big.error), 'more than 5,000 invoices refused');

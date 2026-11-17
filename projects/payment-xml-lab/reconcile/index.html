@@ -28,7 +28,7 @@
   <main class="wrap">
     <section class="intro">
       <h1>Match a bank statement with open invoices, and see why every match was made.</h1>
-      <p>The statement is checked against the ISO 20022 schema and its balances first. Then fixed rules match what they safely can, the rest waits for you with the evidence side by side, and every decision goes into an audit trail that shows any later change.</p>
+      <p>The statement is checked against the ISO 20022 schema and its balances first. Then fixed rules match what they safely can, the rest waits for you with the evidence side by side, and every decision goes into a fingerprinted audit trail: any later change to an exported trail can be found by comparing it with the final fingerprint printed in the report.</p>
       <p class="honest-top"><b>A demonstration workbench, not accounting software. It does not post anything to a ledger.</b> Not certified. No AI here, on purpose: every match is a rule you can read. Please open made-up files only: real statements hold names and accounts.</p>
     </section>
 
@@ -105,7 +105,7 @@
 
     <section class="block">
       <h2>Audit trail <span class="muted" id="trailMeta"></span></h2>
-      <p class="muted trail-intro">Every line carries the fingerprint (SHA-256) of the line before it, so a change to an exported trail can be found. <label class="tb tb-small" for="verifyIn">Check this trail<input type="file" id="verifyIn" accept=".csv,.jsonl,.json,.txt,text/csv,application/json,text/plain"></label></p>
+      <p class="muted trail-intro">Every line carries the fingerprint (SHA-256) of the line before it. A change to an exported trail can be found by comparing it with the final fingerprint printed in the report. <label class="tb tb-small" for="verifyIn">Check this trail<input type="file" id="verifyIn" accept=".csv,.jsonl,.json,.txt,text/csv,application/json,text/plain"></label></p>
       <p class="verify" id="verifyOut" aria-live="polite"></p>
       <div class="table-wrap"><table class="cat trail" id="trailTable">
         <thead><tr><th>#</th><th>Time</th><th>Actor</th><th>Action</th><th>Entries</th><th>Invoices</th><th>Rule</th><th>Paid</th><th>Difference</th><th>Reason or detail</th><th>Fingerprint</th></tr></thead>

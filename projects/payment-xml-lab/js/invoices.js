@@ -120,7 +120,8 @@ export function readInvoices(src, opts = {}) {
     else if (seen.has(number)) p(`Invoice number ${number} is also on line ${seen.get(number)}.`);
     else seen.set(number, r.line);
     if (!customer) p(`Invoice ${number || '?'}: the customer is empty.`);
-    if (amount == null) p(`Invoice ${number || '?'}: "${rawAmt}" is not an amount with the decimal mark "${dec}".`);
+    if (/^\s*(-|\(|\u2212)/.test(rawAmt) || /-\s*$/.test(rawAmt)) p(`Invoice ${number || '?'}: "${rawAmt}" is a negative amount. Credit notes are not in this version: leave them out of the list.`);
+    else if (amount == null) p(`Invoice ${number || '?'}: "${rawAmt}" is not an amount with the decimal mark "${dec}".`);
     else if (amount === 0n) p(`Invoice ${number || '?'}: the amount is zero.`);
     if (!/^[A-Z]{3}$/.test(currency)) p(`Invoice ${number || '?'}: "${cell(r, 'currency')}" is not a 3-letter currency code.`);
     if (account && !(/^[A-Z]{2}\d{2}[A-Z0-9]{1,30}$/.test(account) && ibanIsValid(account))) p(`Invoice ${number || '?'}: the customer account "${cell(r, 'account')}" is not a valid IBAN.`);
