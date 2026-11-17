@@ -1665,7 +1665,10 @@ if (!location.hash) history.replaceState(null, '', '#/overview');
 render();
 lastHash = location.hash;
 if (startNotice) toast(startNotice, 'error');
+// The live portfolio runs this tool without accounts: it does not even ask the server there.
+const NO_ACCOUNT_HOSTS = ['nawres-skhairia.vercel.app'];
 (async () => {
+  if (NO_ACCOUNT_HOSTS.includes(location.hostname)) { renderBand(); return; }
   const me = await api('GET', 'me');
   serverOn = me.status === 200;
   if (serverOn) signupMode = me.body.signup || 'open';

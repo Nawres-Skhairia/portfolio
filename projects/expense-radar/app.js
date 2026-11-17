@@ -61,7 +61,7 @@ function renderBand() {
   if (firstVisit) { $('#band').innerHTML = ''; return; }
   if (!data.own) { $('#band').innerHTML = '<div class="band-in"><span><b>Sample.</b> The made-up money of a fictional person, to look around.</span><span class="grow"></span><button type="button" class="lnk" data-act="reset">Reset the sample</button><button type="button" class="btn sm" data-act="start-own">Start with my own money</button></div>'; return; }
   const last = data.backupAt ? 'Last backup ' + dshort(data.backupAt.slice(0, 10)) + '.' : (data.transactions.length ? 'No backup yet.' : '');
-  $('#band').innerHTML = '<div class="band-in own"><span><b>Saved on this device only.</b> ' + (ui.persisted ? 'Your browser keeps it safe. ' : '') + esc(last) + '</span><span class="grow"></span><button type="button" class="lnk" data-act="backup">Download a backup</button><button type="button" class="lnk" data-act="restore">Restore</button><button type="button" class="lnk" data-act="install">Install on your phone</button><input type="file" id="restoreFile" accept="application/json,.json" hidden></div>';
+  $('#band').innerHTML = '<div class="band-in own"><span><b>Saved on this device only.</b> ' + (ui.persisted ? 'Your browser keeps it safe. ' : '') + esc(last) + '</span><span class="grow"></span><button type="button" class="lnk" data-act="backup">Download a backup</button><button type="button" class="lnk" data-act="restore">Restore</button><button type="button" class="lnk" data-act="install">Install on your phone</button><button type="button" class="lnk" data-act="wipe-own">Delete my data</button><input type="file" id="restoreFile" accept="application/json,.json" hidden></div>';
 }
 function welcome() {
   return '<section class="welcome"><p class="eyebrow">Expense Radar</p><h1>See where your money goes.</h1><p class="lede">Enter or import what you spend and earn. Budgets warn you before you go over, regular payments are found for you, and every figure is worked out by plain rules you can read.</p>' +
@@ -578,6 +578,7 @@ document.addEventListener('click', e => {
     case 'restore': $('#restoreFile').click(); break;
     case 'install': installHelp(); break;
     case 'reset': confirmBox('Reset the sample?', 'Your changes to the sample are removed and the original made-up figures come back.', 'Reset', () => { try { localStorage.removeItem(KEY); } catch (err) { /* nothing saved */ } data = seed(TODAY); ui.sel.clear(); ui.imp = { step: 1 }; render(); toast('The demo was reset.'); }); break;
+    case 'wipe-own': confirmBox('Delete your data?', 'Everything you entered is removed from this device. A backup you downloaded is not touched. This cannot be undone.', 'Delete my data', () => { try { localStorage.removeItem(KEY); } catch (err) { /* nothing saved */ } data = seed(TODAY); firstVisit = true; ui.sel.clear(); ui.imp = { step: 1 }; location.hash = '#/overview'; render(); toast('Your data was deleted from this device.'); }); break;
     case 'empty': confirmBox('Start empty?', 'Every transaction, budget and subscription in this browser is removed, so you can try it with your own made-up figures.', 'Start empty', () => { try { localStorage.removeItem(KEY); } catch (err) { /* nothing saved */ } data = E.emptyData(); ui.sel.clear(); save(); render(); toast('Empty. Add a transaction or import a file.'); }); break;
   }
 });

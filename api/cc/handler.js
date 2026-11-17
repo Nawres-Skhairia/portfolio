@@ -1,7 +1,18 @@
 // Command Center API entry point (Vercel function). All logic is in api/_cc/server.js.
 import { handle } from '../_cc/server.js';
 
+// Accounts are off on production until someone deliberately sets CC_ACCOUNTS=on there (with Nawres's yes).
+// This holds even if database or session variables were added to Production by mistake.
+const accountsOff = () => process.env.VERCEL_ENV === 'production' && process.env.CC_ACCOUNTS !== 'on';
+
 export default async function handler(req, res) {
+  if (accountsOff()) {
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.statusCode = 404;
+    res.end(JSON.stringify({ error: 'Accounts are not available on this copy of the site.' }));
+    return;
+  }
   const url = new URL(req.url, 'http://x');
   // vercel.json rewrites /api/cc/<path> to this file with the path in __p (Vercel has no multi-segment file routes here).
   const raw = url.searchParams.has('__p') ? url.searchParams.get('__p') : url.pathname.replace(/^\/api\/cc\/?/, '');
