@@ -32,19 +32,23 @@
     rateB: { min: 0, max: 30, msg: 'Enter a rate between 0 and 30%.' },
     yearsA: { min: 1, max: 40, whole: true, msg: 'Enter a whole number of years between 1 and 40.' },
     yearsB: { min: 1, max: 40, whole: true, msg: 'Enter a whole number of years between 1 and 40.' },
-    feesA: { min: 0, msg: 'Enter 0 or more. Fees cannot be negative.' },
-    feesB: { min: 0, msg: 'Enter 0 or more. Fees cannot be negative.' },
-    extra: { min: 0, msg: 'Enter 0 or more. An extra payment cannot be negative.' },
-    income: { min: 0, optional: true, msg: 'Enter 0 or more, or leave it empty.' }
+    feesA: { min: 0, max: 1000000, msg: 'Enter fees between 0 and 1,000,000.' },
+    feesB: { min: 0, max: 1000000, msg: 'Enter fees between 0 and 1,000,000.' },
+    extra: { min: 0, max: 1000000, msg: 'Enter an extra payment between 0 and 1,000,000 a month.' },
+    income: { min: 0, max: 10000000, optional: true, msg: 'Enter an income between 0 and 10,000,000 a month, or leave it empty.' }
   };
   const FIELDS = {
     single: ['amount', 'rateA', 'yearsA', 'extra', 'income'],
     compare: ['amount', 'rateA', 'yearsA', 'feesA', 'rateB', 'yearsB', 'feesB', 'income']
   };
+  // The browser could not read the number at all, e.g. "3,5" where only a dot is accepted (PORT-12 R3).
+  const BAD_INPUT = 'Use digits only, with a dot for decimals (for example 3.5).';
+  // Chrome and Safari silently drop a typed comma (3,5 becomes 35), so the comma key itself shows the message.
+  const commaTyped = new Set();
   // Returns an error message, or '' when the value on screen is valid.
   function problem(id) {
     const el = $(id), rule = RULES[id], raw = el.value.trim();
-    if (el.validity && el.validity.badInput) return rule.msg;
+    if (commaTyped.has(id) || (el.validity && el.validity.badInput)) return BAD_INPUT;
     if (raw === '') return rule.optional ? '' : rule.msg;
     const v = Number(raw);
     if (!isFinite(v)) return rule.msg;
@@ -198,7 +202,7 @@
     $('results').classList.toggle('stale', !valid);
     $('fixNote').hidden = valid;
     if (!valid) return;
-    const cur = $('currency').value;
+    const cur = $('currency').value || 'EUR';
     const P = val('amount');
     const rateA = val('rateA'), yearsA = val('yearsA');
     const nA = yearsA * 12;
@@ -283,9 +287,17 @@
     keys.forEach((k) => { if ($(k).value !== '') q.set(k, $(k).value); });
     return location.origin + location.pathname + '?' + q.toString();
   }
+  // Currencies the tool offers; anything else in a share link falls back to euro, with a note (PORT-12 R2).
+  const CURRENCIES = ['EUR', 'USD', 'GBP', 'TND'];
   function fromURL() {
     const q = new URLSearchParams(location.search);
-    keys.forEach((k) => { if (q.has(k)) $(k).value = q.get(k); });
+    keys.forEach((k) => { if (q.has(k) && k !== 'currency') $(k).value = q.get(k); });
+    if (q.has('currency')) {
+      const c = q.get('currency').toUpperCase();
+      const known = CURRENCIES.includes(c);
+      $('currency').value = known ? c : 'EUR';
+      $('currencyNote').hidden = known;
+    }
     if (q.get('mode') === 'compare') mode = 'compare';
   }
   function syncRanges() {
@@ -305,6 +317,21 @@
     $(a).addEventListener('input', () => { if (!problem(a)) $(b).value = $(a).value; update(); });
     $(b).addEventListener('input', () => { $(a).value = $(b).value; update(); });
   });
+  // R3: a comma in a number box is refused with a clear message instead of being dropped without a word.
+  $('form').addEventListener('keydown', (e) => {
+    if (e.key === ',' && e.target.type === 'number' && RULES[e.target.id]) { e.preventDefault(); commaTyped.add(e.target.id); update(); }
+  });
+  // A pasted "3,5" or "1,000" is refused the same way: browsers may otherwise turn it into 35 or 1000 without a word.
+  $('form').addEventListener('paste', (e) => {
+    const t = e.clipboardData ? e.clipboardData.getData('text') : '';
+    if (t.includes(',') && e.target.type === 'number' && RULES[e.target.id]) { e.preventDefault(); commaTyped.add(e.target.id); update(); }
+  });
+  // The message stays until the visitor empties the box or uses a dot, so "2,5" can never end as 25 without a word.
+  $('form').addEventListener('input', (e) => {
+    const v = e.target.value;
+    if (v === '' || v.includes('.')) commaTyped.delete(e.target.id);
+  }, true);
+  $('currency').addEventListener('change', () => { $('currencyNote').hidden = true; });
   ['currency', 'feesA', 'rateB', 'yearsB', 'feesB', 'extra', 'income'].forEach((id) => $(id).addEventListener('input', () => update()));
   $('modeSingle').addEventListener('click', () => setMode('single'));
   $('modeCompare').addEventListener('click', () => setMode('compare'));
