@@ -40,127 +40,164 @@
     </div>
   </header>
 
-  <main id="main" class="wrap cv">
+  <main id="main" class="cv cv2">
     <header class="cv-hero">
-      <div class="cv-topline">
-        <p class="kicker">CV</p>
-        <nav class="cv-langs-switch cv-noprint" aria-label="Language"><a href="/cv/" lang="en" hreflang="en" aria-current="page">EN</a><a href="/cv/fr/" lang="fr" hreflang="fr">FR</a></nav>
-        <button class="cv-motion cv-noprint" type="button" aria-pressed="true">Motion</button>
+      <div class="wrap cv-hero-in">
+        <div class="cv-topline">
+          <p class="kicker">CV</p>
+          <nav class="cv-langs-switch cv-noprint" aria-label="Language"><a href="/cv/" lang="en" hreflang="en" aria-current="page">EN</a><a href="/cv/fr/" lang="fr" hreflang="fr">FR</a></nav>
+          <button class="cv-motion cv-noprint" type="button" aria-pressed="true">Motion</button>
+        </div>
+        <h1>Nawres Skhairia</h1>
+        <p class="cv-role"><span class="cv-role-main">Functional / Technical QA / Business Analyst, iMX Factoring Solutions</span></p>
+        <p class="cv-subline">Factoring software, banking interfaces and AI testing</p>
+        <ul class="cv-contact" aria-label="Contact">
+          <li class="cv-place">Bulgaria</li>
+          <li><a href="mailto:skhairiyanawres@gmail.com">skhairiyanawres@gmail.com</a></li>
+          <li><a href="https://www.linkedin.com/in/nawres-skhairia-440a59143/" target="_blank" rel="noopener noreferrer"><span class="cv-screen">LinkedIn <span aria-hidden="true">↗</span></span><span class="cv-printonly">linkedin.com/in/nawres-skhairia-440a59143</span></a></li>
+          <li class="cv-print-item"><button class="cv-print" type="button">Print or save as PDF</button></li>
+        </ul>
       </div>
-      <h1>Nawres Skhairia</h1>
-      <p class="cv-role"><span class="cv-role-main">Functional / Technical QA / Business Analyst, iMX Factoring Solutions</span></p>
-      <p class="cv-subline">Factoring software, banking interfaces and AI testing</p>
-      <ul class="cv-contact" aria-label="Contact">
-        <li>Bulgaria</li>
-        <li><a href="mailto:skhairiyanawres@gmail.com">skhairiyanawres@gmail.com</a></li>
-        <li><a href="https://www.linkedin.com/in/nawres-skhairia-440a59143/" target="_blank" rel="noopener noreferrer"><span class="cv-screen">LinkedIn <span aria-hidden="true">↗</span></span><span class="cv-printonly">linkedin.com/in/nawres-skhairia-440a59143</span></a></li>
-        <li class="cv-print-item"><button class="cv-print" type="button">Print or save as PDF</button></li>
-      </ul>
-      <section class="cv-profile-block" aria-labelledby="cv-profile">
+    </header>
+
+    <nav class="cv-sec cv-noprint" aria-label="CV sections"><div class="wrap cv-sec-in"><a href="#s-profile">Profile</a><a href="#s-exp">Experience</a><a href="#s-skills">Core skills</a><a href="#s-tools">Side projects</a><a href="#s-facts">Languages</a></div><span class="cv-sec-bar" aria-hidden="true"></span></nav>
+
+    <div class="wrap cv-body">
+      <section id="s-profile" class="cv-block cv-profile-block" aria-labelledby="cv-profile">
         <h2 id="cv-profile" class="cv-h">Profile</h2>
         <p class="cv-profile">Functional / Technical QA and Business Analyst with nearly five years' experience at Codix, publisher of iMX, factoring and receivables finance software used by banks and factoring companies. End-to-end testing of the factoring lifecycle, from contracts and limits to payments, accounting and banking interfaces. Combines analysis of business requirements with hands-on technical validation in SQL, APIs and payment files. Dedicated tester of an AI solution.</p>
       </section>
-    </header>
 
-    <div class="cv-grid">
-      <div class="cv-main">
-        <section class="cv-block" aria-labelledby="cv-exp">
+      <section id="s-exp" class="cv-block" aria-labelledby="cv-exp">
+        <div class="cv-exp-head">
           <h2 id="cv-exp" class="cv-h">Experience</h2>
-          <ol class="cv-jobs">
-            <li class="cv-job is-now">
-              <p class="cv-pill-now">Current</p>
-              <div class="cv-job-head">
-                <h3>Functional / Technical QA / Business Analyst, iMX Factoring Solutions <span class="cv-org"><span class="cv-sep" aria-hidden="true">· </span>Codix</span></h3>
-                <p class="cv-when">2025–today</p>
+          <div class="cv-filter cv-noprint" role="group" aria-label="Filter the experience"><button type="button" data-f="all" aria-pressed="true">All</button><button type="button" data-f="0" aria-pressed="false">Functional QA</button><button type="button" data-f="1" aria-pressed="false">Technical QA</button><button type="button" data-f="2" aria-pressed="false">Business analysis and test management</button><button type="button" data-f="3" aria-pressed="false">AI testing</button></div>
+        </div>
+        <ol class="cv-jobs">
+          <li class="cv-job is-now">
+            <span class="cv-dot" aria-hidden="true"></span>
+            <div class="cv-job-head">
+              <h3>Functional / Technical QA / Business Analyst, iMX Factoring Solutions <span class="cv-org"><span class="cv-sep" aria-hidden="true">· </span>Codix</span></h3>
+              <p class="cv-when">2025–today</p>
+            </div>
+            <p class="cv-pill-now">Current</p>
+            <p class="cv-context">iMX, factoring and receivables finance software for banks and factoring companies</p>
+            <div class="cv-cats">
+              <div class="cv-cat" data-cat="0">
+                <h4 class="cv-sub">Functional QA</h4>
+                <ul class="cv-points">
+                  <li>Individuals and contracts: individuals (natural and legal persons) and their roles, onboarding and screening; contracts across recourse, non-recourse, disclosed, undisclosed, reverse factoring, syndication and SAF.</li>
+                  <li>Limits and funding: debtor limit requests, consumption and concentration; eligibility rules, availability, advance rate, reserve and funding requests.</li>
+                  <li>Portfolio and invoicing: invoices and credit notes in the portfolio; invoicing of fees and commissions, with fee and interest calculations checked against contract terms.</li>
+                  <li>Payment allocation: partial, over- and underpayments, splits, unidentified payments, reversals and write-offs.</li>
+                  <li>Collections: dunning, ageing, recourse and dispute handling.</li>
+                  <li>Accounting module: accounting entries and operation codes checked against the accounting scheme; financial items and client and debtor balances.</li>
+                  <li>Multi-currency flows, client and debtor statements, and operational reports.</li>
+                  <li>User rights and configuration: roles, permissions, four-eyes approval, and client- and country-specific parameters.</li>
+                </ul>
               </div>
-              <p class="cv-context">iMX, factoring and receivables finance software for banks and factoring companies</p>
-              <h4 class="cv-sub">Functional QA</h4>
-              <ul class="cv-points">
-                <li>Individuals and contracts: individuals (natural and legal persons) and their roles, onboarding and screening; contracts across recourse, non-recourse, disclosed, undisclosed, reverse factoring, syndication and SAF.</li>
-                <li>Limits and funding: debtor limit requests, consumption and concentration; eligibility rules, availability, advance rate, reserve and funding requests.</li>
-                <li>Portfolio and invoicing: invoices and credit notes in the portfolio; invoicing of fees and commissions, with fee and interest calculations checked against contract terms.</li>
-                <li>Payment allocation: partial, over- and underpayments, splits, unidentified payments, reversals and write-offs.</li>
-                <li>Collections: dunning, ageing, recourse and dispute handling.</li>
-                <li>Accounting module: accounting entries and operation codes checked against the accounting scheme; financial items and client and debtor balances.</li>
-                <li>Multi-currency flows, client and debtor statements, and operational reports.</li>
-                <li>User rights and configuration: roles, permissions, four-eyes approval, and client- and country-specific parameters.</li>
-              </ul>
-              <h4 class="cv-sub">Technical QA</h4>
-              <ul class="cv-points">
-                <li>Banking interfaces: SEPA and cross-border payments; ISO 20022 XML payment files, CAMT.053 and MT940 statements, from bank file to client account.</li>
-                <li>Night job: interest accrual, ageing, limit expiry and dunning runs, including month-end and rerun scenarios.</li>
-                <li>REST API and web service testing with Postman.</li>
-                <li>SQL data validation and root-cause analysis with application logs.</li>
-              </ul>
-              <h4 class="cv-sub">Business analysis and test management</h4>
-              <ul class="cv-points">
-                <li>Analysis of business requirements and software specifications; test scenarios and acceptance criteria defined with business experts and client teams.</li>
-                <li>Test design and execution across different environments: boundary and negative cases, smoke tests, retests, regression and non-regression campaigns before each release.</li>
-                <li>Defect management in Jira and Xray, with evidence-based reports followed through to closure.</li>
-              </ul>
-              <h4 class="cv-sub">AI testing</h4>
-              <ul class="cv-points">
-                <li>Dedicated tester of an AI solution: response evaluation (accuracy, relevance, groundedness), hallucination detection, prompt-based and adversarial test scenarios, and response regression between versions.</li>
-              </ul>
-            </li>
-            <li class="cv-job">
-              <div class="cv-job-head">
-                <h3>Technical Editor <span class="cv-org"><span class="cv-sep" aria-hidden="true">· </span>Codix</span></h3>
-                <p class="cv-when">2022–2025</p>
+              <div class="cv-cat" data-cat="1">
+                <h4 class="cv-sub">Technical QA</h4>
+                <ul class="cv-points">
+                  <li>Banking interfaces: SEPA and cross-border payments; ISO 20022 XML payment files, CAMT.053 and MT940 statements, from bank file to client account.</li>
+                  <li>Night job: interest accrual, ageing, limit expiry and dunning runs, including month-end and rerun scenarios.</li>
+                  <li>REST API and web service testing with Postman.</li>
+                  <li>SQL data validation and root-cause analysis with application logs.</li>
+                </ul>
               </div>
-              <p class="cv-context">iMX software specifications and localization</p>
-              <ul class="cv-points">
-                <li>Maintenance of iMX software specifications across releases.</li>
-                <li>Contribution to iMX software localization for international clients.</li>
-                <li>Unit testing against specifications and database requirements; training of business teams on the specification management system.</li>
-              </ul>
-            </li>
-            <li class="cv-job">
-              <div class="cv-job-head">
-                <h3>Player Support Specialist <span class="cv-org"><span class="cv-sep" aria-hidden="true">· </span>Telus International Europe</span></h3>
-                <p class="cv-when">2020–2021</p>
+              <div class="cv-cat" data-cat="2">
+                <h4 class="cv-sub">Business analysis and test management</h4>
+                <ul class="cv-points">
+                  <li>Analysis of business requirements and software specifications; test scenarios and acceptance criteria defined with business experts and client teams.</li>
+                  <li>Test design and execution across different environments: boundary and negative cases, smoke tests, retests, regression and non-regression campaigns before each release.</li>
+                  <li>Defect management in Jira and Xray, with evidence-based reports followed through to closure.</li>
+                </ul>
               </div>
-              <p class="cv-context">Player support for a major online game</p>
-              <ul class="cv-points">
-                <li>Multilingual customer support, technical troubleshooting and escalation of complex cases.</li>
-              </ul>
-            </li>
-            <li class="cv-job">
-              <div class="cv-job-head">
-                <h3>Insurance Sales Advisor <span class="cv-org"><span class="cv-sep" aria-hidden="true">· </span>Filiassur</span></h3>
-                <p class="cv-when">2019</p>
+              <div class="cv-cat" data-cat="3">
+                <h4 class="cv-sub">AI testing</h4>
+                <ul class="cv-points">
+                  <li>Dedicated tester of an AI solution: response evaluation (accuracy, relevance, groundedness), hallucination detection, prompt-based and adversarial test scenarios, and response regression between versions.</li>
+                </ul>
               </div>
-              <ul class="cv-points">
-                <li>Client needs assessment and recommendation of insurance products.</li>
-              </ul>
-            </li>
-          </ol>
-        </section>
+            </div>
+          </li>
+          <li class="cv-job">
+            <span class="cv-dot" aria-hidden="true"></span>
+            <div class="cv-job-head">
+              <h3>Technical Editor <span class="cv-org"><span class="cv-sep" aria-hidden="true">· </span>Codix</span></h3>
+              <p class="cv-when">2022–2025</p>
+            </div>
+            <p class="cv-context">iMX software specifications and localization</p>
+                <ul class="cv-points">
+                  <li>Maintenance of iMX software specifications across releases.</li>
+                  <li>Contribution to iMX software localization for international clients.</li>
+                  <li>Unit testing against specifications and database requirements; training of business teams on the specification management system.</li>
+                </ul>
+          </li>
+          <li class="cv-job">
+            <span class="cv-dot" aria-hidden="true"></span>
+            <div class="cv-job-head">
+              <h3>Player Support Specialist <span class="cv-org"><span class="cv-sep" aria-hidden="true">· </span>Telus International Europe</span></h3>
+              <p class="cv-when">2020–2021</p>
+            </div>
+            <p class="cv-context">Player support for a major online game</p>
+                <ul class="cv-points">
+                  <li>Multilingual customer support, technical troubleshooting and escalation of complex cases.</li>
+                </ul>
+          </li>
+          <li class="cv-job">
+            <span class="cv-dot" aria-hidden="true"></span>
+            <div class="cv-job-head">
+              <h3>Insurance Sales Advisor <span class="cv-org"><span class="cv-sep" aria-hidden="true">· </span>Filiassur</span></h3>
+              <p class="cv-when">2019</p>
+            </div>
+                <ul class="cv-points">
+                  <li>Client needs assessment and recommendation of insurance products.</li>
+                </ul>
+          </li>
+        </ol>
+      </section>
 
-        <section class="cv-block cv-noprint" aria-labelledby="cv-side-projects">
-          <h2 id="cv-side-projects" class="cv-h">Side projects</h2>
-          <p class="cv-profile">Web tools created through vibe coding: Test Pilot, payment tools, Loan simulator, Hiring Desk, Spreadsheet X-ray.</p>
-          <a class="cv-more" href="/#work">See the tools <span aria-hidden="true">→</span></a>
-        </section>
-      </div>
+      <section id="s-skills" class="cv-block" aria-labelledby="cv-skills">
+        <h2 id="cv-skills" class="cv-h">Core skills</h2>
+        <div class="cv-arch">
+          <div class="cv-layer" style="--i:0">
+            <h3 class="cv-layer-name"><button type="button" data-cats="0 1" title="Show in experience">Testing</button></h3>
+            <ul class="cv-tags"><li>Functional</li><li>End-to-end</li><li>Regression &amp; non-regression</li><li>Interface &amp; API</li><li>Night job</li><li>Test design</li></ul>
+          </div>
+          <div class="cv-layer" style="--i:1">
+            <h3 class="cv-layer-name"><button type="button" data-cats="2" title="Show in experience">Business analysis</button></h3>
+            <ul class="cv-tags"><li>Requirements analysis</li><li>Software specifications</li><li>Acceptance criteria</li><li>Business processes</li></ul>
+          </div>
+          <div class="cv-layer" style="--i:2">
+            <h3 class="cv-layer-name"><button type="button" data-cats="3" title="Show in experience">AI testing</button></h3>
+            <ul class="cv-tags"><li>Response evaluation</li><li>Hallucination detection</li><li>Prompt-based test design</li></ul>
+          </div>
+          <div class="cv-layer" style="--i:3">
+            <h3 class="cv-layer-name"><button type="button" data-cats="0 1" title="Show in experience">Domain</button></h3>
+            <ul class="cv-tags"><li>Factoring &amp; receivables finance</li><li>Payment allocation</li><li>Accounting</li><li>SEPA</li><li>ISO 20022</li><li>MT940</li></ul>
+          </div>
+          <div class="cv-layer cv-layer-base" style="--i:4">
+            <h3 class="cv-layer-name" id="cv-tools">Technologies &amp; tools</h3>
+            <ul class="cv-tags cv-tags-mono"><li>iMX</li><li>SQL</li><li>Jira</li><li>Xray</li><li>Postman</li><li>XML</li><li>Application logs</li><li>Vibe coding</li></ul>
+          </div>
+        </div>
+      </section>
 
-      <aside class="cv-side" aria-label="Skills, languages, education and certifications">
-        <section class="cv-block" aria-labelledby="cv-skills">
-          <h2 id="cv-skills" class="cv-h">Core skills</h2>
-          <dl class="cv-skills">
-            <div><dt>Testing</dt><dd><ul class="cv-tags"><li>Functional</li><li>End-to-end</li><li>Regression &amp; non-regression</li><li>Interface &amp; API</li><li>Night job</li><li>Test design</li></ul></dd></div>
-            <div><dt>Business analysis</dt><dd><ul class="cv-tags"><li>Requirements analysis</li><li>Software specifications</li><li>Acceptance criteria</li><li>Business processes</li></ul></dd></div>
-            <div><dt>AI testing</dt><dd><ul class="cv-tags"><li>Response evaluation</li><li>Hallucination detection</li><li>Prompt-based test design</li></ul></dd></div>
-            <div><dt>Domain</dt><dd><ul class="cv-tags"><li>Factoring &amp; receivables finance</li><li>Payment allocation</li><li>Accounting</li><li>SEPA</li><li>ISO 20022</li><li>MT940</li></ul></dd></div>
-          </dl>
-        </section>
+      <section id="s-tools" class="cv-block cv-noprint" aria-labelledby="cv-side-projects">
+        <h2 id="cv-side-projects" class="cv-h">Side projects</h2>
+        <p class="cv-lead">Web tools created through vibe coding.</p>
+        <ul class="cv-toolgrid">
+          <li><a href="/projects/test-pilot/"><span class="cv-tool-n" aria-hidden="true">01</span><span class="cv-tool-name">Test Pilot</span><span class="cv-tool-go" aria-hidden="true">→</span></a></li>
+          <li><a href="/#work"><span class="cv-tool-n" aria-hidden="true">02</span><span class="cv-tool-name">Payment tools</span><span class="cv-tool-go" aria-hidden="true">→</span></a></li>
+          <li><a href="/projects/loan-simulator/"><span class="cv-tool-n" aria-hidden="true">03</span><span class="cv-tool-name">Loan simulator</span><span class="cv-tool-go" aria-hidden="true">→</span></a></li>
+          <li><a href="/projects/hiring-desk/"><span class="cv-tool-n" aria-hidden="true">04</span><span class="cv-tool-name">Hiring Desk</span><span class="cv-tool-go" aria-hidden="true">→</span></a></li>
+          <li><a href="/projects/spreadsheet-xray/"><span class="cv-tool-n" aria-hidden="true">05</span><span class="cv-tool-name">Spreadsheet X-ray</span><span class="cv-tool-go" aria-hidden="true">→</span></a></li>
+        </ul>
+      </section>
 
-        <section class="cv-block" aria-labelledby="cv-tools">
-          <h2 id="cv-tools" class="cv-h">Technologies &amp; tools</h2>
-          <ul class="cv-tags cv-tags-mono"><li>iMX</li><li>SQL</li><li>Jira</li><li>Xray</li><li>Postman</li><li>XML</li><li>Application logs</li><li>Vibe coding</li></ul>
-        </section>
-
-        <section class="cv-block" aria-labelledby="cv-lang">
+      <div id="s-facts" class="cv-facts" role="group" aria-label="Languages, education and certifications">
+        <section class="cv-block cv-card" aria-labelledby="cv-lang">
           <h2 id="cv-lang" class="cv-h">Languages</h2>
           <ul class="cv-langs">
             <li><span>Arabic</span><span>native</span></li>
@@ -168,15 +205,13 @@
             <li><span>French</span><span>fluent</span></li>
           </ul>
         </section>
-
-        <section class="cv-block" aria-labelledby="cv-edu">
+        <section class="cv-block cv-card" aria-labelledby="cv-edu">
           <h2 id="cv-edu" class="cv-h">Education</h2>
           <ul class="cv-edu">
             <li><strong>Bachelor's degree in Biomedical Engineering, embedded electronic systems</strong><span>Higher Institute of Medical Technologies of Tunis · 2015–2018</span></li>
           </ul>
         </section>
-
-        <section class="cv-block" aria-labelledby="cv-cert">
+        <section class="cv-block cv-card" aria-labelledby="cv-cert">
           <h2 id="cv-cert" class="cv-h">Certifications &amp; training</h2>
           <ul class="cv-edu">
             <li><strong>DELF B2 (French)</strong></li>
@@ -184,9 +219,9 @@
             <li><strong>Chatbot creation training</strong><span>Orange Developer Center</span></li>
           </ul>
         </section>
-      </aside>
+      </div>
+      <p class="cv-closing">Feedback or questions: <a href="mailto:skhairiyanawres@gmail.com">email</a> · <a href="https://www.linkedin.com/in/nawres-skhairia-440a59143/" target="_blank" rel="noopener noreferrer">LinkedIn</a></p>
     </div>
-    <p class="cv-closing">Feedback or questions: <a href="mailto:skhairiyanawres@gmail.com">email</a> · <a href="https://www.linkedin.com/in/nawres-skhairia-440a59143/" target="_blank" rel="noopener noreferrer">LinkedIn</a></p>
   </main>
 
   <footer class="wrap footer">

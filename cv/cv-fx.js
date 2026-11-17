@@ -8,7 +8,7 @@
   var fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 
   function ready(fn) { if (document.readyState !== 'loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
-  function css(name) { return getComputedStyle(root).getPropertyValue(name).trim(); }
+  function css(name) { return getComputedStyle(document.body).getPropertyValue(name).trim(); }
   function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
 
   ready(function () {
@@ -26,7 +26,7 @@
     var ctx = cv.getContext('2d');
     var W = 0, H = 0, dpr = 1, gap = 30, pts = [], packets = [], mx = -9999, my = -9999, t0 = performance.now(), on = true, raf = 0;
     var col = {};
-    function colours() { col = { dot: css('--ink-3') || '#888', acc: css('--accent') || '#8fcaae' }; }
+    function colours() { col = { dot: css('--ink-3') || '#8193ad', acc: css('--hi') || '#5ee0ff' }; }
     function size() {
       var r = stage.getBoundingClientRect();
       dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -37,13 +37,13 @@
       pts = [];
       for (var y = gap / 2; y < H; y += gap) for (var x = gap / 2; x < W; x += gap) pts.push(x, y);
       packets = [];
-      var n = W < 600 ? 0 : 11; // no moving lines on phones: the text there spans the full width
+      var n = W < 600 ? 0 : 7; // no moving lines on phones: the text there spans the full width
       for (var i = 0; i < n; i++) packets.push(newPacket(true));
     }
     function newPacket(anywhere) {
       var horiz = Math.random() < 0.6;
       var line = Math.floor(Math.random() * Math.max(1, (horiz ? H : W) / gap)) * gap + gap / 2;
-      return { h: horiz, line: line, pos: anywhere ? Math.random() * (horiz ? W : H) : -40, v: 40 + Math.random() * 70, len: 40 + Math.random() * 60 };
+      return { h: horiz, line: line, pos: anywhere ? Math.random() * (horiz ? W : H) : -40, v: 30 + Math.random() * 45, len: 40 + Math.random() * 60 };
     }
     function draw(now) {
       var t = (now - t0) / 1000;
@@ -56,7 +56,7 @@
         var dx = x - mx, dy = y - my, d = Math.sqrt(dx * dx + dy * dy), push = 0;
         if (d < 170) push = (1 - d / 170);
         var ox = d ? dx / d * push * 14 : 0, oy = (d ? dy / d * push * 14 : 0) + w * 2.2;
-        ctx.globalAlpha = 0.26 + 0.2 * (w + 1) / 2 + push * 0.6;
+        ctx.globalAlpha = 0.2 + 0.16 * (w + 1) / 2 + push * 0.6;
         var s = 1 + push * 1.8;
         ctx.fillRect(x + ox - s / 2, y + oy - s / 2, s, s);
       }
@@ -209,7 +209,7 @@
       card.addEventListener('pointermove', function (e) {
         var r = card.getBoundingClientRect();
         var nx = (e.clientX - r.left) / r.width - 0.5, ny = (e.clientY - r.top) / r.height - 0.5;
-        var deg = Math.min(2.4, Math.sqrt(nx * nx + ny * ny) * 5);
+        var deg = Math.min(1.4, Math.sqrt(nx * nx + ny * ny) * 3);
         card.style.rotate = (-ny).toFixed(3) + ' ' + nx.toFixed(3) + ' 0 ' + deg.toFixed(2) + 'deg';
       });
       card.addEventListener('pointerleave', function () { card.style.rotate = ''; });
