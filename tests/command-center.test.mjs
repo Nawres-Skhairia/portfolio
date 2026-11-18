@@ -279,3 +279,47 @@ test('sub-tasks: one level, same project, freed when the parent is deleted', () 
   const r = E.updateTask(d, 't-a3', { description: 'New words' }, 'Lina Haddad', '2026-11-17T10:00');
   assert.equal(r.changes[0].field, 'Description');
 });
+
+// 18 Nov: your own name, people, statuses, time
+test('renamePerson changes a name everywhere it appears', () => {
+  const d = seed('2026-11-18');
+  const out = E.renamePerson(d, 'Lina Haddad', 'Sam Rivera');
+  assert.equal(out.me, 'Sam Rivera');
+  assert.ok(!JSON.stringify(out).includes('Lina Haddad'));
+  assert.equal(out.tasks.length, d.tasks.length);
+});
+test('parseDuration reads the usual ways of writing time', () => {
+  assert.equal(E.parseDuration('1h 30m'), 90); assert.equal(E.parseDuration('1.5h'), 90); assert.equal(E.parseDuration('45m'), 45);
+  assert.equal(E.parseDuration('1d'), 480); assert.equal(E.parseDuration('1:15'), 75); assert.equal(E.parseDuration('2'), 120);
+  assert.equal(E.parseDuration('soon'), 0); assert.equal(E.fmtDuration(90), '1h 30m'); assert.equal(E.fmtDuration(60), '1h');
+});
+test('own statuses sit after In review and can be cleared', () => {
+  E.setCustomStatuses([{ name: 'Testing' }]);
+  assert.deepEqual(E.BOARD_COLUMNS, ['To do', 'In progress', 'In review', 'Testing', 'On hold', 'Done']);
+  assert.equal(E.validateStatusName('done', [{ name: 'Testing' }]), 'A status already has this name.');
+  assert.equal(E.validateStatusName('testing', [{ name: 'Testing' }]), 'A status already has this name.');
+  E.setCustomStatuses([]);
+  assert.ok(!E.TASK_STATUSES.includes('Testing'));
+});
+test('progress and time entries are checked and logged', () => {
+  const d = seed('2026-11-18'); const t = d.tasks[0];
+  assert.ok(Object.keys(E.updateTask(d, t.id, { progress: 140 }, 'X', '2026-11-18T10:00').errors).length);
+  const r = E.updateTask(d, t.id, { progress: 40, worklog: [{ id: 'w1', by: 'X', day: '2026-11-18', mins: 90 }] }, 'X', '2026-11-18T10:00');
+  assert.deepEqual(r.errors, {});
+  const h = r.data.tasks[0].history.slice(-2).map(x => x.field + ':' + x.to);
+  assert.deepEqual(h, ['Progress:40%', 'Work logged:1h 30m']);
+});
+
+test('saved data is checked before use: odd statuses, progress, time entries and widgets are cleaned', () => {
+  const E2 = E;
+  const d = { projects: [], milestones: [], risks: [], tasks: [{ id: 'a', key: 'X-1', status: 'To do', deps: [], due: '2026-11-18', progress: '"><img src=x>', worklog: [{ id: 'w', day: '2026-11-18', mins: 30, by: 'Ana', note: 'ok' }, { id: 'bad', day: 'x', mins: '1' }] }],
+    statuses: [{ name: 'QA', tone: '"><b>' }, { name: 'Done' }, { name: 5 }], people: ['Ana', 7], prefs: { pins: ['nav:board', {}], side: 'x', dash: { project: '', widgets: [{ id: 'w1', title: 'T', measure: 'tasks', by: 'owner', scope: 'open', chart: 'bars', size: 'half' }, { id: 'w2', title: 'T', measure: '<x>', by: 'owner', scope: 'open', chart: 'bars', size: 'half' }] } } };
+  const c = E2.cleanLocal(d);
+  assert.deepEqual(c.statuses, [{ name: 'QA', tone: 'prog' }]);
+  assert.equal(c.tasks[0].progress, 0);
+  assert.equal(c.tasks[0].worklog.length, 1);
+  assert.deepEqual(c.people, ['Ana']);
+  assert.deepEqual(c.prefs.pins, ['nav:board']);
+  assert.equal(c.prefs.side, 'open');
+  assert.equal(c.prefs.dash.widgets.length, 1);
+});

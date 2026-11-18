@@ -61,6 +61,7 @@ export function enhance(root = document) {
   root.querySelectorAll('input[type=date]').forEach(inp => {
     const { hid, btn } = swap(inp, 'date'); paintDate(hid, btn);
   });
+  enhanceLists(root);
 }
 // Set a value from code (tests, quick dates) and tell the page.
 export function setValue(hid, v) {
@@ -205,5 +206,57 @@ document.addEventListener('keydown', e => {
 }, true);
 addEventListener('resize', () => close());
 document.addEventListener('scroll', e => { if (open && !(e.target.closest && e.target.closest('.opop'))) { if (open.btn.isConnected) place(open.pop, open.btn); else close(); } }, true);
+// ---------- the type-ahead field (combobox) ----------
+// A text field with its own list under it. Replaces the browser's datalist, whose list only appears after typing.
+// opts.items() gives [{ v, t, sub }]; showEmpty: show the whole list on click before typing; onPick(v, item) runs on a choice.
+export function combo(inp, opts) {
+  if (inp._combo) { inp._combo = opts; return; }
+  inp._combo = opts;
+  inp.setAttribute('role', 'combobox'); inp.setAttribute('aria-autocomplete', 'list'); inp.setAttribute('aria-expanded', 'false'); inp.setAttribute('autocomplete', 'off');
+  let pop = null, list = null, act = -1, shown = [], typed = false; // until the person types, a filled field still shows the whole list
+  const lid = 'cb' + (++seq);
+  const hide = () => { if (!pop) return; try { pop.hidePopover(); } catch (e) {} pop.remove(); pop = null; act = -1; inp.setAttribute('aria-expanded', 'false'); inp.removeAttribute('aria-activedescendant'); };
+  const paint = () => {
+    list.innerHTML = shown.length ? shown.map((o, i) => '<div role="option" id="' + lid + '-' + i + '" data-i="' + i + '" aria-selected="' + (i === act) + '" class="' + (i === act ? 'on' : '') + '"><span>' + escH(o.t) + '</span>' + (o.sub ? '<small>' + escH(o.sub) + '</small>' : '') + '</div>').join('') : '<p class="onone">' + escH(inp._combo.none || 'No match') + '</p>';
+    if (act >= 0) { inp.setAttribute('aria-activedescendant', lid + '-' + act); list.children[act]?.scrollIntoView({ block: 'nearest' }); } else inp.removeAttribute('aria-activedescendant');
+  };
+  const draw = () => {
+    const o = inp._combo; const q = typed ? inp.value.trim().toLowerCase() : '';
+    if (!q && !o.showEmpty) { hide(); return; }
+    const all = o.items();
+    shown = all.filter(x => !q || (x.t + ' ' + (x.sub || '') + ' ' + (x.find || '')).toLowerCase().includes(q)).slice(0, o.max || 50);
+    if (!shown.length && !o.none) { hide(); return; }
+    if (!pop) {
+      pop = document.createElement('div'); pop.className = 'opop osel-pop ocombo'; if (HAS_POP) pop.setAttribute('popover', 'manual');
+      pop.innerHTML = '<div class="olist" role="listbox" id="' + lid + '" aria-label="' + escH(o.label || inp.getAttribute('aria-label') || 'Suggestions') + '"></div>';
+      inp.parentNode.append(pop); list = pop.firstChild; inp.setAttribute('aria-controls', lid);
+      pop.addEventListener('pointerdown', e => e.preventDefault()); // keep the focus in the field
+      pop.addEventListener('click', e => { const r = e.target.closest('[data-i]'); if (r) pick(shown[Number(r.dataset.i)]); });
+      show(pop); inp.setAttribute('aria-expanded', 'true');
+    }
+    if (act >= shown.length) act = shown.length - 1;
+    paint();
+    const b = inp.getBoundingClientRect(); pop.style.minWidth = Math.max(200, b.width) + 'px'; place(pop, inp);
+  };
+  const pick = x => { if (!x) return; hide(); if (inp._combo.onPick) inp._combo.onPick(x.v, x); else { inp.value = x.v; inp.dispatchEvent(new Event('change', { bubbles: true })); } };
+  inp.addEventListener('input', () => { typed = true; act = inp.value.trim() && !inp._combo.freeText ? 0 : -1; draw(); });
+  inp.addEventListener('focus', () => { typed = false; if (inp._combo.showEmpty) { act = -1; draw(); } });
+  inp.addEventListener('click', () => { if (!pop && inp._combo.showEmpty) { typed = false; act = -1; draw(); } });
+  inp.addEventListener('blur', () => setTimeout(hide, 120));
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); if (!pop) { act = -1; inp._combo.showEmpty || inp.value.trim() ? draw() : 0; if (!pop) return; } const n = shown.length; if (!n) return; act = e.key === 'ArrowDown' ? (act + 1) % n : (act - 1 + n) % n; paint(); }
+    else if (e.key === 'Enter' && pop && act >= 0 && shown[act]) { e.preventDefault(); e.stopPropagation(); pick(shown[act]); }
+    else if (e.key === 'Escape' && pop) { e.preventDefault(); e.stopPropagation(); hide(); }
+    else if (e.key === 'Tab') hide();
+  });
+}
+// A field with list="…" gets the type-ahead list instead: the whole list on click, narrowed while typing.
+function enhanceLists(root) {
+  root.querySelectorAll('input[list]').forEach(inp => {
+    const dl = document.getElementById(inp.getAttribute('list')); inp.removeAttribute('list');
+    const vals = dl ? [...dl.options].map(o => o.value) : [];
+    combo(inp, { showEmpty: true, freeText: true, items: () => vals.map(v => ({ v, t: v })), onPick: inp.classList.contains('lbl-in') ? v => { inp.value = v; inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); } : undefined });
+  });
+}
 // Everything the app draws later is swapped too.
-new MutationObserver(ms => { for (const m of ms) for (const n of m.addedNodes) if (n.nodeType === 1) { if (n.matches('select:not([multiple]), input[type=date]')) enhance(n.parentNode); else if (n.querySelector('select, input[type=date]')) enhance(n); } }).observe(document.documentElement, { childList: true, subtree: true });
+new MutationObserver(ms => { for (const m of ms) for (const n of m.addedNodes) if (n.nodeType === 1) { if (n.matches('select:not([multiple]), input[type=date]')) enhance(n.parentNode); else if (n.querySelector('select, input[type=date]')) enhance(n); if (n.matches('input[list]')) enhanceLists(n.parentNode); else if (n.querySelector('input[list]')) enhanceLists(n); } }).observe(document.documentElement, { childList: true, subtree: true });
