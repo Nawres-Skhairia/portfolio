@@ -49,12 +49,18 @@
     <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.5a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.6M12 17h.01"/></symbol>
     <symbol id="i-summary" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></symbol>
     <symbol id="i-more" viewBox="0 0 24 24"><path d="M5 7h14M5 12h14M5 17h14"/></symbol>
+    <symbol id="i-dash" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="9" rx="1.5"/><rect x="13" y="4" width="7" height="5" rx="1.5"/><rect x="13" y="11" width="7" height="9" rx="1.5"/><rect x="4" y="15" width="7" height="5" rx="1.5"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M9 4h6l-1 5 3 3v2H7v-2l3-3zM12 14v6"/></symbol>
+    <symbol id="i-side" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="2"/><path d="M9.5 5v14"/></symbol>
+    <symbol id="i-grip" viewBox="0 0 24 24"><circle cx="9" cy="7" r="1"/><circle cx="15" cy="7" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="17" r="1"/><circle cx="15" cy="17" r="1"/></symbol>
+    <symbol id="i-swap" viewBox="0 0 24 24"><path d="M5 8h13l-3-3M19 16H6l3 3"/></symbol>
   </svg>
   <a class="skip" href="#main">Skip to content</a>
 
   <div class="strip" id="band" role="region" aria-label="About this workspace"></div>
   <header class="topbar">
     <h1 class="sr">Command Center</h1>
+    <button type="button" class="ib side-tog" id="sideTog" data-act="side-toggle" aria-controls="sideMenu" aria-expanded="true" aria-label="Close the side menu" title="Close the side menu"><svg class="i" aria-hidden="true"><use href="#i-side"/></svg></button>
     <button type="button" class="ws-btn" id="wsBtn" data-menu="ws" aria-haspopup="menu" aria-expanded="false"><span class="ws-mark" aria-hidden="true"><i></i></span><span class="ws-name" id="wsBox">Orbis Studio</span><svg class="i chev" aria-hidden="true"><use href="#i-down"/></svg></button>
     <button type="button" class="gsearch" data-act="palette" aria-label="Search work, projects and people (Ctrl K)"><svg class="i" aria-hidden="true"><use href="#i-search"/></svg><span>Search work, projects and people</span><kbd>Ctrl K</kbd></button>
     <span class="grow"></span>
@@ -65,15 +71,10 @@
     <div class="menu-pop" id="menuPop" role="menu" popover="manual" hidden></div>
   </header>
   <div class="app" id="app">
-    <aside class="side" aria-label="Command Center">
-      <nav class="nav" aria-label="Pages">
-        <a class="nv" href="#/overview" data-nav="overview"><svg class="i"><use href="#i-home"/></svg>For you</a>
-        <a class="nv" href="#/mytasks" data-nav="mytasks"><svg class="i"><use href="#i-check"/></svg>My work<i class="ct" id="myCount"></i></a>
-        <a class="nv" href="#/lists" data-nav="lists"><svg class="i"><use href="#i-list"/></svg>Saved views</a>
-        <a class="nv" href="#/projects" data-nav="projects"><svg class="i"><use href="#i-folder"/></svg>Portfolio</a>
-        <a class="nv" href="#/calendar" data-nav="calendar"><svg class="i"><use href="#i-cal"/></svg>Calendar</a>
-        <a class="nv" href="#/reports" data-nav="reports"><svg class="i"><use href="#i-chart"/></svg>Reports</a>
-        <a class="nv" href="#/insights" data-nav="insights"><svg class="i"><use href="#i-bulb"/></svg>Insights<i class="ins-count" hidden></i></a>
+    <aside class="side" id="sideMenu" aria-label="Command Center">
+      <nav class="nav" aria-label="Pages" id="sideNav">
+        <div id="pinNav" class="nav"></div>
+        <div id="mainNav" class="nav"></div>
         <p class="grp" id="projGrp"><span>Projects</span><button type="button" class="grp-add" data-act="new-project" aria-label="New project" title="New project"><svg class="i"><use href="#i-plus"/></svg></button></p>
         <div id="projNav" class="nav"></div>
         <p class="grp"><span>Team</span></p>
