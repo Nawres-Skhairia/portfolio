@@ -1,0 +1,3 @@
+# The private Expense Radar is its own Vercel project (Root Directory apps/er-personal).
+# Keep it out of the public portfolio deployment entirely.
+apps

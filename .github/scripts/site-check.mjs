@@ -11,7 +11,7 @@ const fail = (file, msg) => problems.push(`${file}: ${msg}`);
 
 function walk(dir, out = []) {
   for (const name of readdirSync(dir)) {
-    if (name === '.git' || name === 'node_modules') continue;
+    if (name === '.git' || name === 'node_modules' || (dir === ROOT && name === 'apps')) continue; // apps/ is a separate private Vercel project
     const p = join(dir, name);
     const s = statSync(p);
     if (s.isDirectory()) walk(p, out); else out.push(p);

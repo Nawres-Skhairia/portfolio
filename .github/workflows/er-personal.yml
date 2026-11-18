@@ -1,0 +1,41 @@
+# Private Expense Radar: key derivation known answers, sealing, merge and the server rules, run against a
+# throwaway Postgres in GitHub. Made-up data only. No secrets, no deploy.
+name: Private Expense Radar check
+on:
+  push:
+    branches: ['claude/**']
+    paths: ['apps/er-personal/**', 'projects/expense-radar/**', 'tests/er-personal.test.mjs', 'tests/expense-radar.test.mjs', '.github/workflows/er-personal.yml']
+  pull_request:
+    paths: ['apps/er-personal/**', 'projects/expense-radar/**', 'tests/er-personal.test.mjs', 'tests/expense-radar.test.mjs', '.github/workflows/er-personal.yml']
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: er_owner
+          POSTGRES_PASSWORD: er_test_only
+          POSTGRES_DB: er_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U er_owner" --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - run: npm ci --ignore-scripts
+      - name: Expense Radar rules
+        run: node --test tests/expense-radar.test.mjs
+      - name: Private copy (keys, sealing, merge, server rules)
+        env:
+          ER_TEST_DATABASE_URL: postgres://er_owner:er_test_only@localhost:5432/er_test
+        run: node --test tests/er-personal.test.mjs
+      - name: The private site builds
+        run: node apps/er-personal/build.mjs
