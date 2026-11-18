@@ -309,3 +309,17 @@ test('progress and time entries are checked and logged', () => {
   const h = r.data.tasks[0].history.slice(-2).map(x => x.field + ':' + x.to);
   assert.deepEqual(h, ['Progress:40%', 'Work logged:1h 30m']);
 });
+
+test('saved data is checked before use: odd statuses, progress, time entries and widgets are cleaned', () => {
+  const E2 = E;
+  const d = { projects: [], milestones: [], risks: [], tasks: [{ id: 'a', key: 'X-1', status: 'To do', deps: [], due: '2026-11-18', progress: '"><img src=x>', worklog: [{ id: 'w', day: '2026-11-18', mins: 30, by: 'Ana', note: 'ok' }, { id: 'bad', day: 'x', mins: '1' }] }],
+    statuses: [{ name: 'QA', tone: '"><b>' }, { name: 'Done' }, { name: 5 }], people: ['Ana', 7], prefs: { pins: ['nav:board', {}], side: 'x', dash: { project: '', widgets: [{ id: 'w1', title: 'T', measure: 'tasks', by: 'owner', scope: 'open', chart: 'bars', size: 'half' }, { id: 'w2', title: 'T', measure: '<x>', by: 'owner', scope: 'open', chart: 'bars', size: 'half' }] } } };
+  const c = E2.cleanLocal(d);
+  assert.deepEqual(c.statuses, [{ name: 'QA', tone: 'prog' }]);
+  assert.equal(c.tasks[0].progress, 0);
+  assert.equal(c.tasks[0].worklog.length, 1);
+  assert.deepEqual(c.people, ['Ana']);
+  assert.deepEqual(c.prefs.pins, ['nav:board']);
+  assert.equal(c.prefs.side, 'open');
+  assert.equal(c.prefs.dash.widgets.length, 1);
+});

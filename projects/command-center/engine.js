@@ -398,6 +398,31 @@ export function deleteMilestone(data, id) {
 }
 
 // Shape check for data read back from the browser.
+// Saved data is read back from this browser only, but every new field is still checked before use, so an
+// odd value can never reach the page as markup (statuses, people, progress, time entries, side menu, widgets).
+export function cleanLocal(d) {
+  const str = (v, n) => typeof v === 'string' ? v.slice(0, n) : '';
+  const strs = (a, n) => Array.isArray(a) ? a.filter(x => typeof x === 'string').map(x => x.slice(0, n)) : [];
+  const out = { ...d };
+  if ('statuses' in d) out.statuses = (Array.isArray(d.statuses) ? d.statuses : []).filter(x => x && typeof x.name === 'string' && x.name.trim() && x.name.length <= 20 && !BUILTIN_STATUSES.includes(x.name)).slice(0, 30).map(x => ({ name: x.name, tone: STATUS_TONES.includes(x.tone) ? x.tone : 'prog' }));
+  if ('people' in d) out.people = strs(d.people, 40).slice(0, 200);
+  if ('wsName' in d) out.wsName = str(d.wsName, 40);
+  out.tasks = d.tasks.map(t => {
+    if (!('progress' in t) && !('worklog' in t)) return t;
+    const n = { ...t };
+    if ('progress' in t) n.progress = Math.max(0, Math.min(100, Math.round(Number(t.progress) || 0)));
+    if ('worklog' in t) n.worklog = (Array.isArray(t.worklog) ? t.worklog : []).filter(w => w && typeof w.id === 'string' && isIso(w.day) && Number.isFinite(w.mins) && w.mins >= 1 && w.mins <= 1440).slice(0, 200).map(w => ({ id: w.id, day: w.day, mins: Math.round(w.mins), by: str(w.by, 40), note: str(w.note, 200) }));
+    return n;
+  });
+  if ('prefs' in d) {
+    const p = d.prefs && typeof d.prefs === 'object' ? d.prefs : {};
+    const ENUM = { measure: ['tasks', 'days', 'time', 'progress'], by: ['owner', 'status', 'priority', 'project', 'type', 'label', 'due'], scope: ['open', 'all', 'done'], chart: ['bars', 'number', 'table'], size: ['half', 'full'] };
+    const okW = w => w && typeof w.id === 'string' && typeof w.title === 'string' && Object.keys(ENUM).every(k => ENUM[k].includes(w[k]));
+    out.prefs = { navOrder: strs(p.navOrder, 80), projOrder: strs(p.projOrder, 80), pins: strs(p.pins, 80), side: p.side === 'closed' ? 'closed' : 'open' };
+    if (p.dash && typeof p.dash === 'object') out.prefs.dash = { project: str(p.dash.project, 80), widgets: (Array.isArray(p.dash.widgets) ? p.dash.widgets : []).filter(okW).slice(0, 12).map(w => ({ ...w, id: w.id.slice(0, 40), title: w.title.slice(0, 50), project: str(w.project, 80) })) };
+  }
+  return out;
+}
 export function isValidData(d) {
   return d && Array.isArray(d.projects) && d.tasks && Array.isArray(d.tasks) && d.tasks.every(t => t && TASK_STATUSES.includes(t.status) && typeof t.key === 'string') && Array.isArray(d.projects) && Array.isArray(d.milestones) && Array.isArray(d.tasks) && Array.isArray(d.risks) &&
     d.projects.every(p => p && typeof p.id === 'string' && typeof p.name === 'string' && isIso(p.start) && isIso(p.deadline)) &&

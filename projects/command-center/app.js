@@ -22,7 +22,7 @@ function load() {
     if (raw) {
       const d = JSON.parse(raw);
       E.setCustomStatuses(d && d.statuses);
-      if (E.isValidData(d)) return { me: d.me || '', filters: d.filters || [], ...d };
+      if (E.isValidData(d)) { const c = E.cleanLocal(d); E.setCustomStatuses(c.statuses); return { me: d.me || '', filters: d.filters || [], ...c }; }
       E.setCustomStatuses([]);
       startNotice = 'The saved workspace could not be read, so the sample data was restored.';
     } else firstVisit = true;
@@ -1392,7 +1392,7 @@ function checkMailbox(email, title) {
 async function resend(email) { const r = await api('POST', 'auth/resend', { email }); toast(r.status === 200 ? 'If this address has an account waiting, a new link is on its way.' : (r.body.error || 'Not sent.'), r.status === 200 ? 'ok' : 'error'); }
 
 // Copy the workspace saved in this browser into the account (checked by the server; the browser copy is kept).
-function localWorkspace() { try { const raw = localStorage.getItem(KEY); const d = raw && JSON.parse(raw); return d && E.isValidData(d) && d.projects.length ? d : null; } catch (e) { return null; } }
+function localWorkspace() { try { const raw = localStorage.getItem(KEY); const d = raw && JSON.parse(raw); return d && E.isValidData(d) && d.projects.length ? E.cleanLocal(d) : null; } catch (e) { return null; } }
 function offerCopy() {
   if (offeredCopy || !acct) return;
   const local = localWorkspace(); if (!local) return;
