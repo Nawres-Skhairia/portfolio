@@ -4,6 +4,58 @@
 export const PROJECT_STATUSES = ['Planned', 'Active', 'On hold', 'Completed'];
 export const TASK_STATUSES = ['Backlog', 'To do', 'In progress', 'In review', 'On hold', 'Done'];
 export const BOARD_COLUMNS = ['To do', 'In progress', 'In review', 'On hold', 'Done'];
+// Own statuses (on-device version): they sit after "In review", before "Paused" and "Done". The six built-in
+// statuses keep their meaning (Paused needs a reason, Done finishes the task), so they stay.
+export const BUILTIN_STATUSES = ['Backlog', 'To do', 'In progress', 'In review', 'On hold', 'Done'];
+export const STATUS_TONES = ['todo', 'prog', 'rev', 'done'];
+export function setCustomStatuses(list) {
+  const own = (Array.isArray(list) ? list : []).map(x => x && x.name).filter(n => typeof n === 'string' && n && !BUILTIN_STATUSES.includes(n));
+  TASK_STATUSES.splice(0, TASK_STATUSES.length, 'Backlog', 'To do', 'In progress', 'In review', ...own, 'On hold', 'Done');
+  BOARD_COLUMNS.splice(0, BOARD_COLUMNS.length, 'To do', 'In progress', 'In review', ...own, 'On hold', 'Done');
+}
+export function validateStatusName(name, list, except = '') {
+  const n = String(name || '').trim();
+  if (!n) return 'Give the status a name.';
+  if (n.length > 20) return 'Up to 20 characters.';
+  const taken = [...BUILTIN_STATUSES, 'Paused', 'Not planned yet', ...(list || []).map(x => x.name)].filter(x => x !== except);
+  if (taken.some(x => x.toLowerCase() === n.toLowerCase())) return 'A status already has this name.';
+  return '';
+}
+// A person typed into this browser: a name only, never an account.
+export function validatePersonName(name, list, except = '') {
+  const n = String(name || '').trim();
+  if (!n) return 'Write a name.';
+  if (n.length > 40) return 'Up to 40 characters.';
+  if ((list || []).some(x => x !== except && x.toLowerCase() === n.toLowerCase())) return 'This name is already in the list.';
+  return '';
+}
+// Give a person a new name everywhere: tasks, comments, history, projects, risks.
+export function renamePerson(data, from, to) {
+  if (!from || !to || from === to) return data;
+  const r = v => v === from ? to : v;
+  return { ...data, me: r(data.me), people: data.people ? data.people.map(r) : data.people,
+    projects: data.projects.map(p => ({ ...p, owner: r(p.owner) })),
+    risks: data.risks.map(x => ({ ...x, owner: r(x.owner) })),
+    tasks: data.tasks.map(t => ({ ...t, owner: r(t.owner), reporter: t.reporter === undefined ? undefined : r(t.reporter), watchers: t.watchers ? t.watchers.map(r) : t.watchers,
+      comments: (t.comments || []).map(c => ({ ...c, by: r(c.by) })), history: (t.history || []).map(h => ({ ...h, by: r(h.by) })), worklog: t.worklog ? t.worklog.map(w => ({ ...w, by: r(w.by) })) : t.worklog })) };
+}
+// Time spent: "1h 30m", "1.5h", "90m", "2d" (a day of work is 8 hours), "1:30". Returns minutes, or 0.
+export function parseDuration(s) {
+  s = String(s || '').trim().toLowerCase().replace(',', '.'); if (!s) return 0;
+  let m = /^(\d{1,3}):(\d{2})$/.exec(s); if (m) return Number(m[1]) * 60 + Number(m[2]);
+  if (/^\d+(\.\d+)?$/.test(s)) return Math.round(Number(s) * 60);
+  let total = 0, any = false;
+  const re = /(\d+(?:\.\d+)?)\s*(d|day|days|h|hr|hrs|hour|hours|m|min|mins|minute|minutes)\b/g; let rest = s;
+  while ((m = re.exec(s))) { any = true; const n = Number(m[1]); const u = m[2][0]; total += u === 'd' ? n * 480 : u === 'h' ? n * 60 : n; rest = rest.replace(m[0], ''); }
+  if (!any || rest.trim()) return 0;
+  return Math.round(total);
+}
+export function fmtDuration(mins) {
+  mins = Math.round(Number(mins) || 0); if (mins <= 0) return '0m';
+  const h = Math.floor(mins / 60), m = mins % 60;
+  return (h ? h + 'h' : '') + (h && m ? ' ' : '') + (m ? m + 'm' : '');
+}
+export const loggedMins = t => (t.worklog || []).reduce((s, w) => s + (Number(w.mins) || 0), 0);
 export const PRIORITIES = ['Low', 'Medium', 'High', 'Critical'];
 export const RISK_STATUSES = ['Open', 'Mitigating', 'Closed'];
 
@@ -87,6 +139,11 @@ export function validateTask(t, data) {
   if (t.checklist !== undefined) {
     if (!Array.isArray(t.checklist) || t.checklist.length > 30) e.checklist = 'Up to 30 checklist items.';
     else if (t.checklist.some(c => !c || typeof c.id !== 'string' || !/^[A-Za-z0-9_-]{1,48}$/.test(c.id) || typeof c.text !== 'string' || !c.text.trim() || c.text.length > 120 || typeof c.done !== 'boolean')) e.checklist = 'Each checklist item needs a text of up to 120 characters.';
+  }
+  if (t.progress !== undefined && t.progress !== '' && !(Number.isInteger(t.progress) && t.progress >= 0 && t.progress <= 100)) e.progress = 'Progress is a whole number from 0 to 100.';
+  if (t.worklog !== undefined) {
+    if (!Array.isArray(t.worklog) || t.worklog.length > 200) e.worklog = 'Up to 200 time entries per task.';
+    else if (t.worklog.some(w => !w || typeof w.id !== 'string' || !isIso(w.day) || !Number.isInteger(w.mins) || w.mins < 1 || w.mins > 1440 || typeof w.by !== 'string' || (w.note !== undefined && (typeof w.note !== 'string' || w.note.length > 200)))) e.worklog = 'Each time entry needs a day and from 1 minute to 24 hours.';
   }
   if (t.archivedAt) { if (!isIso(t.archivedAt)) e.archivedAt = 'The archive date is not valid.'; else if (t.status !== 'Done') e.archivedAt = 'Only done tasks can be archived.'; }
   const labels = t.labels || [];
@@ -356,7 +413,7 @@ export function nextKey(data, projectId) {
   return p.code + '-' + ((nums.length ? Math.max(...nums) : 0) + 1);
 }
 
-const TRACKED = { title: 'Title', owner: 'Assignee', priority: 'Priority', status: 'Status', due: 'Due date', estimate: 'Estimate', labels: 'Labels', milestoneId: 'Milestone', deps: 'Waits for', holdReason: 'Hold reason', checklist: 'Checklist', archivedAt: 'Archived', type: 'Type', description: 'Description', watchers: 'Watchers' };
+const TRACKED = { title: 'Title', owner: 'Assignee', priority: 'Priority', status: 'Status', due: 'Due date', estimate: 'Estimate', labels: 'Labels', milestoneId: 'Milestone', deps: 'Waits for', holdReason: 'Hold reason', checklist: 'Checklist', archivedAt: 'Archived', type: 'Type', description: 'Description', watchers: 'Watchers', progress: 'Progress' };
 const same = (a, b) => JSON.stringify(a ?? '') === JSON.stringify(b ?? '');
 
 // One change to one task, validated, with its history. Returns { data, errors }.
@@ -373,6 +430,7 @@ export function updateTask(data, id, patch, by, at) {
   if (Object.keys(errors).length) return { data, errors };
   const changes = [];
   for (const k of Object.keys(TRACKED)) if (k in patch && !same(t[k], next[k])) changes.push({ at, by, field: TRACKED[k], from: fmtVal(k, t[k], data), to: fmtVal(k, next[k], data) });
+  if ('worklog' in patch) { const add = loggedMins(next) - loggedMins(t); if (add > 0) changes.push({ at, by, field: 'Work logged', from: '', to: fmtDuration(add) }); }
   next.history = [...(t.history || []), ...changes];
   return { data: { ...data, tasks: data.tasks.map(x => x.id === id ? next : x) }, errors: {}, changes };
 }
@@ -383,6 +441,7 @@ function fmtVal(k, v, data) {
   if (k === 'deps') return (v || []).map(d => (data.tasks.find(x => x.id === d) || {}).key || '?').join(', ') || 'none';
   if (k === 'description') return v ? (String(v).length > 60 ? String(v).slice(0, 60) + '…' : String(v)) : 'none';
   if (k === 'watchers') return (v || []).join(', ') || 'none';
+  if (k === 'progress') return (Number(v) || 0) + '%';
   if (k === 'milestoneId') return (data.milestones.find(m => m.id === v) || {}).name || 'none';
   return v === '' || v === undefined || v === null ? 'none' : String(v);
 }
